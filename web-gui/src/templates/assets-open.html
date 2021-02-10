@@ -1,0 +1,109 @@
+<html>
+  <head>
+    <title>Asset list</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}"/>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='table.css') }}"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js" integrity="sha512-d9xgZrVZpmmQlfonhQUvTR7lMPtO7NkZMkA0ABN3PHCbKA5nqylQ/yWlFAyY6hYgdF1Qh6nYiuADWwKB4C2WSw==" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='chartjs-plugin-colorschemes.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='chartjs-plugin-labels.min.js') }}"></script>
+  </head>
+  <body>
+    <div class="section">
+      <h1>Open assets</h1>
+      <table class="table-fill">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Market price</th>
+            <th>3m change</th>
+            <th>Quantity</th>
+            <th>Investment</th>
+            <th>Net value</th>
+            <th>Gain</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for asset in assets %}
+          <tr>
+            <td data-title="Name">
+              {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
+              {% if asset.link -%}
+              <a href="{{asset.link}}" target="_blank" rel="noopener noreferrer">
+                <img class="link" src="{{ url_for('static', filename='external-link.svg') }}" />
+              </a>
+              {%- endif %}
+            </td>
+            <td data-title="Type">{{ asset.type }}</td>
+            <td data-title="Category">{{ asset.subcategory if asset.subcategory else asset.category }}</td>
+            <td data-title="Market price" class="text-right">{{ asset.lastQuote.quote }} {{ asset.currency }}</td>
+            <td date-title="Change 3m" data-gain="{{ ((asset.lastQuote.quote - asset.quote3mAgo.quote) / asset.quote3mAgo.quote * 100) | round(2) }}%"></td>
+            <td data-title="Quantity">{{ asset.finalQuantity }}</td>
+            <td data-title="Investment" data-monetary="{{ asset._unrealisedInvestment | round(2) }} PLN"></td>
+            <td data-title="Net value" data-monetary="{{ asset._netValue | round(2) }} PLN"></td>
+            <td data-title="Gain" data-gain="{{ ((asset._netValue - asset._unrealisedInvestment) / asset._unrealisedInvestment * 100) | round(2) }}%"></td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td data-title="Name" class="empty"></td>
+            <td data-title="Type" class="empty"></td>
+            <td data-title="Category" class="empty"></td>
+            <td data-title="Market price" class="empty"></td>
+            <td data-title="Change 3m" class="empty"></td>
+            <td data-title="Quantity" class="last-empty"></td>
+            <td data-title="Investment" data-monetary="{{ assets | sum(attribute='_unrealisedInvestment') | round(2) }} PLN"></td>
+            <td data-title="Net value" data-monetary="{{ assets | sum(attribute='_netValue') | round(2) }} PLN"></td>
+            <td data-title="Gain" data-gain="{{ ((assets | sum(attribute='_netValue') - (assets | sum(attribute='_unrealisedInvestment'))) / (assets | sum(attribute='_unrealisedInvestment')) * 100) | round(2) }}%"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="section">
+      <h1>Asset allocation</h1>
+      <canvas id="allocationChart" width="400" height="400"></canvas>
+      {% block javascript %}
+      <script>
+        var ctx = document.getElementById('allocationChart').getContext('2d');
+        var allocation = JSON.parse({{ allocation | tojson }})
+        var myChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: Object.keys(allocation),
+            datasets: [{
+              data: Object.values(allocation),
+              borderWidth: 1
+            }]
+          },
+          options: {
+            plugins: {
+              colorschemes: {
+                scheme: 'brewer.Spectral11'
+              },
+              labels: {
+                render: 'percentage',
+                fontColor: 'black',
+                fontSize: 16,
+                precision: 1
+              }
+            },
+            tooltips: {
+              callbacks: {
+                label: function(tooltipItem, data) {
+                  var dataset = data.datasets[tooltipItem.datasetIndex];
+                  var total = dataset.data.reduce(function(previousValue, currentValue, currentIndex, array) {
+                            return previousValue + currentValue;
+                          });
+                  var currentValue = dataset.data[tooltipItem.index];
+                  var percentage = Number((currentValue/total*100).toFixed(1));
+                  return data.labels[tooltipItem.index] + ': ' + Number(currentValue.toFixed(2)) + ' PLN [' + percentage + "%]";
+                }
+              }
+            }
+          }
+        });
+      </script>
+      {% endblock %}
+    </div>
+  </body>
+</html>

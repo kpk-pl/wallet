@@ -1,9 +1,9 @@
 .table-fill {
   background: white;
-  border-radius:3px;
+  border-radius: 3px;
   border-collapse: collapse;
   margin: auto;
-  padding:5px;
+  padding: 5px;
   width: 100%;
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
   animation: float 5s infinite;
@@ -136,4 +136,8 @@ td[data-gain]:after {
 
 td[data-monetary-gain^="-"]:after, td[data-monetary^="-"]:after, td[data-gain^="-"]:after {
   color: red;
+}
+
+img.link {
+  vertical-align: middle;
 }

@@ -10,7 +10,6 @@ from dateutil.relativedelta import relativedelta
 import os
 
 
-# mongo = MongoClient('mongodb://admin:password@192.168.101.132:27017')
 mongo = MongoClient('mongodb://{}:{}@{}:{}'.format(os.environ.get("MONGO_USER", "investing"),
                                                    os.environ.get("MONGO_PASS", "investing"),
                                                    os.environ.get("MONGO_HOST", "127.0.0.1"),
@@ -25,13 +24,33 @@ def getQuote(item):
     return (item[0], quotes.getQuote(item[1]))
 
 
-@app.route('/assets')
-def openAssets():
+@app.route('/assets', methods = ['GET'])
+def assets():
+    pipeline = [
+        {
+            "$addFields" : {
+                "finalQuantity": { "$last": "$operations.finalQuantity" }
+            }
+        },
+        { "$unset" : ["quoteHistory", "operations"] }
+    ]
+    assets = list(db.assets.aggregate(pipeline))
+    return render_template("assets.html", assets=assets)
+
+
+@app.route('/assets/open', methods = ['GET'])
+def assetsOpen():
     queryLiveQuotes = (request.args.get('liveQuotes') == 'true')
     threeMonthsAgo = datetime.now() - relativedelta(months=3)
     threeMonthsAgo = threeMonthsAgo.replace(tzinfo=timezone.utc).timestamp()
 
     pipeline = [
+        {
+            "$match" : {
+                "operations": { "$exists": True },
+                "quoteHistory": { "$exists": True }
+             }
+        },
         {
             "$addFields" : {
                 "finalQuantity": { "$last": "$operations.finalQuantity" },
@@ -86,7 +105,7 @@ def openAssets():
             categoryAllocation[asset.data['category']] += asset.data['_netValue']
 
     assets = sorted([a.data for a in assets], key=lambda a: a['name'].lower())
-    return render_template("assets.html", assets=assets, allocation=json.dumps(categoryAllocation))
+    return render_template("assets-open.html", assets=assets, allocation=json.dumps(categoryAllocation))
 
 
 @app.route('/realized-profits')
@@ -95,20 +114,44 @@ def realizedProfits():
         { '$match': { 'operations': {'$elemMatch': {'type': "SELL"}}}}
     ]
 
-    assets = [analyzer.Analyzer(asset) for asset in db.aggregate(pipeline)]
+    assets = [analyzer.Analyzer(asset) for asset in db.assets.aggregate(pipeline)]
     assets = sorted([a.data for a in assets], key=lambda a: a['name'].lower())
     return render_template("realized-profits.html", assets=assets)
 
 
-@app.route('/get-quotes')
+@app.route('/asset/add', methods = ['GET'])
+def assetAdd():
+    return render_template("asset-add.html")
+
+@app.route('/asset', methods = ['POST'])
+def assetPost():
+    if request.method == 'POST':
+        data = {}
+
+        allowedKeys = ['name', 'ticker', 'currency', 'link', 'type', 'category', 'subcategory', 'region', 'institution']
+        for key in allowedKeys:
+            if key in request.form.keys() and request.form[key]:
+                data[key] = request.form[key]
+        print(data)
+        db.assets.insert(data)
+        return ('', 204)
+
+@app.route('/quote', methods = ['GET'])
+def quote():
+    quoteUrl = request.args.get('url')
+    response = quotes.getQuote(quoteUrl)
+    return Response(json.dumps(response), mimetype="application/json")
+
+
+@app.route('/quotes')
 def saveQuotes():
     storeQuotes = (request.args.get('store') == 'true')
 
-    assets = list(db.wallet.find({}, {'_id': 1, 'name': 1, 'quoteSource': 1}))
-    assetDict = { e['_id'] : e['quoteSource'] for e in assets }
+    assets = list(db.assets.find({'link': {'$exists': True}}, {'_id': 1, 'name': 1, 'link': 1}))
+    assetDict = { e['_id'] : e['link'] for e in assets }
 
-    currencies = list(db.currencies.find({}, {'_id': 1, 'name': 1, 'quoteSource': 1}))
-    currenciesDict = { e['_id'] : e['quoteSource'] for e in currencies }
+    currencies = list(db.currencies.find({}, {'_id': 1, 'name': 1, 'link': 1}))
+    currenciesDict = { e['_id'] : e['link'] for e in currencies }
 
     timestamp = int(time.time())
 
@@ -119,18 +162,18 @@ def saveQuotes():
     response = []
     for asset in assets:
         _id = asset['_id']
-        query = {'_id': _id}
-        update = {'$push': {'quoteHistory': {'timestamp': timestamp, 'quote': quotes[_id]['quote']}}}
         if storeQuotes:
-            db.wallet.update(query, update)
-        response.append({'name': asset['name'], 'quote': quotes[_id]['quote']})
+            query = {'_id': _id}
+            update = {'$push': {'quoteHistory': {'timestamp': timestamp, 'quote': quotes[_id]['quote']}}}
+            db.assets.update(query, update)
+        response.append({'name': asset['name'], 'quote': quotes[_id]})
 
     for asset in currencies:
         _id = asset['_id']
-        query = {'_id': _id}
-        update = {'$push': {'quoteHistory': {'timestamp': timestamp, 'quote': quotes[_id]['quote']}}}
         if storeQuotes:
+            query = {'_id': _id}
+            update = {'$push': {'quoteHistory': {'timestamp': timestamp, 'quote': quotes[_id]['quote']}}}
             db.currencies.update(query, update)
-        response.append({'name': asset['name'], 'quote': quotes[_id]['quote']})
+        response.append({'name': asset['name'], 'quote': quotes[_id]})
 
     return Response(json.dumps(response), mimetype="application/json")

@@ -1,0 +1,125 @@
+<html>
+  <head>
+    <title>Add asset</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}"/>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='form.css') }}"/>
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery-3.5.1.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery.validate.min.js') }}"></script>
+    <script type="text/javascript">
+$(document).ready(function(){
+  $("#f-link").change(function() {
+    function setDefault(selector, value) {
+      var element = $(selector)
+      if ((element.val() === null || element.val() === "") && value !== null)
+        element.val(value).change()
+    }
+
+    if ($(this).valid()) {
+      $.getJSON("/quote?url=" + encodeURIComponent($(this).val()), function(quote){
+        console.log(quote)
+        setDefault('#f-name', quote['name'])
+        setDefault('#f-type', quote['type'])
+        setDefault('#f-currency', quote['currency'])
+        setDefault('#f-name', quote['name'])
+        setDefault('#f-ticker', quote['ticker'])
+        setDefault('#f-quote', quote['quote'])
+      })
+    }
+  });
+});
+    </script>
+    <script type="text/javascript">
+$.validator.setDefaults({
+  submitHandler: function() {
+    $.post('/asset', $('form').serialize(), function(data) {
+      $(location).attr("href", "/assets");
+    })
+  }
+});
+    </script>
+  </head>
+  <body>
+		<div style="max-width: 500px">
+			<form method="post" action="" enctype="text/plain">
+				<label for="f-link">Link to biznesradar.pl or pl.investing.com: </label>
+				<input type="url" id="f-link" name="link" data-lpignore="true" required/>
+
+        <table>
+          <tbody>
+            <tr>
+              <td style="width: 85%">
+                <label for="f-name">Asset name: </label>
+                <input type="text" id="f-name" name="name" data-lpignore="true" required/>
+              </td>
+              <td stype="width: 15%">
+                <label for="f-ticker">Ticker: </label>
+                <input type="text" id="f-ticker" name="ticker" data-lpignore="true"/>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table>
+          <tbody>
+            <tr>
+              <td style="width: 50%">
+                <label for="f-currency">Currency: </label>
+                <select id="f-currency" name="currency" required>
+                  <option value="" hidden disabled selected value></option>
+                  <option value="PLN">PLN</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </td>
+              <td style="width: 50%">
+                <label for="f-quote">Quote: </label>
+                <input type="text" id="f-quote" name="quote" disabled="disabled" data-lpignore="true"/>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+				<label for="f-type">Type: </label>
+				<select id="f-type" name="type" required>
+          <option value="" hidden disabled selected value></option>
+					<option value="ETF">ETF</option>
+					<option value="Equity">Equity</option>
+					<option value="Investment Fund">Investment Fund</option>
+					<option value="Deposit">Deposit</option>
+				</select>
+
+        <table>
+          <tbody>
+            <tr>
+              <td style="width: 50%">
+                <label for="f-category">Category: </label>
+                <select id="f-category" name="category" required>
+                  <option value="" hidden disabled selected value></option>
+                  <option value="Equities">Equities</option>
+                  <option value="Bonds">Bonds</option>
+                  <option value="Cash">Cash</option>
+                </select>
+              </td>
+              <td style="width: 50%">
+                <label for="f-subcategory">Subcategory: </label>
+                <input type="text" id="f-subcategory" name="subcategory" data-lpignore="true" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+				<label for="f-institution">Institution: </label>
+				<input type="text" id="f-institution" name="institution" data-lpignore="true" required/>
+
+				<label for="f-region">Region: </label>
+				<input type="text" id="f-region" name="region" data-lpignore="true" required/>
+
+				<input type="submit" value="Submit"/>
+			</form>
+		</div>
+<script>
+    $("form").validate();
+</script>
+    </script>
+  </body>
+</html>
