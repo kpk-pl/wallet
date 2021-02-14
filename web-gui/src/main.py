@@ -164,7 +164,6 @@ def assetReceiptGet():
 
 @app.route('/asset/receipt', methods = ['POST'])
 def assetReceiptPost():
-    print(request.form)
     query = {'_id': ObjectId(request.form['_id'])}
     operation = {
         'date': parser.parse(request.form['date']),

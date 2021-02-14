@@ -26,7 +26,7 @@ $(document).ready(function(){
       var multiplier = 1
       if (type == "SELL")
         multiplier = -1
-      $("#f-quantity-after").val(parseFloat(quantity.val())*multiplier + {{ asset.finalQuantity }})
+      $("#f-quantity-after").val(parseFloat(quantity.val())*multiplier + {{ asset.finalQuantity if asset.finalQuantity else 0 }})
   }
 
   $("#f-quantity").on('input', updateQuantity)
@@ -40,7 +40,8 @@ $(document).ready(function(){
     var price = $("#f-price")
     var conversion = $("#f-conversion")
     if (price.valid() && provision.valid() && (!conversion.length || conversion.valid()))
-      $("#f-cost").val((provision.val() != "" ? parseFloat(provision.val()) : 0) + (conversion.length ? parseFloat(conversion.val()) : 1.0) * parseFloat(price.val()))
+      var cost = (provision.val() != "" ? parseFloat(provision.val()) : 0) + (conversion.length ? parseFloat(conversion.val()) : 1.0) * parseFloat(price.val())
+      $("#f-cost").val(Number(cost.toFixed(2)))
   }
 
   $("#f-provision").on('input', updateCost)
@@ -73,7 +74,7 @@ $.validator.setDefaults({
       {%- endif %}
       <p>Institution: {{ asset.institution }}</p>
       <p>Currency: {{ asset.currency }}</p>
-      <p>Current quantity: {{ asset.finalQuantity }}</p>
+      <p>Current quantity: {{ asset.finalQuantity if asset.finalQuantity else 0 }}</p>
       {% if asset.lastQuote -%}
       <p>Current quote: {{ asset.lastQuote.quote }} {{ asset.currency }}</p>
       {%- endif %}
@@ -127,7 +128,7 @@ $.validator.setDefaults({
                 <td style="width: 50%">
                   <label for="f-price">Transaction value: </label>
                   <div class="input-icon input-icon-right">
-                    <input type="number" value="0" step="0.01" data-number-to-fixed="2" data-number-stepfactor="100" class="currency" id="f-price" name="price" required/>
+                    <input type="number" value="0" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="currency" id="f-price" name="price" required/>
                     <i>{{ asset.currency }}</i>
                   </div>
                 </td>
