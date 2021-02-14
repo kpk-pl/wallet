@@ -84,8 +84,12 @@ def _getInvesting(url):
         if len(bottomSpans) >= 2:
             timeText = bottomSpans[1].text
             if timeText:
-                timeParsed = datetime.strptime(timeText, "%H:%M:%S")
-                result['timestamp'] = datetime.combine(date.today(), timeParsed.time()).timestamp()
+                if len(timeText) == 8:
+                    timeParsed = datetime.strptime(timeText, "%H:%M:%S")
+                    result['timestamp'] = datetime.combine(date.today(), timeParsed.time()).timestamp()
+                elif len(timeText) == 5:
+                    timeParsed = datetime.strptime(timeText, "%d/%m")
+                    result['timestamp'] = datetime.combine(timeParsed, time()).timestamp()
 
     return result
 

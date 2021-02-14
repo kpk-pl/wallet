@@ -30,7 +30,11 @@ class Analyzer(object):
         self._calculateRealisedGain()
 
     def addQuoteInfo(self, currencies):
-        self.data['_netValue'] = self.data['finalQuantity'] * self.data['lastQuote']['quote']
+        if 'lastQuote' in self.data and self.data['lastQuote'] is not None:
+            self.data['_netValue'] = self.data['finalQuantity'] * self.data['lastQuote']['quote']
+        else:
+            self.data['_netValue'] = self.data['_unrealisedInvestment']
+
         if self.data['currency'] != 'PLN':
             currencyConv = currencies[self.data['currency']]['quote']
             self.data['_netValue'] *= currencyConv

@@ -1,12 +1,14 @@
 from flask import Flask, request, render_template, Response
 from pymongo import MongoClient
 from bson.son import SON
+from bson.objectid import ObjectId
 from multiprocessing import Pool
 import quotes, analyzer
 import json
 import time
 from datetime import datetime, timezone
 from dateutil.relativedelta import relativedelta
+from dateutil import parser
 import os
 
 
@@ -38,8 +40,8 @@ def assets():
     return render_template("assets.html", assets=assets)
 
 
-@app.route('/assets/open', methods = ['GET'])
-def assetsOpen():
+@app.route('/wallet', methods = ['GET'])
+def wallet():
     queryLiveQuotes = (request.args.get('liveQuotes') == 'true')
     threeMonthsAgo = datetime.now() - relativedelta(months=3)
     threeMonthsAgo = threeMonthsAgo.replace(tzinfo=timezone.utc).timestamp()
@@ -47,8 +49,7 @@ def assetsOpen():
     pipeline = [
         {
             "$match" : {
-                "operations": { "$exists": True },
-                "quoteHistory": { "$exists": True }
+                "operations": { "$exists": True }
              }
         },
         {
@@ -79,8 +80,8 @@ def assetsOpen():
     currencies = { c['name'] : c for c in db.currencies.aggregate(currenciesPipeline) }
 
     if queryLiveQuotes:
-        liveQuotes = { a.data['name'] : a.data['quoteSource'] for a in assets }
-        liveCurrencies = { "__currency_" + name : c['quoteSource'] for name, c in currencies.items()}
+        liveQuotes = { a.data['name'] : a.data['link'] for a in assets if 'link' in a.data }
+        liveCurrencies = { "__currency_" + name : c['link'] for name, c in currencies.items()}
         liveQuotes = {**liveQuotes, **liveCurrencies}
 
         with Pool(len(assets)) as pool:
@@ -89,7 +90,8 @@ def assetsOpen():
         for name in currencies.keys():
             currencies[name]['lastQuote'] = liveQuotes["__currency_" + name]
         for asset in assets:
-            asset.data['lastQuote'] = liveQuotes[asset.data['name']]
+            if asset.data['name'] in liveQuotes:
+                asset.data['lastQuote'] = liveQuotes[asset.data['name']]
 
     for currency in currencies.keys():
         currencies[currency] = currencies[currency]['lastQuote']
@@ -105,7 +107,7 @@ def assetsOpen():
             categoryAllocation[asset.data['category']] += asset.data['_netValue']
 
     assets = sorted([a.data for a in assets], key=lambda a: a['name'].lower())
-    return render_template("assets-open.html", assets=assets, allocation=json.dumps(categoryAllocation))
+    return render_template("wallet.html", assets=assets, allocation=json.dumps(categoryAllocation))
 
 
 @app.route('/realized-profits')
@@ -125,16 +127,64 @@ def assetAdd():
 
 @app.route('/asset', methods = ['POST'])
 def assetPost():
-    if request.method == 'POST':
-        data = {}
+    data = {}
 
-        allowedKeys = ['name', 'ticker', 'currency', 'link', 'type', 'category', 'subcategory', 'region', 'institution']
-        for key in allowedKeys:
-            if key in request.form.keys() and request.form[key]:
-                data[key] = request.form[key]
-        print(data)
-        db.assets.insert(data)
-        return ('', 204)
+    allowedKeys = ['name', 'ticker', 'currency', 'link', 'type', 'category', 'subcategory', 'region', 'institution']
+    for key in allowedKeys:
+        if key in request.form.keys() and request.form[key]:
+            data[key] = request.form[key]
+
+    db.assets.insert(data)
+    return ('', 204)
+
+@app.route('/asset/receipt', methods = ['GET'])
+def assetReceiptGet():
+    id = request.args.get('id')
+    if not id:
+        return ('', 400)
+
+    pipeline = [
+        { "$match" : { "_id" : ObjectId(id) } },
+        {
+            "$addFields" : {
+                "finalQuantity": { "$last": "$operations.finalQuantity" },
+            }
+        },
+        { "$unset" : ["quoteHistory"] }
+    ]
+
+    assets = list(db.assets.aggregate(pipeline))
+    if not assets:
+        return ('', 404)
+
+    asset = assets[0]
+    if 'link' in asset:
+        asset['lastQuote'] = quotes.getQuote(asset['link'])
+    return render_template("asset-receipt.html", asset=asset)
+
+@app.route('/asset/receipt', methods = ['POST'])
+def assetReceiptPost():
+    print(request.form)
+    query = {'_id': ObjectId(request.form['_id'])}
+    operation = {
+        'date': parser.parse(request.form['date']),
+        'type': request.form['type'],
+        'quantity': float(request.form['quantity']),
+        'finalQuantity': float(request.form['finalQuantity']),
+        'price': float(request.form['price'])
+    }
+
+    provision = float(request.form['provision'])
+    if provision > 0:
+        operation['provision'] = provision
+
+    if 'currencyConversion' in request.form.keys():
+        operation['currencyConversion'] = float(request.form['currencyConversion'])
+
+    update = {'$push': {'operations': operation }}
+    db.assets.update(query, update)
+
+    return ('', 204)
 
 @app.route('/quote', methods = ['GET'])
 def quote():
