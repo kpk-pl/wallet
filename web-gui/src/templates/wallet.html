@@ -37,12 +37,12 @@
             <td data-title="Name">
               {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
               {% if asset.link -%}
-              <a href="{{asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink">
-                <i class="fas fa-chart-line fa-fw float-right"></i>
+              <a href="{{asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="External asset site">
+                <i class="fas fa-chart-line fa-fw fa-pull-right"></i>
               </a>
-              {%- else -%}
-              <i class="fas fa-fw float-right"></i>
-              {%- endif %}
+              {% else -%}
+              <i class="fas fa-fw fa-pull-right"></i>
+              {% endif %}
             </td>
             <td data-title="Type">{{ asset.type }}</td>
             <td data-title="Category">{{ asset.subcategory if asset.subcategory else asset.category }}</td>
