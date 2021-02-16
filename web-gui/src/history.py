@@ -1,47 +1,49 @@
 import requests
 import json
 import time
+import re
 
-def _getHistoryBiznesradar(desc, unixFrom, unixTo):
-    url = 'https://www.biznesradar.pl/get-quotes-json/'
+def _getHistoryBiznesradar(url):
+    html = requests.get(url).text
+    oid = re.search(r"{symbol_oid: (.*?)}", html)
+    if not oid:
+        return {}
+    oid = oid.group(1)
 
-    ts = int(time.time())
-    SECS_IN_DAY = 60*60*24
-    if unixFrom >= ts-(365/2)*SECS_IN_DAY:
-        rng = '6m'
-    elif unixFrom >= ts-365*SECS_IN_DAY:
-        rng = '1r'
-    elif unixFrom >= ts-3*365*SECS_IN_DAY:
-        rng = '3l'
-    elif unixFrom >= ts-5*365*SECS_IN_DAY:
-        rng = '5l'
-    else:
-        rng = 'max'
-
-    print(rng)
-
-    data = {'oid': desc['id'], 'range': rng, 'type': 'lin', 'without_operations': 0, 'currency_exchange': 0}
+    quotesUrl = 'https://www.biznesradar.pl/get-quotes-json/'
+    data = {'oid': oid, 'range': 'max', 'type': 'lin', 'without_operations': 0, 'currency_exchange': 0}
     headers = {'Accept': 'application/json, text/javascript, */*; q=0.01',
                'X-Requested-With': 'XMLHttpRequest'}
 
-    response = requests.post(url, data=data, headers=headers)
+    response = requests.post(quotesUrl, data=data, headers=headers)
     if response.status_code != 200:
-        raise RuntimeError(response)
+        return {}
 
     response = json.loads(response.text)
     if response['error'] != 0:
-        raise RuntimeError("Response contains error: {}".format(response['error']))
+        {}
 
     return {quote['ts']: quote['c'] for quote in response['data'][0]['quotes']}
 
 
-def _getHistoryInvesting(desc, unixFrom, unixTo):
-    timestamp = int(time.time())
-    url = 'https://tvc4.forexpros.com/{}/{}/1/1/8/history'.format(desc['hash'], timestamp)
-    params = {'symbol': desc['symbol'], 'resolution': 'D', 'from': unixFrom, 'to': unixTo}
+def _getHistoryInvesting(url):
     headers = {"User-Agent" : "Mozilla/5.0"}
 
-    response = requests.get(url, params=params, headers=headers)
+    if '?' in url:
+        pos = url.find('?')
+        chartUrl = url[:pos] + '-chart' + url[pos:]
+    else:
+        chartUrl = url + '-chart'
+
+    html = requests.get(chartUrl, headers=headers).text
+    carrier = html.find('carrier=')
+    carrier = html[carrier+8:carrier+40]
+
+    timestamp = int(time.time())
+    url = 'https://tvc4.forexpros.com/{}/{}/32/15/57/history'.format(carrier, timestamp)
+
+    response = requests.get(url, headers=headers)
+    print(response)
     if response.status_code != 200:
         raise RuntimeError(response)
 
@@ -52,8 +54,10 @@ def _getHistoryInvesting(desc, unixFrom, unixTo):
     return {response['t'][i]: response['c'][i] for i in range(len(response['t']))}
 
 
-def getHistory(desc, unixFrom, unixTo):
-    if desc['source'] == 'biznesradar':
-        return _getHistoryBiznesradar(desc, unixFrom, unixTo)
-    elif desc['source'] == 'investing':
-        return _getHistoryInvesting(desc, unixFrom, unixTo)
+def getHistory(desc):
+    if desc.startswith("https://pl.investing.com/"):
+        return _getHistoryInvesting(desc)
+    elif desc.startswith("https://www.biznesradar.pl/"):
+        return _getHistoryBiznesradar(desc)
+    else:
+        return {}

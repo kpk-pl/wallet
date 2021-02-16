@@ -164,7 +164,6 @@ def assetReceiptGet():
 
 @app.route('/asset/receipt', methods = ['POST'])
 def assetReceiptPost():
-    query = {'_id': ObjectId(request.form['_id'])}
     operation = {
         'date': parser.parse(request.form['date']),
         'type': request.form['type'],
@@ -180,9 +179,19 @@ def assetReceiptPost():
     if 'currencyConversion' in request.form.keys():
         operation['currencyConversion'] = float(request.form['currencyConversion'])
 
-    update = {'$push': {'operations': operation }}
-    db.assets.update(query, update)
 
+    query = {'_id': ObjectId(request.form['_id'])}
+    update = {'$push': {'operations': operation }}
+
+    if request.form['type'] == 'BUY':
+        asset = db.assets.find_one(query)
+        if asset and 'quoteHistory' not in asset:
+            update['$push']['quoteHistory'] = {
+                'timestamp': operation['date'].timestamp(),
+                'quote': operation['price'] / operation['quantity']
+            }
+
+    db.assets.update(query, update)
     return ('', 204)
 
 @app.route('/quote', methods = ['GET'])
