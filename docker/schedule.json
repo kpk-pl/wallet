@@ -1,0 +1,7 @@
+{
+  "request": {
+    "url": "http://web-gui/quotes",
+    "method": "PUT"
+  },
+  "schedule": "20 21 * * 1-5"
+}

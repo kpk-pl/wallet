@@ -2,7 +2,6 @@ version: "3"
 services:
   mongo:
     image: mongo:latest
-    hostname: mongodb
     volumes:
       - ./docker/initdb.d/:/docker-entrypoint-initdb.d/
       - ${MONGO_PERSISTENT_STORAGE_DB}/:/data/db/
@@ -12,11 +11,20 @@ services:
       MONGO_INITDB_DATABASE: admin
     ports:
       - "27017:27017"
-#  web-gui:
-#    hostname: web-gui
-#    build: web-gui
-#    environment:
-#      MONGO_HOST: mongodb
-#      MONGO_PORT: 27017
-#    ports:
-#      - "5000:80"
+  scheduler:
+    #    image: amplication/scheduler
+    build:
+      context: 'https://github.com/kpk-pl/amplication.git#:packages/amplication-scheduler'
+    volumes:
+      - ./docker/schedule.json:/etc/scheduler/config
+    depends_on:
+      - web-gui
+  web-gui:
+    build: web-gui
+    environment:
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+    ports:
+      - "5000:80"
+    depends_on:
+      - mongo
