@@ -1,80 +1,90 @@
-class AssetGroup(object):
-    def __init__(self, op):
-        super(AssetGroup, self).__init__()
-        self.operation = op
+import math
 
-        self.quantity = self.operation['quantity']
-        self.pricePerOne = self.operation['price'] / float(self.quantity)
-        self._provision = self.operation['provision'] if 'provision' in self.operation else 0.0
-        self._provisionPerOne = self._provision / float(self.quantity)
+def _valueOr(dictionary, key, default):
+    return dictionary[key] if key in dictionary else default
 
-    def provision(self, quantity):
-        return quantity * self._provisionPerOne
-
-    def netPrice(self, quantity):
-        result = quantity * self.pricePerOne
-        if 'currencyConversion' in self.operation:
-            result *= self.operation['currencyConversion']
-        return result
-
+def _operationNetValue(operation):
+    return operation['price'] * _valueOr(operation, 'currencyConversion', 1.0)
 
 class Analyzer(object):
     def __init__(self, assetData):
         super(Analyzer, self).__init__()
         self.data = assetData
 
-        self.data['_investmentStart'] = self.data['operations'][0]['date']
-        self.data['_investmentEnd'] = self.data['operations'][-1]['date'] if self.data['finalQuantity'] != 0 else ""
-
         self._realisedGains = []
-        self._calculateRealisedGain()
+        self._calculateRolling()
+        self._calculateSums()
+
+    def f(self, name):
+        return self.data[name] if name in self.data else None
+
+    def investmentStartEnd(self):
+        self.data['_investmentStart'] = self.data['operations'][0]['date']
+        self.data['_investmentEnd'] = self.data['operations'][-1]['date'] if self.data['finalQuantity'] != 0 else None
 
     def addQuoteInfo(self, currencies):
-        if 'lastQuote' in self.data and self.data['lastQuote'] is not None:
+        if _valueOr(self.data, 'lastQuote', None) is not None:
             self.data['_netValue'] = self.data['finalQuantity'] * self.data['lastQuote']['quote']
         else:
-            self.data['_netValue'] = self.data['_unrealisedInvestment']
+            self.data['_netValue'] = self.data['_stillInvestedValue']
 
         if self.data['currency'] != 'PLN':
             currencyConv = currencies[self.data['currency']]['quote']
             self.data['_netValue'] *= currencyConv
 
-    def _calculateRealisedGain(self):
-        buyGroups = []
+    def _calculateRolling(self):
+        firstStillInvestedBuyId = 0
+        for operationId in range(len(self.data['operations'])):
+            operation = self.data['operations'][operationId]
+            operation['_stats'] = {}
+            if operation['type'] == 'BUY':
+                operation['_stats']['stillInvestedQuantity'] = operation['quantity']
+            elif operation['type'] == 'SELL':
+                operation['_stats']['profits'] = {
+                    'netValue': _operationNetValue(operation),
+                    'provisions': _valueOr(operation, 'provision', 0.0)
+                }
 
-        for op in self.data['operations']:
-            if op['type'] == 'BUY':
-                buyGroups.append(AssetGroup(op))
-            elif op['type'] == 'SELL':
-                self._realiseGain(op, buyGroups)
-                op['_realisedGain'] = self._realisedGains[-1]
+                firstStillInvestedBuyId = self._processRollingSell(operationId, firstStillInvestedBuyId)
 
-        self.data['_unrealisedProvision'] = sum([g.provision(g.quantity) for g in buyGroups])
-        self.data['_unrealisedInvestment'] = sum([g.netPrice(g.quantity) for g in buyGroups])
+    def _processRollingSell(self, sellOperationId, firstStillInvestedBuyId = 0):
+        operation = self.data['operations'][sellOperationId]
+        remainingQuantity = operation['quantity']
 
-        self.data['_realisedGain'] = sum([rg['netGain'] for rg in self._realisedGains])
-        self.data['_realisedProvision'] = sum([rg['provisions'] for rg in self._realisedGains])
+        for investedBuyId in range(firstStillInvestedBuyId, sellOperationId):
+            investedBuyOperation = self.data['operations'][investedBuyId]
+            if investedBuyOperation['type'] != 'BUY':
+                firstStillInvestedBuyId += 1
+                continue
 
-        assert(abs(self.data['finalQuantity'] - sum([g.quantity for g in buyGroups]) < 1e-6))
+            sellingQuantity = min(remainingQuantity, investedBuyOperation['_stats']['stillInvestedQuantity'])
+            remainingQuantity -= sellingQuantity
+            investedBuyOperation['_stats']['stillInvestedQuantity'] -= sellingQuantity
+            if investedBuyOperation['_stats']['stillInvestedQuantity'] == 0:
+                firstStillInvestedBuyId += 1
 
-    def _realiseGain(self, operation, buyGroups):
-        opGroup = AssetGroup(operation)
+            buyPartial = sellingQuantity / investedBuyOperation['quantity']
+            operation['_stats']['profits']['netValue'] -= _operationNetValue(investedBuyOperation) * buyPartial
+            operation['_stats']['profits']['provisions'] += _valueOr(investedBuyOperation, 'provision', 0.0) * buyPartial
 
-        self._realisedGains.append({
-            "date": operation["date"],
-            "netGain": 0.0,
-            "provisions": opGroup.provision(opGroup.quantity)
-        })
+            if math.isclose(remainingQuantity, 0, abs_tol=1e-12):
+                return firstStillInvestedBuyId
 
-        while opGroup.quantity > 0:
-            quantity = min(opGroup.quantity, buyGroups[0].quantity)
-            self._realisedGains[-1]['netGain'] += opGroup.netPrice(quantity) - buyGroups[0].netPrice(quantity)
-            self._realisedGains[-1]['provisions'] += buyGroups[0].provision(quantity)
+        raise RuntimeError("Not enough bought quantity to sell")
 
-            if quantity >= buyGroups[0].quantity:
-                opGroup.quantity -= buyGroups[0].quantity
-                del buyGroups[0]
-            else:
-                buyGroups[0].quantity -= quantity
-                return
+    def _calculateSums(self):
+        self.data['_stillInvestedValue'] = 0.0
+        self.data['_totalProfits'] = {
+            'netValue': 0.0,
+            'provisions': 0.0
+        }
 
+        for operation in self.data['operations']:
+            quantity = _valueOr(operation['_stats'], 'stillInvestedQuantity', 0)
+            if quantity > 0:
+                self.data['_stillInvestedValue'] += operation['price'] * (quantity / operation['quantity']) * _valueOr(operation, 'currencyConversion', 1.0)
+
+            profits = _valueOr(operation['_stats'], 'profits', None)
+            if profits is not None:
+                self.data['_totalProfits']['netValue'] += profits['netValue']
+                self.data['_totalProfits']['provisions'] += profits['provisions']

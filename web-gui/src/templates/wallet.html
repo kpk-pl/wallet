@@ -46,12 +46,16 @@
             </td>
             <td data-title="Type">{{ asset.type }}</td>
             <td data-title="Category">{{ asset.subcategory if asset.subcategory else asset.category }}</td>
-            <td data-title="Market price" class="text-right">{{ asset.lastQuote.quote }} {{ asset.currency }}</td>
+            <td data-title="Market price" class="text-right">
+            {% if asset.lastQuote -%}
+              {{ asset.lastQuote.quote }} {{ asset.currency }}
+            {%- endif %}
+            </td>
             <td date-title="Change 3m" data-gain="{{ ((asset.lastQuote.quote - asset.quote3mAgo.quote) / asset.quote3mAgo.quote * 100) | round(2) if asset.lastQuote else 0 }}%"></td>
             <td data-title="Quantity">{{ asset.finalQuantity }}</td>
-            <td data-title="Investment" data-monetary="{{ asset._unrealisedInvestment | round(2) }} PLN"></td>
+            <td data-title="Investment" data-monetary="{{ asset._stillInvestedValue | round(2) }} PLN"></td>
             <td data-title="Net value" data-monetary="{{ asset._netValue | round(2) }} PLN"></td>
-            <td data-title="Gain" data-gain="{{ ((asset._netValue - asset._unrealisedInvestment) / asset._unrealisedInvestment * 100) | round(2) }}%"></td>
+            <td data-title="Gain" data-gain="{{ ((asset._netValue - asset._stillInvestedValue) / asset._stillInvestedValue * 100) | round(2) }}%"></td>
           </tr>
           {% endfor %}
           <tr>
@@ -61,9 +65,9 @@
             <td data-title="Market price" class="empty"></td>
             <td data-title="Change 3m" class="empty"></td>
             <td data-title="Quantity" class="last-empty"></td>
-            <td data-title="Investment" data-monetary="{{ assets | sum(attribute='_unrealisedInvestment') | round(2) }} PLN"></td>
+            <td data-title="Investment" data-monetary="{{ assets | sum(attribute='_stillInvestedValue') | round(2) }} PLN"></td>
             <td data-title="Net value" data-monetary="{{ assets | sum(attribute='_netValue') | round(2) }} PLN"></td>
-            <td data-title="Gain" data-gain="{{ ((assets | sum(attribute='_netValue') - (assets | sum(attribute='_unrealisedInvestment'))) / (assets | sum(attribute='_unrealisedInvestment')) * 100) | round(2) }}%"></td>
+            <td data-title="Gain" data-gain="{{ ((assets | sum(attribute='_netValue') - (assets | sum(attribute='_stillInvestedValue'))) / (assets | sum(attribute='_stillInvestedValue')) * 100) | round(2) }}%"></td>
           </tr>
         </tbody>
       </table>

@@ -120,6 +120,33 @@ def realizedProfits():
     assets = sorted([a.data for a in assets], key=lambda a: a['name'].lower())
     return render_template("realized-profits.html", assets=assets)
 
+@app.route('/summary/<int:year>')
+def summaryInYear():
+    pipeline = [
+      { '$match': { "operations.0.date": {'$gte': ISODate(f'{year}-01-01')}}},
+      { '$project': {
+          'name': 1,
+          'ticker': 1,
+          'institution': 1,
+          'currency': 1,
+          'link': 1,
+          'category': 1,
+          'subcategory': 1,
+          'operations': { '$filter': {
+              'input': '$operations',
+              'as': 'op',
+              'cond': {'$lt': ['$$op.date', ISODate(f'{year}-12-31')]}
+          }},
+          'quoteHistory': { '$filter': {
+              'input': '$quoteHistory',
+              'as': 'q',
+              'cond': { '$and': [
+                  { '$gt': ['$$q.timestamp', 1600] },
+                  { '$lt': ['$$q.timestamp', 100] }
+              ]}
+          }}
+      }}
+    ]
 
 @app.route('/asset/add', methods = ['GET'])
 def assetAdd():
@@ -201,9 +228,9 @@ def quote():
     return Response(json.dumps(response), mimetype="application/json")
 
 
-@app.route('/quotes')
+@app.route('/quotes', methods = ['GET', 'PUT'])
 def saveQuotes():
-    storeQuotes = (request.args.get('store') == 'true')
+    storeQuotes = (request.method == 'PUT')
 
     assets = list(db.assets.find({'link': {'$exists': True}}, {'_id': 1, 'name': 1, 'link': 1}))
     assetDict = { e['_id'] : e['link'] for e in assets }
