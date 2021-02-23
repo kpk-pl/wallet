@@ -1,0 +1,51 @@
+from flask import Flask, request, render_template, Response
+from pymongo import MongoClient
+from bson.son import SON
+from bson.objectid import ObjectId
+from multiprocessing import Pool
+import quotes, analyzer
+import json
+import time
+from datetime import datetime, timezone
+from dateutil.relativedelta import relativedelta
+from dateutil import parser
+import os
+
+
+@app.route('/realized-profits')
+def realizedProfits():
+    pipeline = [
+        { '$match': { 'operations': {'$elemMatch': {'type': "SELL"}}}}
+    ]
+
+    assets = [analyzer.Analyzer(asset) for asset in db.assets.aggregate(pipeline)]
+    assets = sorted([a.data for a in assets], key=lambda a: a['name'].lower())
+    return render_template("realized-profits.html", assets=assets)
+
+@app.route('/summary/<int:year>')
+def summaryInYear():
+    pipeline = [
+      { '$match': { "operations.0.date": {'$gte': ISODate(f'{year}-01-01')}}},
+      { '$project': {
+          'name': 1,
+          'ticker': 1,
+          'institution': 1,
+          'currency': 1,
+          'link': 1,
+          'category': 1,
+          'subcategory': 1,
+          'operations': { '$filter': {
+              'input': '$operations',
+              'as': 'op',
+              'cond': {'$lt': ['$$op.date', ISODate(f'{year}-12-31')]}
+          }},
+          'quoteHistory': { '$filter': {
+              'input': '$quoteHistory',
+              'as': 'q',
+              'cond': { '$and': [
+                  { '$gt': ['$$q.timestamp', 1600] },
+                  { '$lt': ['$$q.timestamp', 100] }
+              ]}
+          }}
+      }}
+    ]

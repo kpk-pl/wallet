@@ -1,3 +1,4 @@
 web-gui/venv/
-web-gui/src/__pycache__/
+web-gui/flaskr/__pycache__/
+*.pyc
 data/
