@@ -21,7 +21,7 @@ def create_app(test_config=None):
     from flaskr import db
     db.init_app(app)
 
-    from flaskr.handlers import assets, asset, wallet, quotes, quote
+    from flaskr.handlers import assets, asset, wallet, quotes, quote, results
     app.add_url_rule('/wallet', 'wallet', wallet.wallet, methods=['GET'])
     app.add_url_rule('/assets', 'assets', assets.assets, methods=['GET'])
     app.add_url_rule('/asset', 'asset', asset.asset, methods=['POST'])
@@ -29,5 +29,6 @@ def create_app(test_config=None):
     app.add_url_rule('/asset/receipt', 'asset.receipt', asset.asset_receipt, methods=['GET', 'POST'])
     app.add_url_rule('/quotes', 'quotes', quotes.quotes, methods=['GET', 'PUT'])
     app.add_url_rule('/quote', 'quote', quote.quote, methods=['GET'])
+    app.add_url_rule('/results/<int:year>', 'results', results.results, methods=['GET'])
 
     return app

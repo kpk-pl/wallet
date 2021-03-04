@@ -22,7 +22,7 @@ class Analyzer(object):
         self.data['_investmentStart'] = self.data['operations'][0]['date']
         self.data['_investmentEnd'] = self.data['operations'][-1]['date'] if self.data['finalQuantity'] != 0 else None
 
-    def addQuoteInfo(self, currencies):
+    def addCurrentQuoteInfo(self, currencies):
         if _valueOr(self.data, 'lastQuote', None) is not None:
             self.data['_netValue'] = self.data['finalQuantity'] * self.data['lastQuote']['quote']
         else:
@@ -31,6 +31,24 @@ class Analyzer(object):
         if self.data['currency'] != 'PLN':
             currencyConv = currencies[self.data['currency']]['quote']
             self.data['_netValue'] *= currencyConv
+
+    def addPeriodInfo(self, periodFrom, periodTo, currencyQuotes):
+        fromOperationId = -1
+        while fromOperationId < len(self.data['operations'])-1:
+            if self.data['operations'][fromOperationId + 1]['date'] > periodFrom:
+                break
+            fromOperationId += 1
+
+        if fromOperationId < 0:  # asset has been first bought in the checked period
+            pass
+
+        fromQuantity = self.data['operations'][fromOperationId]['finalQuantity'] if fromOperationId >= 0 else 0
+        toQuantity = self.data['operations'][-1]['finalQuantity']
+
+        print("addPeriodInfo from {} to {}".format(periodFrom, periodTo))
+        print("fromOperationId = {}".format(fromOperationId))
+        from flask import json
+        print(json.dumps(self.data, indent=2))
 
     def _calculateRolling(self):
         firstStillInvestedBuyId = 0
@@ -81,7 +99,7 @@ class Analyzer(object):
 
         for operation in self.data['operations']:
             quantity = _valueOr(operation['_stats'], 'stillInvestedQuantity', 0)
-            if quantity > 0:
+            if not math.isclose(quantity, 0, abs_tol=1e-12):
                 self.data['_stillInvestedValue'] += operation['price'] * (quantity / operation['quantity']) * _valueOr(operation, 'currencyConversion', 1.0)
 
             profits = _valueOr(operation['_stats'], 'profits', None)

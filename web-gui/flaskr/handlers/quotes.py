@@ -19,8 +19,6 @@ def quotes():
         currencies = list(db.get_db().currencies.find({}, {'_id': 1, 'name': 1, 'link': 1}))
         currenciesDict = { e['_id'] : e['link'] for e in currencies }
 
-        timestamp = int(time.time())
-
         quotes = {**assetDict, **currenciesDict}
         with Pool(len(quotes)) as pool:
             quotes = dict(pool.map(_getQuote, quotes.items()))
@@ -30,7 +28,10 @@ def quotes():
             _id = asset['_id']
             if storeQuotes:
                 query = {'_id': _id}
-                update = {'$push': {'quoteHistory': {'timestamp': timestamp, 'quote': quotes[_id]['quote']}}}
+                update = {'$push': {'quoteHistory': {
+                    'timestamp': quotes[_id]['timestamp'],
+                    'quote': quotes[_id]['quote']
+                }}}
                 db.get_db().assets.update(query, update)
             response.append({'name': asset['name'], 'quote': quotes[_id]})
 
@@ -38,7 +39,10 @@ def quotes():
             _id = asset['_id']
             if storeQuotes:
                 query = {'_id': _id}
-                update = {'$push': {'quoteHistory': {'timestamp': timestamp, 'quote': quotes[_id]['quote']}}}
+                update = {'$push': {'quoteHistory': {
+                    'timestamp': quotes[_id]['timestamp'],
+                    'quote': quotes[_id]['quote']
+                }}}
                 db.get_db().currencies.update(query, update)
             response.append({'name': asset['name'], 'quote': quotes[_id]})
 

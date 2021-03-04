@@ -24,28 +24,3 @@ def realizedProfits():
 
 @app.route('/summary/<int:year>')
 def summaryInYear():
-    pipeline = [
-      { '$match': { "operations.0.date": {'$gte': ISODate(f'{year}-01-01')}}},
-      { '$project': {
-          'name': 1,
-          'ticker': 1,
-          'institution': 1,
-          'currency': 1,
-          'link': 1,
-          'category': 1,
-          'subcategory': 1,
-          'operations': { '$filter': {
-              'input': '$operations',
-              'as': 'op',
-              'cond': {'$lt': ['$$op.date', ISODate(f'{year}-12-31')]}
-          }},
-          'quoteHistory': { '$filter': {
-              'input': '$quoteHistory',
-              'as': 'q',
-              'cond': { '$and': [
-                  { '$gt': ['$$q.timestamp', 1600] },
-                  { '$lt': ['$$q.timestamp', 100] }
-              ]}
-          }}
-      }}
-    ]

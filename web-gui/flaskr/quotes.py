@@ -23,7 +23,7 @@ def _getBiznesRadar(url):
     if timeHtml:
         timeHtml = timeHtml.time
         if timeHtml:
-            result['timestamp'] = dateutil.parser.parse(timeHtml['datetime']).timestamp()
+            result['timestamp'] = dateutil.parser.parse(timeHtml['datetime'])
 
     headerHtml = soup.find(id="fullname-container")
     if headerHtml:
@@ -86,10 +86,10 @@ def _getInvesting(url):
             if timeText:
                 if len(timeText) == 8:
                     timeParsed = datetime.strptime(timeText, "%H:%M:%S")
-                    result['timestamp'] = datetime.combine(date.today(), timeParsed.time()).timestamp()
+                    result['timestamp'] = datetime.combine(date.today(), timeParsed.time())
                 elif len(timeText) == 5:
                     timeParsed = datetime.strptime(timeText, "%d/%m")
-                    result['timestamp'] = datetime.combine(timeParsed, time()).timestamp()
+                    result['timestamp'] = datetime.combine(timeParsed, time())
 
     return result
 

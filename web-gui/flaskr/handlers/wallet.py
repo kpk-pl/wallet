@@ -9,38 +9,41 @@ def _getQuote(item):
     return (item[0], quotes.getQuote(item[1]))
 
 
+def _getPipeline():
+    threeMonthsAgo = datetime.now() - relativedelta(months=3)
+    threeMonthsAgo = threeMonthsAgo.replace(tzinfo=timezone.utc)
+
+    pipeline = []
+
+    pipeline.append({ "$match" : {
+        "operations": { "$exists": True }
+    }})
+
+    pipeline.append({ "$addFields" : {
+        "finalQuantity": { "$last": "$operations.finalQuantity" },
+        "lastQuote": { "$last": "$quoteHistory" },
+        "quotesAfter3m": { "$filter": {
+                 "input": "$quoteHistory",
+                 "as": "item",
+                 "cond": { "$gte": ["$$item.timestamp", threeMonthsAgo] }
+        }}
+    }})
+
+    pipeline.append({ "$addFields" : {
+        "quote3mAgo": { "$first": "$quotesAfter3m" }
+    }})
+
+    pipeline.append({ "$match" : { "finalQuantity": { "$ne": 0 } } })
+    pipeline.append({ "$unset" : ["quoteHistory", "quotesAfter3m"] })
+
+    return pipeline
+
+
 def wallet():
     if request.method == 'GET':
         queryLiveQuotes = (request.args.get('liveQuotes') == 'true')
-        threeMonthsAgo = datetime.now() - relativedelta(months=3)
-        threeMonthsAgo = threeMonthsAgo.replace(tzinfo=timezone.utc).timestamp()
 
-        pipeline = [
-            {
-                "$match" : {
-                    "operations": { "$exists": True }
-                 }
-            },
-            {
-                "$addFields" : {
-                    "finalQuantity": { "$last": "$operations.finalQuantity" },
-                    "lastQuote": { "$last": "$quoteHistory" },
-                    "quotesAfter3m": { "$filter": {
-                             "input": "$quoteHistory",
-                             "as": "item",
-                             "cond": { "$gte": ["$$item.timestamp", threeMonthsAgo] }
-                    }}
-                }
-            },
-            {
-                "$addFields" : {
-                    "quote3mAgo": { "$first": "$quotesAfter3m" }
-                }
-            },
-            { "$match" : { "finalQuantity": { "$ne": 0 } } },
-            { "$unset" : ["quoteHistory", "quotesAfter3m"] }
-        ]
-        assets = [analyzer.Analyzer(asset) for asset in db.get_db().assets.aggregate(pipeline)]
+        assets = [analyzer.Analyzer(asset) for asset in db.get_db().assets.aggregate(_getPipeline())]
 
         currenciesPipeline = [
             { "$addFields" : { "lastQuote": { "$last": "$quoteHistory" } } },
@@ -66,7 +69,7 @@ def wallet():
             currencies[currency] = currencies[currency]['lastQuote']
 
         for asset in assets:
-            asset.addQuoteInfo(currencies)
+            asset.addCurrentQuoteInfo(currencies)
 
         categoryAllocation = {}
         for asset in assets:

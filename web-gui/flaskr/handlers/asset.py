@@ -70,7 +70,7 @@ def asset_receipt():
             asset = db.get_db().assets.find_one(query)
             if asset and 'quoteHistory' not in asset:
                 update['$push']['quoteHistory'] = {
-                    'timestamp': operation['date'].timestamp(),
+                    'timestamp': operation['date'],
                     'quote': operation['price'] / operation['quantity']
                 }
 
