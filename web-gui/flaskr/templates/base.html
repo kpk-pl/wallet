@@ -1,27 +1,64 @@
 <!doctype html>
-<title>{% block title %}{% endblock %}</title>
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}"/>
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='table.css') }}"/>
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='form.css') }}"/>
-{% block links %}{% endblock %}
-<script src="https://kit.fontawesome.com/2106e6faed.js" crossorigin="anonymous"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='jquery-3.5.1.min.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='jquery.validate.min.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='jquery.validate.methods.js') }}"></script>
-{% block scripts %}{% endblock %}
-<nav>
-  <ul>
-    <li><a href="{{ url_for('wallet') }}">Wallet</a></li>
-    <li><a href="{{ url_for('assets') }}">Assets</a></li>
-    <li><a href="{{ url_for('asset.add') }}">Add asset</a></li>
-  </ul>
-</nav>
-<section class="content">
-  <header>
-    {% block header %}{% endblock %}
-  </header>
-  {% for msg in get_flashed_messages() %}
-    <div class="flash">{{ msg }}</div>
-  {% endfor %}
-  {% block content %}{% endblock %}
-</section>
+<html lang="en">
+<head>
+  <title>{% block title %}{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}"/>
+  {% block links %}{% endblock %}
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/adminlte/css/adminlte.min.css') }}"/>
+
+  {% block scripts %}{% endblock %}
+</head>
+
+<body class="hold-transition layout-top-nav">
+  <div class="wrapper">
+    <nav class="main-header navbar navbar-light navbar-white navbar-expand-md">
+      <div class="container">
+        <div id="navbarCollapse" class="collapse navbar-collapse order-3">
+          <ul class="navbar-nav">
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('wallet') }}">Wallet</a></li>
+            <li class="nav-item dropdown">
+              <a id="navAssetsDropdown" class="nav-link dropdown-toggle" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Assets</a>
+              <ul class="dropdown-menu border-0 shadow" aria-labelledby="navAssetsDropdown">
+                <li><a class="dropdown-item" href="{{ url_for('assets') }}">List</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('asset.add') }}">Add</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <div class="content-wrapper">
+      <section class="content-header">
+        <div class="container">
+          <div class="row mb-2">
+            <div class="col-sm-12">
+              <h1 class="m-0">
+                {% block header %}{% endblock %}
+              </h1>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content">
+        {% for msg in get_flashed_messages() %}
+          <div class="flash">{{ msg }}</div>
+        {% endfor %}
+
+        {% block content %}{% endblock %}
+      </section>
+    </div>
+  </div>
+
+  <script src="https://kit.fontawesome.com/2106e6faed.js" crossorigin="anonymous"></script>
+  <script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery/jquery.min.js') }}"></script>
+  <script type="text/javascript" src="{{ url_for('static', filename='plugins/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+  {% block plugins_scripts %}{% endblock %}
+  <script type="text/javascript" src="{{ url_for('static', filename='plugins/adminlte/js/adminlte.min.js') }}"></script>
+
+  {% block user_scripts %}{% endblock %}
+</body>
+</html>

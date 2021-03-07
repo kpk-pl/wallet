@@ -1,26 +1,3 @@
-@import url(https://fonts.googleapis.com/css?family=Roboto:400,500,700,300,100);
-
-body {
-  font-family: "Roboto", helvetica, arial, sans-serif;
-  font-weight: 400;
-  font-size: 12px;
-  text-rendering: optimizeLegibility;
-}
-
-#allocationChart {
-  max-width: 400px;
-  margin: auto;
-}
-
-div.section {
-  padding-bottom: 10px;
-}
-
-h1 {
-  text-align: center;
-  color: #424141;
-}
-
 a.imagelink {
   text-decoration: none;
   color: inherit;
@@ -29,4 +6,16 @@ a.imagelink {
 /* FontAwesome fix */
 .fa-fw {
   height: 1em;
+}
+
+img.link {
+  vertical-align: middle;
+}
+
+.color-gain-positive {
+  color: green;
+}
+
+.color-gain-negative {
+  color: red;
 }
