@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{% block header %}Wallet{% endblock %}{% endblock %}
+{% block title %}Wallet{% endblock %}
 
 {% block links %}
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
@@ -96,7 +96,7 @@
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
-      <div class="card">
+      <div class="card card-primary">
         <div class="card-header">
           <h3 class="card-title">Open assets</h3>
         </div>
@@ -163,7 +163,7 @@
   </div>
   <div class="row">
     <div class="col-12">
-      <div class="card">
+      <div class="card card-primary">
         <div class="card-header">
           <h3 class="card-title">Asset allocation</h3>
         </div>

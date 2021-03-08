@@ -2,45 +2,84 @@
 
 {% block title %}Asset list{% endblock %}
 
+{% block links %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
+{% endblock %}
+
+{% block plugins_scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables/jquery.dataTables.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
+{% endblock %}
+
+{% block user_scripts %}
+<script>
+  $(function () {
+    $('#assetsTable').DataTable({
+      "paging": false,
+      "lengthChange": false,
+      "searching": false,
+      "ordering": true,
+      "info": false,
+      "autoWidth": false,
+      "responsive": true,
+    });
+  });
+</script>
+{% endblock %}
+
 {% block content %}
-<div class="section">
-  <table class="table-fill">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Institution</th>
-        <th>Type</th>
-        <th>Category</th>
-        <th>Region</th>
-        <th>Currency</th>
-        <th>Quantity</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for asset in assets | sort(attribute='name') %}
-      <tr>
-        <td data-title="Name">
-          {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
-          {% if asset.link -%}
-          <a href="{{asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="External asset site">
-            <i class="fas fa-chart-line fa-fw fa-pull-right"></i>
-          </a>
-          {% else -%}
-          <i class="fas fa-fw fa-pull-right"></i>
-          {% endif %}
-          <a href="{{ url_for('asset.receipt', id=asset._id) }}" class="imagelink" title="Register buy or sell">
-            <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
-          </a>
-        </td>
-        <td data-title="Institution">{{ asset.institution }}</td>
-        <td data-title="Type">{{ asset.type }}</td>
-        <td data-title="Category">{{ asset.subcategory if asset.subcategory else asset.category }}</td>
-        <td data-title="Region">{{ asset.region }}</td>
-        <td data-title="Currency">{{ asset.currency }}</td>
-        <td data-title="Quantity">{{ asset.finalQuantity or 0 }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Assets</h3>
+        </div>
+        <div class="card-body">
+					<table id="assetsTable" class="table table-bordered table-striped table-hover">
+            <thead role="row">
+              <tr>
+                <th>Name</th>
+                <th>Institution</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Region</th>
+                <th>Currency</th>
+                <th>Quantity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for asset in assets | sort(attribute='name') %}
+              <tr>
+                <td data-title="Name">
+                  {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
+                  {% if asset.link -%}
+                  <a href="{{asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="External asset site">
+                    <i class="fas fa-chart-line fa-fw fa-pull-right"></i>
+                  </a>
+                  {% else -%}
+                  <i class="fas fa-fw fa-pull-right"></i>
+                  {% endif %}
+                  <a href="{{ url_for('asset.receipt', id=asset._id) }}" class="imagelink" title="Register buy or sell">
+                    <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
+                  </a>
+                </td>
+                <td data-title="Institution">{{ asset.institution }}</td>
+                <td data-title="Type">{{ asset.type }}</td>
+                <td data-title="Category">{{ asset.subcategory if asset.subcategory else asset.category }}</td>
+                <td data-title="Region">{{ asset.region }}</td>
+                <td data-title="Currency">{{ asset.currency }}</td>
+                <td data-title="Quantity">{{ asset.finalQuantity or 0 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+					</table>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
