@@ -14,7 +14,7 @@ def _getPipeline(year):
 
     firstDay = datetime(year, 1, 1)
     pipeline.append({ '$project': {
-        '_id': 0,
+        '_id': 1,
         'name': 1,
         'ticker': 1,
         'institution': 1,

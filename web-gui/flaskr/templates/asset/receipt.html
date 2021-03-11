@@ -8,6 +8,7 @@
 
 {% block plugins_scripts %}
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery-validation/jquery.validate.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='jquery.validate.methods.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js') }}"></script>
 {% endblock %}
@@ -111,7 +112,7 @@ $.validator.setDefaults({
 });
 $("form").validate({
   rules: {
- /*   date: {
+    date: {
       isDate: true
     },
     currencyConversion: {
@@ -122,7 +123,7 @@ $("form").validate({
     },
     quantity: {
       greaterThan: 0
-    }*/
+    }
   },
   errorElement: 'span',
   errorPlacement: function (error, element) {

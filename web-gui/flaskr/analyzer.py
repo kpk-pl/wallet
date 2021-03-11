@@ -1,5 +1,6 @@
 import math
 
+
 def _valueOr(dictionary, key, default):
     return dictionary[key] if key in dictionary else default
 
@@ -32,6 +33,32 @@ class Analyzer(object):
             currencyConv = currencies[self.data['currency']]['quote']
             self.data['_netValue'] *= currencyConv
 
+    def _findQuote(assetQuotes, timepoint):
+        return None
+
+    def _findValueFromQuotes(self, timepoint, currencyQuotes):
+        value = Analyzer._findQuote(self.data['quoteHistory'], timepoint)
+        if not value:
+            self.data['_periodStats']['errors'].append({
+                'type': 'asset',
+                'id': self.data['_id'],
+                'timestamp': timepoint
+            })
+            return None
+
+        if self.data['currency'] != 'PLN':
+            conversion = Analyzer._findQuote(currencyQuotes[self.data['currency']], timepoint)
+            if not conversion:
+                self.data['_periodsStats']['errors'].append({
+                    'type': 'currency',
+                    'id': currencyQuotes[self.data['currency']]['_id'],
+                    'timestamp': timestamp
+                })
+                return None
+            value *= conversion
+
+        return value
+
     def addPeriodInfo(self, periodFrom, periodTo, currencyQuotes):
         fromOperationId = -1
         while fromOperationId < len(self.data['operations'])-1:
@@ -39,16 +66,36 @@ class Analyzer(object):
                 break
             fromOperationId += 1
 
-        if fromOperationId < 0:  # asset has been first bought in the checked period
-            pass
+        self.data['_periodStats'] = {
+            'firstOperation': fromOperationId + 1,
+            'errors': []
+        }
 
-        fromQuantity = self.data['operations'][fromOperationId]['finalQuantity'] if fromOperationId >= 0 else 0
-        toQuantity = self.data['operations'][-1]['finalQuantity']
+        if fromOperationId < 0:  # asset has been initialized in the checked period, so it is a new asset
+            self.data['_periodStats']['initialQuantity'] = 0
+            self.data['_periodStats']['initialNetValue'] = 0
+        else:  # asset existed before the checked period
+            self.data['_periodStats']['initialQuantity'] = self.data['operations'][fromOperationId]['finalQuantity']
+            self.data['_periodStats']['initialNetValue'] = self._findValueFromQuotes(periodFrom, currencyQuotes)
 
-        print("addPeriodInfo from {} to {}".format(periodFrom, periodTo))
-        print("fromOperationId = {}".format(fromOperationId))
-        from flask import json
-        print(json.dumps(self.data, indent=2))
+        self.data['_periodStats']['finalQuantity'] = self.data['operations'][-1]['finalQuantity']
+        if self.data['_periodStats']['finalQuantity'] == 0:
+            self.data['_periodStats']['finalNetValue'] = 0
+        else:
+            self.data['_periodStats']['finalNetValue'] = self._findValueFromQuotes(periodTo, currencyQuotes)
+
+        self.data['_periodStats']['profits'] = {
+            'netValue': 0,
+            'provisions': 0
+        }
+
+        for operation in self.data['operations'][self.data['_periodStats']['firstOperation']:]:
+            if 'profits' in operation['_stats']:
+                self.data['_periodStats']['profits']['netValue'] += operation['_stats']['profits']['netValue']
+                self.data['_periodStats']['profits']['provisions'] += operation['_stats']['profits']['provisions']
+
+        from bson.json_util import dumps
+        print(dumps(self.data, indent=2))
 
     def _calculateRolling(self):
         firstStillInvestedBuyId = 0
