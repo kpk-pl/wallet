@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}Add quote for {{ asset.name }}{% endblock %}
+
+{% block links %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css') }}">
+{% endblock %}
+
+{% block plugins_scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery-validation/jquery.validate.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='jquery.validate.methods.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js') }}"></script>
+{% endblock %}
+
+{% block user_scripts %}
+<script type="text/javascript">
+$(function () {
+  $('#f-date-group').datetimepicker({
+    locale: 'pl',
+    format: 'YYYY-MM-DD HH:mm:ss',
+  });
+})
+</script>
+<script type="text/javascript">
+$.validator.setDefaults({
+  submitHandler: function() {
+    $.post('/quote', $('form').serialize(), function(data) {
+      document.location.href = "{{ ref }}"
+    })
+  }
+});
+$("form").validate({
+  rules: {
+    timestamp: {
+      isDate: true
+    }
+  },
+  errorElement: 'span',
+  errorPlacement: function (error, element) {
+          error.addClass('invalid-feedback');
+          element.closest('.form-group').append(error);
+  },
+  highlight: function (element, errorClass, validClass) {
+          $(element).addClass('is-invalid');
+  },
+  unhighlight: function (element, errorClass, validClass) {
+          $(element).removeClass('is-invalid');
+  },
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">{{ asset.name }}</h3>
+          <div class="card-tools">
+            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <dl class="row">
+            <dt class="col-sm-4">Name</dt>
+            <dd class="col-sm-8">{{ asset.name }}</dd>
+            {% if asset.ticker -%}
+            <dt class="col-sm-4">Ticker</dt>
+            <dd class="col-sm-8">{{ asset.ticker }}</dd>
+            {%- endif %}
+            {% if asset.lastQuote -%}
+            <dt class="col-sm-4">Quote source</dt>
+            <dd class="col-sm-8">
+              {% if asset.link %}
+              <a href="{{ asset.link }}" target="_blank" rel="noopener noreferrer">{{ asset.link }}</a>
+              {% endif %}
+            </dd>
+            <dt class="col-sm-4">Last quote</dt>
+            <dd class="col-sm-8">{{ asset.lastQuote.quote }} {{ asset.currency }}</dd>
+            {%- endif %}
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Add quote</h3>
+        </div>
+        <form method="post" action="">
+          <input type="hidden" name="_id" value="{{ asset._id }}"/>
+          <input type="hidden" name="assetType" value="{{ assetType }}"/>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-6">
+                <div class="form-group">
+                  <label for="f-timestamp">Timestamp</label>
+                  <div class="input-group date" id="f-date-group" data-target-input="nearest">
+                    <input type="text" id="f-timestamp" name="timestamp" class="form-control datetimepicker-input" data-target="#f-date-group" value="{{ date }}" required/>
+                    <div class="input-group-append" data-target="#f-date-group" data-toggle="datetimepicker">
+                      <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="form-group">
+                  <label for="f-quote">Quote</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">{{ 'PLN' if assetType == 'currencies' else asset.currency }}</span>
+                    </div>
+                    <input type="number" value="0" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-quote" name="quote" required/>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-primary" type="submit">Submit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

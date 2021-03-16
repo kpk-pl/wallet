@@ -1,7 +1,9 @@
 from flask import render_template, request
 from flaskr import db, analyzer
+from flaskr.analyzers.period import Period
 import time
 from datetime import datetime, date
+from bson.objectid import ObjectId
 
 
 def _getPipeline(year):
@@ -12,7 +14,7 @@ def _getPipeline(year):
     # include only those assets that were created up to this year
     pipeline.append({ '$match': { "operations.0.date": {'$lte': nextYear}}})
 
-    firstDay = datetime(year, 1, 1)
+#    pipeline.append({ "$match" : { "_id" : ObjectId("60153b027e1237164d0e0f97") } })
     pipeline.append({ '$project': {
         '_id': 1,
         'name': 1,
@@ -21,6 +23,8 @@ def _getPipeline(year):
         'currency': 1,
         'link': 1,
         'category': 1,
+        'subcategory': 1,
+        'type' : 1,
         'subcategory': 1,
         'operations': { '$filter': {
             'input': '$operations',
@@ -31,16 +35,16 @@ def _getPipeline(year):
             'input': '$quoteHistory',
             'as': 'q',
             'cond': { '$and': [
-                { '$gte': ['$$q.timestamp', firstDay] },
-                { '$lt': ['$$q.timestamp', nextYear] }
+                { '$gte': ['$$q.timestamp', datetime(year-1, 12, 27)] },
+                { '$lt': ['$$q.timestamp', datetime(year+1, 1, 5)] }
             ]}
         }}
     }})
 
-    pipeline.append({ '$addFields': {
-        'finalQuantity': { '$last': '$operations.finalQuantity' },
-        'lastQuote': { '$last' : '$quoteHistory' }
-    }})
+#    pipeline.append({ '$addFields': {
+#        'finalQuantity': { '$last': '$operations.finalQuantity' },
+#        'lastQuote': { '$last' : '$quoteHistory' }
+#    }})
 
     return pipeline
 
@@ -48,17 +52,15 @@ def _getPipeline(year):
 def _getCurrencyPipeline(year):
     pipeline = []
 
-    firstDay = datetime(year, 1, 1)
-    nextYear = datetime(year + 1, 1, 1)
     pipeline.append({ '$project': {
-        '_id': 0,
+        '_id': 1,
         'name': 1,
         'quoteHistory': { '$filter': {
             'input': '$quoteHistory',
             'as': 'q',
             'cond': { '$and': [
-                { '$gte': ['$$q.timestamp', firstDay] },
-                { '$lt': ['$$q.timestamp', nextYear] }
+                { '$gte': ['$$q.timestamp', datetime(year-1, 12, 27)] },
+                { '$lt': ['$$q.timestamp', datetime(year+1, 1, 5)] }
             ]}
         }}
     }})
@@ -71,5 +73,10 @@ def results(year):
         assets = [analyzer.Analyzer(asset) for asset in db.get_db().assets.aggregate(_getPipeline(year))]
         currencies = { c['name'] : c for c in db.get_db().currencies.aggregate(_getCurrencyPipeline(year)) }
 
+        assets = [a.data for a in assets]
+
         for asset in assets:
-            asset.addPeriodInfo(datetime(year, 1, 1), datetime(year+1, 1, 1), currencies)
+            period = Period(asset, currencies)
+            period.calc(datetime(year, 1, 1), datetime(year+1, 1, 1))
+
+        return render_template("results.html", year=year, assets=assets)

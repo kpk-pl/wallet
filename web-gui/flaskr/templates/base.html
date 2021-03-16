@@ -26,6 +26,14 @@
                 <li><a class="dropdown-item" href="{{ url_for('asset.add') }}">Add</a></li>
               </ul>
             </li>
+            <li class="nav-item dropdown">
+              <a id="navResultsDropdown" class="nav-link dropdown-toggle" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Results</a>
+              <ul class="dropdown-menu border-0 shadow" aria-labelledby="navResultsDropdown">
+                <li><a class="dropdown-item" href="{{ url_for('results', year='2019') }}">2019</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('results', year='2020') }}">2020</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('results', year='2021') }}">2021</a></li>
+              </ul>
+            </li>
           </ul>
         </div>
       </div>

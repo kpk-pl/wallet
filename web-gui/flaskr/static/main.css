@@ -19,3 +19,7 @@ img.link {
 .color-gain-negative {
   color: red;
 }
+
+tr.warning-row {
+  background-color: rgba(255,193,7,.9) !important;
+}
