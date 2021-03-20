@@ -46,6 +46,26 @@ def _getBiznesRadar(url):
     return result
 
 
+def _investingNameHeader(nameHeader):
+    nameTickerRe = re.compile(r"(.*?)\(([A-Z0-9]+)\)(?!.*\([A-Z0-9]+\))")
+
+    name = None
+    ticker = None
+
+    if nameHeader:
+        name = nameHeader.strip()
+        nameTickerMatch = nameTickerRe.fullmatch(name)
+        if nameTickerMatch:
+            if nameTickerMatch.group(1):
+                name = nameTickerMatch.group(1).strip()
+            if nameTickerMatch.group(2):
+                ticker = nameTickerMatch.group(2).strip()
+
+    return name, ticker
+
+# TODO: Refactor this copy-paste hell
+# TODO: Need to figure out some gracefull exception handling here when it's impossible to parse something
+# because now the whole query just fails
 def _getInvesting(url):
     result = {}
     if 'equities' in url:
@@ -53,23 +73,24 @@ def _getInvesting(url):
     elif 'etfs' in url:
         result['type'] = 'ETF'
 
-    nameTickerRe = re.compile(r"(.*?)\(([A-Z0-9]+)\)(?!.*\([A-Z0-9]+\))")
     html = requests.get(url, headers={"User-Agent" : "Mozilla/5.0"}).text
     soup = BeautifulSoup(html, 'html.parser')
 
+    name = None
+    ticker = None
+
     nameHeader = soup.select('.instrumentHead > h1')
     if len(nameHeader) > 0:
-        nameHeader = nameHeader[0].text
-        if nameHeader:
-            nameHeader = nameHeader.strip()
-            nameTickerMatch = nameTickerRe.fullmatch(nameHeader)
-            if nameTickerMatch:
-                if nameTickerMatch.group(1):
-                    result['name'] = nameTickerMatch.group(1).strip()
-                if nameTickerMatch.group(2):
-                    result['ticker'] = nameTickerMatch.group(2).strip()
-            else:
-                result['name'] = nameHeader
+        name, ticker = _investingNameHeader(nameHeader[0].text)
+    else:
+        nameHeader = soup.select('h1[class*="instrument-header_title__"]')
+        if len(nameHeader) > 0:
+            name, ticker = _investingNameHeader(nameHeader[0].text)
+
+    if name:
+        result['name'] = name
+    if ticker:
+        result['ticker'] = ticker
 
     quoteNode = soup.find(id="last_last")
     if quoteNode:
@@ -83,6 +104,23 @@ def _getInvesting(url):
 
         if len(bottomSpans) >= 2:
             timeText = bottomSpans[1].text
+            if timeText:
+                if len(timeText) == 8:
+                    timeParsed = datetime.strptime(timeText, "%H:%M:%S")
+                    result['timestamp'] = datetime.combine(date.today(), timeParsed.time())
+                elif len(timeText) == 5:
+                    timeParsed = datetime.strptime(timeText, "%d/%m")
+                    result['timestamp'] = datetime.combine(timeParsed, time())
+    else:
+        quoteNode = soup.select('span[class*="instrument-price_last__"]')
+        if len(quoteNode):
+            result['quote'] = float(quoteNode[0].text.replace(".", "").replace(",", '.'))
+        quoteCurrency = soup.select('div[class*="instrument-metadata_currency__"] > span')
+        if len(quoteCurrency) >= 2:
+            result['currency'] = quoteCurrency[1].text
+        quoteTimestamp = soup.select('div[class*="instrument-metadata_time__"] > time')
+        if len(quoteTimestamp):
+            timeText = quoteTimestamp[0].text
             if timeText:
                 if len(timeText) == 8:
                     timeParsed = datetime.strptime(timeText, "%H:%M:%S")
