@@ -22,6 +22,10 @@ def asset_add():
         return render_template("asset/add.html")
 
 
+# TODO: need to handle buying more of an asset that do not have 
+# URI and realtime tracking of quotes
+# probably just calculate average between last quote/quantity
+# and the ones that is being bought?
 def asset_receipt():
     if request.method == 'GET':
         id = request.args.get('id')

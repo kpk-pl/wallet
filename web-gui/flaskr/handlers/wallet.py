@@ -1,5 +1,9 @@
 from flask import render_template, request, json
-from flaskr import db, analyzer, quotes
+
+from flaskr import db, quotes
+from flaskr.analyzers.profits import Profits
+from flaskr.analyzers.value import Value
+
 from datetime import datetime, timezone
 from dateutil.relativedelta import relativedelta
 from multiprocessing import Pool
@@ -42,8 +46,10 @@ def _getPipeline():
 def wallet():
     if request.method == 'GET':
         queryLiveQuotes = (request.args.get('liveQuotes') == 'true')
+        debug = bool(request.args.get('debug'))
 
-        assets = [analyzer.Analyzer(asset) for asset in db.get_db().assets.aggregate(_getPipeline())]
+        assets = list(db.get_db().assets.aggregate(_getPipeline()))
+        assets = [Profits(asset)() for asset in assets]
 
         currenciesPipeline = [
             { "$addFields" : { "lastQuote": { "$last": "$quoteHistory" } } },
@@ -52,7 +58,7 @@ def wallet():
         currencies = { c['name'] : c for c in db.get_db().currencies.aggregate(currenciesPipeline) }
 
         if queryLiveQuotes:
-            liveQuotes = { a.data['name'] : a.data['link'] for a in assets if 'link' in a.data }
+            liveQuotes = { a['name'] : a['link'] for a in assets if 'link' in a }
             liveCurrencies = { "__currency_" + name : c['link'] for name, c in currencies.items()}
             liveQuotes = {**liveQuotes, **liveCurrencies}
 
@@ -62,21 +68,19 @@ def wallet():
             for name in currencies.keys():
                 currencies[name]['lastQuote'] = liveQuotes["__currency_" + name]
             for asset in assets:
-                if asset.data['name'] in liveQuotes:
-                    asset.data['lastQuote'] = liveQuotes[asset.data['name']]
+                if asset['name'] in liveQuotes:
+                    asset['lastQuote'] = liveQuotes[asset['name']]
 
         for currency in currencies.keys():
             currencies[currency] = currencies[currency]['lastQuote']
 
-        for asset in assets:
-            asset.addCurrentQuoteInfo(currencies)
+        assets = [Value(asset, currencies)() for asset in assets]
 
         categoryAllocation = {}
         for asset in assets:
-            if asset.data['category'] not in categoryAllocation:
-                categoryAllocation[asset.data['category']] = asset.data['_netValue']
+            if asset['category'] not in categoryAllocation:
+                categoryAllocation[asset['category']] = asset['_netValue']
             else:
-                categoryAllocation[asset.data['category']] += asset.data['_netValue']
+                categoryAllocation[asset['category']] += asset['_netValue']
 
-        assets = sorted([a.data for a in assets], key=lambda a: a['name'].lower())
-        return render_template("wallet.html", assets=assets, allocation=json.dumps(categoryAllocation))
+        return render_template("wallet.html", assets=assets, allocation=json.dumps(categoryAllocation), showData=debug)

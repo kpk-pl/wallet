@@ -1,5 +1,6 @@
 from flask import render_template, request
-from flaskr import db, analyzer
+from flaskr import db
+from flaskr.analyzers.profits import Profits
 from flaskr.analyzers.period import Period
 import time
 from datetime import datetime, date
@@ -70,13 +71,13 @@ def _getCurrencyPipeline(year):
 
 def results(year):
     if request.method == 'GET':
-        assets = [analyzer.Analyzer(asset) for asset in db.get_db().assets.aggregate(_getPipeline(year))]
+        assets = [Profits(asset)() for asset in db.get_db().assets.aggregate(_getPipeline(year))]
         currencies = { c['name'] : c for c in db.get_db().currencies.aggregate(_getCurrencyPipeline(year)) }
 
-        assets = [a.data for a in assets]
+        periodEnd = min(datetime(year+1, 1, 1), datetime.now())
 
         for asset in assets:
             period = Period(asset, currencies)
-            period.calc(datetime(year, 1, 1), datetime(year+1, 1, 1))
+            period.calc(datetime(year, 1, 1), periodEnd)
 
         return render_template("results.html", year=year, assets=assets)

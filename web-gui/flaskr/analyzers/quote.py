@@ -10,7 +10,13 @@ class Quote(object):
         self.currencyQuotes = currencyQuotes
 
     def __call__(self, timepoint, errors):
-        value = Quote._findQuote(self.data['quoteHistory'], timepoint)
+        if 'url' in self.data:
+            value = Quote._findQuote(self.data['quoteHistory'], timepoint)
+        elif self.data['operations'][-1]['finalQuantity'] > 0 and '_stillInvestedValue' in self.data:
+            value = self.data['_stillInvestedValue'] / self.data['operations'][-1]['finalQuantity']
+        else:
+            value = self.data['quoteHistory'][-1]['quote']
+
         if not value:
             errors.append({
                 'type': 'asset',
@@ -26,7 +32,7 @@ class Quote(object):
                 errors.append({
                     'type': 'currency',
                     'assetName': self.data['currency'],
-                    'id': currencyQuotes[self.data['currency']]['_id'],
+                    'id': self.currencyQuotes[self.data['currency']]['_id'],
                     'timestamp': timepoint
                 })
                 return None

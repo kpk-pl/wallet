@@ -2,6 +2,12 @@ import os
 from flask import Flask
 
 
+def _filter_toJson(data):
+    from bson.json_util import dumps
+    content = dumps(data, indent=2)
+    return content
+
+
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     #app.config.from_mapping(
@@ -33,5 +39,6 @@ def create_app(test_config=None):
     app.add_url_rule('/results/<int:year>', 'results', results.results, methods=['GET'])
 
     app.jinja_env.filters['withSign'] = lambda x: '+'+str(x) if x > 0 else x
+    app.jinja_env.filters['toJson'] = _filter_toJson
 
     return app

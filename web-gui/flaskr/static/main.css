@@ -23,3 +23,7 @@ img.link {
 tr.warning-row {
   background-color: rgba(255,193,7,.9) !important;
 }
+
+.ui-tooltip {
+  white-space: pre-line;
+}

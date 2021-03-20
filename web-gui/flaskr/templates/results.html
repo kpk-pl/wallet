@@ -101,8 +101,8 @@ $(document).Toasts('create', {
                 <td data-title="Type">{{ asset.type }}</td>
                 <td data-title="Category">{{ asset.subcategory if asset.subcategory else asset.category }}</td>
                 <td data-title="Quantity change">{{ (asset._periodStats.finalQuantity - asset._periodStats.initialQuantity) | withSign }}</td>
-                <td data-title="Net profit" class="text-right color-gain">{{ (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) | round(2) }} PLN</td>
-                <td data-title="Total profit" class="text-right color-gain">{{ (asset._periodStats.profits.quoteValue - asset._periodStats.profits.provisions) | round(2) }} PLN</td>
+                <td data-title="Net profit" class="text-right color-gain">{{ (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) | round(2) }}&nbsp;PLN</td>
+                <td data-title="Total profit" class="text-right color-gain">{{ (asset._periodStats.profits.quoteValue - asset._periodStats.profits.provisions) | round(2) }}&nbsp;PLN</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -113,8 +113,8 @@ $(document).Toasts('create', {
                 <th></th>
                 <th></th>
                 <th></th>
-                <th class="text-right">{{ assets | sum(attribute='_periodStats.profits.netValue') | round(2) }} PLN</th>
-                <th class="text-right">{{ assets | sum(attribute='_periodStats.profits.quoteValue') | round(2) }} PLN</th>
+                <th class="text-right">{{ assets | sum(attribute='_periodStats.profits.netValue') | round(2) }}&nbsp;PLN</th>
+                <th class="text-right">{{ assets | sum(attribute='_periodStats.profits.quoteValue') | round(2) }}&nbsp;PLN</th>
               </tr>
             </tfoot>
 					</table>
