@@ -78,9 +78,12 @@ def wallet():
 
         categoryAllocation = {}
         for asset in assets:
-            if asset['category'] not in categoryAllocation:
-                categoryAllocation[asset['category']] = asset['_netValue']
+            category = asset['category']
+            if 'subcategory' in asset:
+                category += " " + asset['subcategory']
+            if category not in categoryAllocation:
+                categoryAllocation[category] = asset['_netValue']
             else:
-                categoryAllocation[asset['category']] += asset['_netValue']
+                categoryAllocation[category] += asset['_netValue']
 
         return render_template("wallet.html", assets=assets, allocation=json.dumps(categoryAllocation), showData=debug)

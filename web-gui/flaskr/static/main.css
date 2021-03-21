@@ -27,3 +27,7 @@ tr.warning-row {
 .ui-tooltip {
   white-space: pre-line;
 }
+
+.smaller {
+  font-size: smaller;
+}
