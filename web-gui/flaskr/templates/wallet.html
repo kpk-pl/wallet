@@ -113,10 +113,9 @@
 							<tr role="row">
 								<th>Name</th>
 								<th>Institution</th>
-								<th>Type</th>
 								<th>Category</th>
 								<th>Market price</th>
-								<th>3m change</th>
+								<th>3M in %</th>
 								<th>Quantity</th>
 								<th>Investment</th>
 								<th>Net value</th>
@@ -128,39 +127,36 @@
 							<tr>
 								<td>
 									{{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
-                  {% if showData %}
+                  {%- if showData -%}
                   <a href="#" class="imagelink">
                     <i class="fas fa-fw fa-bug fa-pull-right"></i>
                   </a>
-                  {% endif %}
-									{% if asset.link -%}
+                  {%- endif -%}
+									{%- if asset.link -%}
 									<a href="{{asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="External asset site">
 										<i class="fas fa-chart-line fa-fw fa-pull-right"></i>
 									</a>
-									{% else -%}
+									{%- else -%}
 									<i class="fas fa-fw fa-pull-right"></i>
-									{% endif %}
+									{%- endif -%}
 								</td>
                 <td>{{ asset.institution }}</td>
-								<td>{{ asset.type }}</td>
                 <td data-order="{{ asset.category }}{{ (" " + asset.subcategory) if asset.subcategory else ""}}">
                   {{- asset.category -}}
                   {%- if asset.subcategory -%}
                   <br/>
-                  <span class="smaller">
-                    {{ asset.subcategory }}
-                  </span>
+                  <span class="smaller">{{ asset.subcategory }}</span>
                   {%- endif -%}
                 </td>
                 <td class="text-right" data-order="{{ asset.lastQuote.quote if asset.lastQuote else 0 }}">
-								{% if asset.lastQuote -%}
+								{%- if asset.lastQuote -%}
                 {{ asset.lastQuote.quote }}&nbsp;{{ asset.currency }}
-								{%- endif %}
+								{%- endif -%}
 								</td>
                 <td class="text-right color-gain">
-                {% if asset.quote3mAgo -%}
+                {%- if asset.quote3mAgo -%}
                   {{ ((asset.lastQuote.quote - asset.quote3mAgo.quote) / asset.quote3mAgo.quote * 100) | round(2) if asset.lastQuote else 0 }}%
-                {%- endif %}
+                {%- endif -%}
                 </td>
 								<td>{{ asset.finalQuantity }}</td>
                 <td class="text-right" data-order="{{ asset._stillInvestedNetValue }}">{{ asset._stillInvestedNetValue | round(2) }}&nbsp;PLN</td>
@@ -171,7 +167,6 @@
 						</tbody>
 						<tfoot>
               <tr>
-                <th></th>
                 <th></th>
                 <th></th>
                 <th></th>

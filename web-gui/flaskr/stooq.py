@@ -55,11 +55,17 @@ class Stooq(object):
     def history(self, timeFrom, timeTo):
         url = f'https://stooq.pl/q/d/l/?s={self.ticker}&d1={timeFrom.year:04d}{timeFrom.month:02d}{timeFrom.day:02d}&d2={timeTo.year:04d}{timeTo.month:02d}{timeTo.day:02d}&i=d'
 
-        csvIO = StringIO(requests.get(url).text)
-        data = {}
+        html = requests.get(url).text
+        if html == "Przekroczony dzienny limit wywolan":
+            raise html
+
+        csvIO = StringIO(html)
+        data = []
         for entry in list(csv.reader(csvIO, delimiter=','))[1:]:
-            d = dateutil.parser.parse(entry[0]).date()
-            data[d] = {'open': entry[1], 'high': entry[2], 'low': entry[3], 'close': entry[4], 'volume': entry[5]}
+            entryData = {'date': dateutil.parser.parse(entry[0]).date(), 'open': entry[1], 'high': entry[2], 'low': entry[3], 'close': entry[4]}
+            if len(entry) > 5:
+                entryData['volume'] = entry[5]
+            data.append(entryData)
 
         return data
 

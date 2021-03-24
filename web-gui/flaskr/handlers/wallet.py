@@ -1,16 +1,13 @@
-from flask import render_template, request, json
+from flask import render_template, request, json, current_app
 
 from flaskr import db, quotes
+from flaskr.stooq import Stooq
 from flaskr.analyzers.profits import Profits
 from flaskr.analyzers.value import Value
 
 from datetime import datetime, timezone
 from dateutil.relativedelta import relativedelta
 from multiprocessing import Pool
-
-
-def _getQuote(item):
-    return (item[0], quotes.getQuote(item[1]))
 
 
 def _getPipeline():
@@ -43,6 +40,33 @@ def _getPipeline():
     return pipeline
 
 
+def _getCurrencyPipeline():
+    pipeline = [
+        { "$addFields" : { "lastQuote": { "$last": "$quoteHistory" } } },
+        { "$unset" : "quoteHistory" }
+    ]
+
+    return pipeline
+
+
+def _queryLiveQuote(asset):
+    if 'stooqSymbol' in asset:
+        current_app.logger.info(f"Querying live quotes from stooq: {asset['stooqSymbol']}")
+        provider = Stooq(asset['stooqSymbol'])
+
+        now = datetime.now()
+        threeMonthsAgo = now - relativedelta(months=3)
+        threeMonthsAgo = threeMonthsAgo.replace(tzinfo=timezone.utc)
+
+        data = provider.history(threeMonthsAgo, now)
+        print(data)
+        asset['lastQuote'] = data[-1]['close']
+        asset['quote3mAgo'] = data[0]['close']
+    else:
+        current_app.logger.info(f"Querying live quotes: {asset['link']}")
+        asset['lastQuote'] = quotes.getQuote(asset['link'])
+
+
 def wallet():
     if request.method == 'GET':
         queryLiveQuotes = (request.args.get('liveQuotes') == 'true')
@@ -51,28 +75,14 @@ def wallet():
         assets = list(db.get_db().assets.aggregate(_getPipeline()))
         assets = [Profits(asset)() for asset in assets]
 
-        currenciesPipeline = [
-            { "$addFields" : { "lastQuote": { "$last": "$quoteHistory" } } },
-            { "$unset" : "quoteHistory" }
-        ]
-        currencies = { c['name'] : c for c in db.get_db().currencies.aggregate(currenciesPipeline) }
+        currencies = list(db.get_db().currencies.aggregate(_getCurrencyPipeline()))
 
         if queryLiveQuotes:
-            liveQuotes = { a['name'] : a['link'] for a in assets if 'link' in a }
-            liveCurrencies = { "__currency_" + name : c['link'] for name, c in currencies.items()}
-            liveQuotes = {**liveQuotes, **liveCurrencies}
+            objects = [obj for obj in assets + currencies if 'link' in obj]
+            with Pool(1) as pool:
+                pool.map(_queryLiveQuote, objects)
 
-            with Pool(len(assets)) as pool:
-                liveQuotes = dict(pool.map(_getQuote, liveQuotes.items()))
-
-            for name in currencies.keys():
-                currencies[name]['lastQuote'] = liveQuotes["__currency_" + name]
-            for asset in assets:
-                if asset['name'] in liveQuotes:
-                    asset['lastQuote'] = liveQuotes[asset['name']]
-
-        for currency in currencies.keys():
-            currencies[currency] = currencies[currency]['lastQuote']
+        currencies = { c['name'] : c['lastQuote'] for c in currencies }
 
         assets = [Value(asset, currencies)() for asset in assets]
 
