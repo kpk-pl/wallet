@@ -4,6 +4,7 @@ import requests
 from datetime import time, date, datetime
 import dateutil.parser
 import re
+from flaskr.stooq import Stooq
 
 
 def _getBiznesRadar(url):
@@ -132,10 +133,13 @@ def _getInvesting(url):
     return result
 
 
+# for the future maybe: https://www.quandl.com/
 def getQuote(desc):
     if desc.startswith("https://pl.investing.com/"):
         return _getInvesting(desc)
     elif desc.startswith("https://www.biznesradar.pl/"):
         return _getBiznesRadar(desc)
+    elif desc.startswith("https://stooq.pl/"):
+        return Stooq(url = desc).assetAddData()
     else:
         return None

@@ -2,6 +2,7 @@ from flask import render_template, request
 from flaskr import db, quotes
 from bson.objectid import ObjectId
 from dateutil import parser
+from flaskr.stooq import Stooq
 
 
 def asset():
@@ -12,6 +13,9 @@ def asset():
         for key in allowedKeys:
             if key in request.form.keys() and request.form[key]:
                 data[key] = request.form[key]
+
+        if data['link'].startswith("https://stooq.pl"):
+            data['stooqSymbol'] = Stooq(data['link'])
 
         db.get_db().assets.insert(data)
         return ('', 204)
