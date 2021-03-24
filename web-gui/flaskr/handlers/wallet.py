@@ -79,7 +79,7 @@ def wallet():
 
         if queryLiveQuotes:
             objects = [obj for obj in assets + currencies if 'link' in obj]
-            with Pool(1) as pool:
+            with Pool(4) as pool:
                 pool.map(_queryLiveQuote, objects)
 
         currencies = { c['name'] : c['lastQuote'] for c in currencies }

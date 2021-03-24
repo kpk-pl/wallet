@@ -20,7 +20,7 @@ def quotes():
         currenciesDict = { e['_id'] : e['link'] for e in currencies }
 
         quotes = {**assetDict, **currenciesDict}
-        with Pool(len(quotes)) as pool:
+        with Pool(4) as pool:
             quotes = dict(pool.map(_getQuote, quotes.items()))
 
         response = []
