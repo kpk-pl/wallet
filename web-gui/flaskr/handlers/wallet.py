@@ -96,4 +96,16 @@ def wallet():
             else:
                 categoryAllocation[category] += asset['_netValue']
 
-        return render_template("wallet.html", assets=assets, allocation=json.dumps(categoryAllocation), showData=debug)
+        lastQuoteUpdateTime = db.last_quote_update_time()
+        misc = {
+            'showData': debug,
+            'lastQuoteUpdate': {
+                'timestamp': lastQuoteUpdateTime,
+                'daysPast': (datetime.now() - lastQuoteUpdateTime).days
+            }
+        }
+
+        return render_template("wallet.html",
+                               assets=assets,
+                               allocation=json.dumps(categoryAllocation),
+                               misc=misc)

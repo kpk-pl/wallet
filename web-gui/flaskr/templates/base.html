@@ -36,6 +36,11 @@
             </li>
           </ul>
         </div>
+        <div class="order-1 order-md-3 navbar-nav navbar-no-expand ml-auto">
+          {%- if misc and misc.lastQuoteUpdate -%}
+          <i class="fas fa-fw fa-calendar-check" title="Last quote update in DB: {{ misc.lastQuoteUpdate.timestamp }}" data-toggle="tooltip" style="color: {{ "green" if misc.lastQuoteUpdate.daysPast < 3 else "red" }}"></i>
+          {%- endif -%}
+        </div>
       </div>
     </nav>
     <div class="content-wrapper">
@@ -67,6 +72,11 @@
   {% block plugins_scripts %}{% endblock %}
   <script type="text/javascript" src="{{ url_for('static', filename='plugins/adminlte/js/adminlte.min.js') }}"></script>
 
+  <script type="text/javascript">
+    $(document).ready(function(){
+      $('[data-toggle="tooltip"]').tooltip();
+    });
+  </script>
   {% block user_scripts %}{% endblock %}
 </body>
 </html>

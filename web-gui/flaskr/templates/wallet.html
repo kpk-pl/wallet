@@ -90,13 +90,6 @@
   });
 </script>
 {% endblock %}
-{% if showData %}
-<script>
-  $(document).ready(function(){
-    $('[data-toggle="tooltip"]').tooltip();
-  });
-</script>
-{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -127,7 +120,7 @@
 							<tr>
 								<td>
 									{{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
-                  {%- if showData -%}
+                  {%- if misc and misc.showData -%}
                   <a href="#" class="imagelink">
                     <i class="fas fa-fw fa-bug fa-pull-right"></i>
                   </a>
