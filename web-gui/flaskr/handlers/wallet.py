@@ -86,15 +86,21 @@ def wallet():
 
         assets = [Value(asset, currencies)() for asset in assets]
 
+        subcategoryAllocation = {}
         categoryAllocation = {}
         for asset in assets:
-            category = asset['category']
-            if 'subcategory' in asset:
-                category += " " + asset['subcategory']
-            if category not in categoryAllocation:
-                categoryAllocation[category] = asset['_netValue']
+            if asset['category'] not in categoryAllocation:
+                categoryAllocation[asset['category']] = asset['_netValue']
             else:
-                categoryAllocation[category] += asset['_netValue']
+                categoryAllocation[asset['category']] += asset['_netValue']
+
+            subcategory = asset['category']
+            if 'subcategory' in asset:
+                subcategory += " " + asset['subcategory']
+            if subcategory not in subcategoryAllocation:
+                subcategoryAllocation[subcategory] = asset['_netValue']
+            else:
+                subcategoryAllocation[subcategory] += asset['_netValue']
 
         lastQuoteUpdateTime = db.last_quote_update_time()
         misc = {
@@ -108,4 +114,5 @@ def wallet():
         return render_template("wallet.html",
                                assets=assets,
                                allocation=json.dumps(categoryAllocation),
+                               suballocation=json.dumps(subcategoryAllocation),
                                misc=misc)

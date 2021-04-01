@@ -48,46 +48,49 @@
 
 {% block javascript %}
 <script>
-  var ctx = document.getElementById('allocationChart').getContext('2d');
-  var allocation = JSON.parse({{ allocation | tojson }})
-  var myChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: Object.keys(allocation),
-      datasets: [{
-        data: Object.values(allocation),
-        borderWidth: 1
-      }]
-    },
-    options: {
-      maintainAspectRatio: false,
-      responsive: true,
-      plugins: {
-        colorschemes: {
-          scheme: 'brewer.Spectral11'
-        },
-        labels: {
-          render: 'percentage',
-          fontColor: 'black',
-          fontSize: 16,
-          precision: 1
-        }
+  function allocationChart(data, target) {
+    return new Chart(target.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(data),
+        datasets: [{
+          data: Object.values(data),
+          borderWidth: 1
+        }]
       },
-      tooltips: {
-        callbacks: {
-          label: function(tooltipItem, data) {
-            var dataset = data.datasets[tooltipItem.datasetIndex];
-            var total = dataset.data.reduce(function(previousValue, currentValue, currentIndex, array) {
-                      return previousValue + currentValue;
-                    });
-            var currentValue = dataset.data[tooltipItem.index];
-            var percentage = Number((currentValue/total*100).toFixed(1));
-            return data.labels[tooltipItem.index] + ': ' + Number(currentValue.toFixed(2)) + ' PLN [' + percentage + "%]";
+      options: {
+        maintainAspectRatio: false,
+        responsive: true,
+        plugins: {
+          colorschemes: {
+            scheme: 'tableau.Classic10'
+          },
+          labels: {
+            render: 'percentage',
+            fontColor: 'black',
+            fontSize: 16,
+            precision: 1
+          }
+        },
+        tooltips: {
+          callbacks: {
+            label: function(tooltipItem, data) {
+              var dataset = data.datasets[tooltipItem.datasetIndex];
+              var total = dataset.data.reduce(function(previousValue, currentValue, currentIndex, array) {
+                        return previousValue + currentValue;
+                      });
+              var currentValue = dataset.data[tooltipItem.index];
+              var percentage = Number((currentValue/total*100).toFixed(1));
+              return data.labels[tooltipItem.index] + ': ' + Number(currentValue.toFixed(2)) + ' PLN [' + percentage + "%]";
+            }
           }
         }
       }
-    }
-  });
+    });
+  };
+
+  var categoryChart = allocationChart(JSON.parse({{ allocation | tojson }}), document.getElementById('allocationChart'));
+  var subcategoryChart = allocationChart(JSON.parse({{ suballocation | tojson }}), document.getElementById('allocationChartSubcategory'));
 </script>
 {% endblock %}
 {% endblock %}
@@ -177,13 +180,23 @@
     </div>
   </div>
   <div class="row">
-    <div class="col-12">
+    <div class="col-6">
       <div class="card card-primary">
         <div class="card-header">
-          <h3 class="card-title">Asset allocation</h3>
+          <h3 class="card-title">Category allocation</h3>
         </div>
         <div class="card-body">
           <canvas id="allocationChart" style="min-height: 400px; height: 400px; max-height: 400px; max-width: 100%;"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-6">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Subcategory allocation</h3>
+        </div>
+        <div class="card-body">
+          <canvas id="allocationChartSubcategory" style="min-height: 400px; height: 400px; max-height: 400px; max-width: 100%;"></canvas>
         </div>
       </div>
     </div>
