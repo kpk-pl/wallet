@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ asset.name }}{% endblock %}
+
+{% block links %}
+{% endblock %}
+
+{% block plugins_scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js/Chart.min.js') }}"></script>
+{% endblock %}
+
+{% block user_scripts %}
+{% block javascript %}
+<script type="text/javascript">
+  const data = {{ asset.quoteHistory | tojson }};
+  const operations = {{ asset.operations | tojson }};
+  const operationsBuy = operations.filter(function(e){ return e.type == 'BUY'; })
+  const operationsSell = operations.filter(function(e){ return e.type == 'SELL'; })
+  var chart = new Chart(document.getElementById('chart').getContext('2d'), {
+    type: 'line',
+    data: {
+      datasets: [{
+        label: '{{ asset.name }}',
+        cubicInterpolationMode: 'monotone',
+        pointRadius: 0,
+        data: data.map(function(e){ return {t: e.timestamp, y: e.quote}; }),
+        backgroundColor: 'rgba(0, 123, 255, 0.65)',
+        borderColor: 'rgba(0, 123, 255, 1)',
+        borderWidth: 2,
+        order: 1
+      },
+      {
+        label: 'buy',
+        pointRadius: 5,
+        showLine: false,
+        data: operationsBuy.map(function(e){ return {t: e.date, y: e.price/e.quantity}; }),
+        pointBackgroundColor: 'rgb(40, 167, 69)',
+        pointBorderColor: 'rgb(40, 167, 69)'
+      },
+      {
+        label: 'sell',
+        pointRadius: 5,
+        showLine: false,
+        data: operationsSell.map(function(e){ return {t: e.date, y: e.price/e.quantity}; }),
+        pointBackgroundColor: 'rgb(220, 53, 69)',
+        pointBorderColor: 'rgb(220, 53, 69)'
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      responsive: true,
+      scales: {
+        xAxes: [{
+          type: 'time',
+          time: {
+            unit: 'day'
+          }
+        }],
+        yAxes: [{
+          scaleLabel: {
+            display: true,
+            labelString: '{{ asset.currency }}'
+          }
+        }],
+      },
+      hover: {
+        mode: 'nearest'
+      },
+      legend: {
+        display: true,
+        labels: {
+          filter: function(legendItem, data) {
+            return legendItem.text != 'buy' && legendItem.text != 'sell';
+          }
+        }
+      },
+      tooltips: {
+        callbacks: {
+          label: function(tooltipItem, data) {
+            if (tooltipItem.datasetIndex == 0)
+              return data[tooltipItem.index];
+
+            const op = tooltipItem.datasetIndex == 1 ? operationsBuy[tooltipItem.index] : operationsSell[tooltipItem.index]
+            return op.type + ' ' + op.quantity + ' @ ' + Number((op.price/op.quantity).toFixed(2)) + ' {{ asset.currency }}';
+          }
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">{{ asset.name }}</h3>
+        </div>
+        <div class="card-body">
+          <dl class="row">
+            <dt class="col-sm-3">Type</dt>
+            <dd class="col-sm-9">{{ asset.type }}</dd>
+            <dt class="col-sm-3">Category</dt>
+            <dd class="col-sm-9">{{ asset.category }}
+            {%- if asset.subcategory -%}
+            &nbsp;({{ asset.subcategory }})
+            {%- endif -%}
+            </dd>
+            {% if asset.ticker -%}
+            <dt class="col-sm-3">Ticker</dt>
+            <dd class="col-sm-9">{{ asset.ticker }}</dd>
+            {%- endif %}
+            <dt class="col-sm-3">Institution</dt>
+            <dd class="col-sm-9">{{ asset.institution }}</dd>
+            <dt class="col-sm-3">Currency</dt>
+            <dd class="col-sm-9">{{ asset.currency }}</dd>
+            <dt class="col-sm-3">Current quantity</dt>
+            <dd class="col-sm-9">{{ asset.finalQuantity if asset.finalQuantity else 0 }}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Graph</h3>
+          <div class="card-tools">
+            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <canvas id="chart" style="min-height: 400px; height: 400px; max-height: 400px; max-width: 100%;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Operations</h3>
+          <div class="card-tools">
+            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th style="width: 10px">#</th>
+                <th>Date</th>
+                <th style="width: 30px">Type</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Unit price</th>
+                {% if asset.currency != 'PLN' -%}
+                <th>Currency conversion</th>
+                {%- endif %}
+                <th>Provision</th>
+                <th>Final quantity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for operation in asset.operations -%}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ operation.date }}</td>
+                <td><span class="badge bg-{{ 'danger' if operation.type == 'SELL' else 'success' }}">{{ operation.type }}</span></td>
+                <td>{{ operation.quantity }}</td>
+                <td>{{ operation.price }} {{ asset.currency }}</td>
+                <td>{{ (operation.price / operation.quantity) | round(3) }} {{ asset.currency }}</td>
+                {% if asset.currency != 'PLN' -%}
+                <td>{{ operation.currencyConversion }} PLN/{{ asset.currency }}</td>
+                {%- endif %}
+                <td>{{ operation.provision }} PLN</td>
+                <td>{{ operation.finalQuantity }}</td>
+              </tr>
+              {%- endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

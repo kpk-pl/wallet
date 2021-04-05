@@ -5,8 +5,25 @@ from dateutil import parser
 from flaskr.stooq import Stooq
 
 
+def _getPipelineForAssetDetails(assetId):
+    pipeline = []
+    pipeline.append({ "$match" : { "_id" : ObjectId(assetId) } })
+    pipeline.append({ "$addFields" : { "finalQuantity": { "$last": "$operations.finalQuantity" } }})
+    return pipeline
+
+
 def asset():
-    if request.method == 'POST':
+    if request.method == 'GET':
+        assetId = request.args.get('id')
+        if not assetId:
+            return ('', 400)
+
+        assets = list(db.get_db().assets.aggregate(_getPipelineForAssetDetails(assetId)))
+        if not assets:
+            return ('', 404)
+
+        return render_template("asset/_.html", asset=assets[0])
+    elif request.method == 'POST':
         data = {}
 
         allowedKeys = ['name', 'ticker', 'currency', 'link', 'type', 'category', 'subcategory', 'region', 'institution']
@@ -26,7 +43,7 @@ def asset_add():
         return render_template("asset/add.html")
 
 
-# TODO: need to handle buying more of an asset that do not have 
+# TODO: need to handle buying more of an asset that do not have
 # URI and realtime tracking of quotes
 # probably just calculate average between last quote/quantity
 # and the ones that is being bought?

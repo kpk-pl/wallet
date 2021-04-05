@@ -58,13 +58,16 @@
                   {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
                   {% if asset.link -%}
                   <a href="{{asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="External asset site">
-                    <i class="fas fa-chart-line fa-fw fa-pull-right"></i>
+                    <i class="fas fa-external-link-alt fa-fw fa-pull-right"></i>
                   </a>
                   {% else -%}
                   <i class="fas fa-fw fa-pull-right"></i>
                   {% endif %}
                   <a href="{{ url_for('asset.receipt', id=asset._id) }}" class="imagelink" title="Register buy or sell">
                     <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
+                  </a>
+                  <a href="{{ url_for('asset', id=asset._id) }}" class="imagelink" title="Asset details">
+                    <i class="fas fa-info-circle fa-fw fa-pull-right"></i>
                   </a>
                 </td>
                 <td data-title="Institution">{{ asset.institution }}</td>

@@ -26,7 +26,6 @@ def _getPipeline(year):
         'category': 1,
         'subcategory': 1,
         'type' : 1,
-        'subcategory': 1,
         'operations': { '$filter': {
             'input': '$operations',
             'as': 'op',
