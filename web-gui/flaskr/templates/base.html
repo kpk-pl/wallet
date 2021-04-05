@@ -66,7 +66,8 @@
     </div>
   </div>
 
-  <script src="https://kit.fontawesome.com/2106e6faed.js" crossorigin="anonymous"></script>
+  <!--script src="https://kit.fontawesome.com/2106e6faed.js" crossorigin="anonymous"></script-->
+  <script type="text/javascript" src="{{ url_for('static', filename='plugins/fontawesome/fa.min.js') }}"></script>
   <script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery/jquery.min.js') }}"></script>
   <script type="text/javascript" src="{{ url_for('static', filename='plugins/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
   {% block plugins_scripts %}{% endblock %}
