@@ -29,16 +29,14 @@
         borderColor: 'rgba(0, 123, 255, 1)',
         borderWidth: 2,
         order: 1
-      },
-      {
+      }, {
         label: 'buy',
         pointRadius: 5,
         showLine: false,
         data: operationsBuy.map(function(e){ return {t: e.date, y: e.price/e.quantity}; }),
         pointBackgroundColor: 'rgb(40, 167, 69)',
         pointBorderColor: 'rgb(40, 167, 69)'
-      },
-      {
+      }, {
         label: 'sell',
         pointRadius: 5,
         showLine: false,
@@ -54,7 +52,10 @@
         xAxes: [{
           type: 'time',
           time: {
-            unit: 'day'
+            unit: 'day',
+            displayFormats: {
+              day: 'D MMM YY'
+            }
           }
         }],
         yAxes: [{

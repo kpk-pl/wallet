@@ -1,7 +1,7 @@
 from flask import request, Response, json
 from flaskr import db
 from flaskr.quotes import getQuote
-import time
+from datetime import datetime
 from multiprocessing import Pool
 
 
@@ -24,26 +24,38 @@ def quotes():
             quotes = dict(pool.map(_getQuote, quotes.items()))
 
         response = []
+        now = datetime.now()
+
         for asset in assets:
             _id = asset['_id']
-            if storeQuotes:
-                query = {'_id': _id}
-                update = {'$push': {'quoteHistory': {
-                    'timestamp': quotes[_id]['timestamp'],
-                    'quote': quotes[_id]['quote']
-                }}}
-                db.get_db().assets.update(query, update)
+            timeDiff = now - quotes[_id]['timestamp']
+            if timeDiff.days == 0:
+                if storeQuotes:
+                    query = {'_id': _id}
+                    update = {'$push': {'quoteHistory': {
+                        'timestamp': quotes[_id]['timestamp'],
+                        'quote': quotes[_id]['quote']
+                    }}}
+                    db.get_db().assets.update(query, update)
+            else:
+                quotes[_id]['stale'] = True
+
             response.append({'name': asset['name'], 'quote': quotes[_id]})
 
         for asset in currencies:
             _id = asset['_id']
-            if storeQuotes:
-                query = {'_id': _id}
-                update = {'$push': {'quoteHistory': {
-                    'timestamp': quotes[_id]['timestamp'],
-                    'quote': quotes[_id]['quote']
-                }}}
-                db.get_db().currencies.update(query, update)
+            timeDiff = now - quotes[_id]['timestamp']
+            if timeDiff.days == 0:
+                if storeQuotes:
+                    query = {'_id': _id}
+                    update = {'$push': {'quoteHistory': {
+                        'timestamp': quotes[_id]['timestamp'],
+                        'quote': quotes[_id]['quote']
+                    }}}
+                    db.get_db().currencies.update(query, update)
+            else:
+                quotes[_id]['stale'] = True
+
             response.append({'name': asset['name'], 'quote': quotes[_id]})
 
         return Response(json.dumps(response), mimetype="application/json")
