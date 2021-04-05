@@ -48,49 +48,120 @@
 
 {% block javascript %}
 <script>
-  function allocationChart(data, target) {
-    return new Chart(target.getContext('2d'), {
-      type: 'doughnut',
-      data: {
-        labels: Object.keys(data),
-        datasets: [{
-          data: Object.values(data),
-          borderWidth: 1
-        }]
-      },
-      options: {
-        maintainAspectRatio: false,
-        responsive: true,
-        plugins: {
-          colorschemes: {
-            scheme: 'tableau.Classic10'
-          },
-          labels: {
-            render: 'percentage',
-            fontColor: 'black',
-            fontSize: 16,
-            precision: 1
-          }
+  const categoryAllocation = JSON.parse({{ allocation | tojson }});
+  const categories = Object.keys(categoryAllocation);
+  const subcategories = categories.map(function(c) { return Object.keys(categoryAllocation[c]).map(s => c + ' ' + s); }).flat();
+
+  var categoryChart = new Chart(document.getElementById('allocationChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: categories.concat(subcategories),
+      datasets: [{
+        data: categories.map(function(c){ return Object.values(categoryAllocation[c]).reduce((a,b) => a+b); }),
+        borderWidth: 1
+      }, {
+        data: categories.map(function(c) { return Object.values(categoryAllocation[c]); }).flat(),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      responsive: true,
+      cutoutPercentage: 30,
+      plugins: {
+        colorschemes: {
+          scheme: 'tableau.Classic10'
         },
-        tooltips: {
-          callbacks: {
-            label: function(tooltipItem, data) {
-              var dataset = data.datasets[tooltipItem.datasetIndex];
-              var total = dataset.data.reduce(function(previousValue, currentValue, currentIndex, array) {
-                        return previousValue + currentValue;
-                      });
-              var currentValue = dataset.data[tooltipItem.index];
-              var percentage = Number((currentValue/total*100).toFixed(1));
-              return data.labels[tooltipItem.index] + ': ' + Number(currentValue.toFixed(2)) + ' PLN [' + percentage + "%]";
-            }
+        labels: {
+          render: 'percentage',
+          fontColor: 'black',
+          fontSize: 16,
+          precision: 1
+        }
+      },
+      tooltips: {
+        callbacks: {
+          label: function(tooltipItem, data) {
+            var dataset = data.datasets[tooltipItem.datasetIndex];
+            var total = dataset.data.reduce(function(previousValue, currentValue, currentIndex, array) {
+                      return previousValue + currentValue;
+                    });
+            var currentValue = dataset.data[tooltipItem.index];
+            var percentage = Number((currentValue/total*100).toFixed(1));
+            var labelIdx = tooltipItem.datasetIndex == 0 ? tooltipItem.index : categories.length + tooltipItem.index;
+            return data.labels[labelIdx] + ': ' + Number(currentValue.toFixed(2)) + ' PLN [' + percentage + "%]";
           }
         }
-      }
-    });
-  };
+      },
+      legend: {
+        labels: {
+          generateLabels: function(chart) {
+            // Get the default label list
+            const original = Chart.defaults.doughnut.legend.labels.generateLabels;
+            const labelsOriginal = original.call(this, chart);
 
-  var categoryChart = allocationChart(JSON.parse({{ allocation | tojson }}), document.getElementById('allocationChart'));
-  var subcategoryChart = allocationChart(JSON.parse({{ suballocation | tojson }}), document.getElementById('allocationChartSubcategory'));
+            // Build an array of colors used in the datasets of the chart
+            var datasetColors = chart.data.datasets.map(e => e.backgroundColor).flat();
+
+            function findSubIndexes(category) {
+              var counter = 0
+              for (var c = 0; c < category; ++c) {
+                counter += Object.keys(categoryAllocation[categories[c]]).length
+              }
+              return Array.from({length: Object.keys(categoryAllocation[categories[category]]).length})
+                .map((_, i) => i + counter);
+            };
+
+            // Modify the color and hide state of each label
+            labelsOriginal.forEach(label => {
+                label.datasetIndex = label.index < categories.length ? 0 : 1;
+
+                // The hidden state must match the dataset's hidden state
+                label.hidden = !chart.isDatasetVisible(label.datasetIndex);
+
+                // Change the color to match the dataset
+                label.fillStyle = datasetColors[label.index];
+
+                // Embed information about category mappings
+                if (label.index < categories.length) {
+                  label.subcategories = findSubIndexes(label.index);
+                }
+            });
+
+            return labelsOriginal;
+          }
+        },
+        onClick: function(mouseEvent, legendItem) {
+          var ctx = this.chart;
+          var categoryMeta = ctx.getDatasetMeta(0);
+          var subcategoryMeta = ctx.getDatasetMeta(1);
+
+          if (legendItem.index < categories.length) {
+            var hidden = categoryMeta.data[legendItem.index].hidden
+            // hide category
+            categoryMeta.data[legendItem.index].hidden = !hidden
+            // and all it's subcategories
+            legendItem.subcategories.forEach(function(idx){
+              subcategoryMeta.data[idx].hidden = !hidden;
+            });
+          }
+          else {
+            var subIndex = legendItem.index - categories.length
+            var hidden = subcategoryMeta.data[subIndex].hidden
+            // hide subcategory
+            subcategoryMeta.data[subIndex].hidden = !hidden;
+            // and whole dataset above
+            categoryMeta.data.forEach(function(e){
+              e.hidden = !hidden;
+            });
+            //categoryMeta.hidden = !hidden;
+          }
+
+          this.chart.update();
+        }
+      }
+    }
+  });
 </script>
 {% endblock %}
 {% endblock %}
@@ -180,23 +251,13 @@
     </div>
   </div>
   <div class="row">
-    <div class="col-6">
+    <div class="col-12">
       <div class="card card-primary">
         <div class="card-header">
           <h3 class="card-title">Category allocation</h3>
         </div>
         <div class="card-body">
-          <canvas id="allocationChart" style="min-height: 400px; height: 400px; max-height: 400px; max-width: 100%;"></canvas>
-        </div>
-      </div>
-    </div>
-    <div class="col-6">
-      <div class="card card-primary">
-        <div class="card-header">
-          <h3 class="card-title">Subcategory allocation</h3>
-        </div>
-        <div class="card-body">
-          <canvas id="allocationChartSubcategory" style="min-height: 400px; height: 400px; max-height: 400px; max-width: 100%;"></canvas>
+          <canvas id="allocationChart" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
         </div>
       </div>
     </div>

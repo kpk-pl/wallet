@@ -8,6 +8,7 @@ from flaskr.analyzers.value import Value
 from datetime import datetime, timezone
 from dateutil.relativedelta import relativedelta
 from multiprocessing import Pool
+from collections import defaultdict
 
 
 def _getPipeline():
@@ -86,21 +87,10 @@ def wallet():
 
         assets = [Value(asset, currencies)() for asset in assets]
 
-        subcategoryAllocation = {}
-        categoryAllocation = {}
+        categoryAllocation = defaultdict(lambda: defaultdict(int))
         for asset in assets:
-            if asset['category'] not in categoryAllocation:
-                categoryAllocation[asset['category']] = asset['_netValue']
-            else:
-                categoryAllocation[asset['category']] += asset['_netValue']
-
-            subcategory = asset['category']
-            if 'subcategory' in asset:
-                subcategory += " " + asset['subcategory']
-            if subcategory not in subcategoryAllocation:
-                subcategoryAllocation[subcategory] = asset['_netValue']
-            else:
-                subcategoryAllocation[subcategory] += asset['_netValue']
+            subcategory = asset['subcategory'] if 'subcategory' in asset else asset['category']
+            categoryAllocation[asset['category']][subcategory] += asset['_netValue']
 
         lastQuoteUpdateTime = db.last_quote_update_time()
         misc = {
@@ -114,5 +104,4 @@ def wallet():
         return render_template("wallet.html",
                                assets=assets,
                                allocation=json.dumps(categoryAllocation),
-                               suballocation=json.dumps(subcategoryAllocation),
                                misc=misc)
