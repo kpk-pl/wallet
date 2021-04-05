@@ -150,11 +150,15 @@
             var hidden = subcategoryMeta.data[subIndex].hidden
             // hide subcategory
             subcategoryMeta.data[subIndex].hidden = !hidden;
+
             // and whole dataset above
-            categoryMeta.data.forEach(function(e){
-              e.hidden = !hidden;
-            });
-            //categoryMeta.hidden = !hidden;
+            if (!hidden) {
+              categoryMeta.data.forEach(function(e){e.hidden = true;});
+            } else {
+              var hiddenSubs = subcategoryMeta.data.reduce((p, d) => p + (d.hidden ? 1 : 0), 0)
+              if (hiddenSubs == 0)
+                categoryMeta.data.forEach(function(e){e.hidden = false;});
+            }
           }
 
           this.chart.update();
