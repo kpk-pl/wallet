@@ -12,6 +12,7 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js/Chart.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js-plugin-labels/chartjs-plugin-labels.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js-plugin-colorschemes/chartjs-plugin-colorschemes.min.js') }}"></script>
@@ -45,8 +46,6 @@
     });
   });
 </script>
-
-{% block javascript %}
 <script>
   const categoryAllocation = JSON.parse({{ allocation | tojson }});
   const categories = Object.keys(categoryAllocation);
@@ -167,7 +166,70 @@
     }
   });
 </script>
-{% endblock %}
+<script>
+  var assetAllocationChart = new Chart(document.getElementById('assetAllocationChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: []
+    },
+    options: {
+      maintainAspectRatio: false,
+      responsive: true,
+      plugins: {
+        colorschemes: {
+          scheme: 'tableau.JewelBright9',
+          fillAlpha: 1
+        }
+      },
+      hover: {
+        mode: 'nearest'
+      },
+      scales: {
+        xAxes: [{
+          type: 'time',
+          time: {
+            unit: 'day',
+            displayFormats: {
+              day: 'D MMM YY'
+            }
+          }
+        }],
+        yAxes: [{
+          stacked: true,
+          scaleLabel: {
+            display: true,
+            labelString: 'PLN'
+          }
+        }]
+      }
+    }
+  });
+
+  function updateHistoricalChart(data){
+    assetAllocationChart.data.labels = data.t
+
+    var category;
+    for (category in data.categories) {
+      assetAllocationChart.data.datasets.push({
+        data: data.categories[category].y,
+        cubicInterpolationMode: 'monotone',
+        pointRadius: 1,
+        borderWidth: 2,
+        label: category
+      });
+    }
+    assetAllocationChart.update();
+  }
+
+  const allAssetIds = [
+	{%- for asset in assets -%}
+    '{{ asset._id }}',
+  {%- endfor -%}
+  ];
+
+  $.getJSON("{{ url_for('asset.historicalValue') }}?daysBack=30&id=" + allAssetIds.join('&id='), updateHistoricalChart);
+</script>
 {% endblock %}
 
 {% block content %}
@@ -262,6 +324,18 @@
         </div>
         <div class="card-body">
           <canvas id="allocationChart" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Asset allocation</h3>
+        </div>
+        <div class="card-body">
+          <canvas id="assetAllocationChart" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
         </div>
       </div>
     </div>

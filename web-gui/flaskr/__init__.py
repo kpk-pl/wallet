@@ -33,6 +33,7 @@ def create_app(test_config=None):
     app.add_url_rule('/asset', 'asset', asset.asset, methods=['GET', 'POST'])
     app.add_url_rule('/asset/add', 'asset.add', asset.asset_add, methods=['GET'])
     app.add_url_rule('/asset/receipt', 'asset.receipt', asset.asset_receipt, methods=['GET', 'POST'])
+    app.add_url_rule('/asset/historicalValue', 'asset.historicalValue', asset.asset_historicalValue, methods=['GET'])
     app.add_url_rule('/quotes', 'quotes', quotes.quotes, methods=['GET', 'PUT'])
     app.add_url_rule('/quote', 'quote', quote.quote, methods=['GET', 'POST'])
     app.add_url_rule('/quote/add', 'quote.add', quote.quote_add, methods=['GET'])

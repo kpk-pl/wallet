@@ -1,8 +1,11 @@
-from flask import render_template, request
+from flask import render_template, request, Response, json
 from flaskr import db, quotes
+from flaskr.analyzers.historical import HistoricalValue
 from bson.objectid import ObjectId
 from dateutil import parser
+from datetime import datetime, timedelta
 from flaskr.stooq import Stooq
+from collections import defaultdict
 
 
 def _getPipelineForAssetDetails(assetId):
@@ -101,3 +104,134 @@ def asset_receipt():
 
         db.get_db().assets.update(query, update)
         return ('', 204)
+
+
+def _getPipelineForIdsHistorical(ids, fromTime):
+    pipeline = [
+        { "$match" : { "_id" : { "$in": [ObjectId(id) for id in ids] } } },
+        { "$project" : {
+            '_id': 1,
+            'quoteHistory': { '$filter': {
+                'input': '$quoteHistory',
+                'as': 'q',
+                'cond': { '$gte': ['$$q.timestamp', fromTime] }
+            }},
+            'operations': 1,
+            'currency': 1,
+            'name': 1,
+            'category': 1,
+            'subcategory': 1
+        }}
+    ]
+    return pipeline
+
+def _getPipelineForCurrenciesForAssetsHistorical(currencies, fromTime):
+    pipeline = [
+        { "$match" : { "name" : { "$in": list(currencies) }}},
+        { "$project" : {
+            'quoteHistory': { '$filter': {
+                'input': '$quoteHistory',
+                'as': 'q',
+                'cond': { '$gte': ['$$q.timestamp', fromTime] }
+            }},
+            'name': 1
+        }}
+    ]
+    return pipeline
+
+def _responseForSingleAssetHistoricalValue(asset, currencies):
+    currencyData = currencies[asset['currency']] if asset['currency'] != 'PLN' else None
+    historical = HistoricalValue(asset, currencyData)
+    values = historical()
+    result = {
+        'name': asset['name'],
+        'currency': 'PLN',
+        'category': asset['category'],
+        'subcategory': asset['subcategory'] if 'subcategory' in asset else None,
+        't': values['t'],
+        'y': values['y']
+    }
+    return Response(json.dumps(result), mimetype="application/json")
+
+def asset_historicalValue():
+    if request.method == 'GET':
+        ids = request.args.getlist('id')
+        if not ids:
+            return ('', 400)
+
+        ids = list(set(ids))
+
+        daysBack = request.args.get('daysBack')
+        daysBack = int(daysBack) if daysBack is not None else int(1.5*365)
+        fromTime = datetime.now() - timedelta(daysBack)
+
+        inPercent = request.args.get('inPercent') is not None
+
+        assets = list(db.get_db().assets.aggregate(_getPipelineForIdsHistorical(ids, fromTime)))
+        if len(assets) != len(ids):
+            return ('', 404)
+
+        currencies = set([asset['currency'] for asset in assets])
+        currencies.remove('PLN')
+        if currencies:
+            currencies = list(db.get_db().currencies.aggregate(_getPipelineForCurrenciesForAssetsHistorical(currencies, fromTime)))
+            if not currencies:
+                return ('', 400)
+
+            currencies = {currency['name']: currency['quoteHistory'] for currency in currencies}
+        else:
+            currencies = {}
+
+        if len(assets) == 1:
+            return _responseForSingleAssetHistoricalValue(assets[0], currencies)
+
+        result = {'t': [], 'categories': {}}
+        for asset in assets:
+            key = asset['category']
+            if 'subcategory' in asset:
+                key += ' ' + asset['subcategory']
+
+            if key not in result['categories']:
+                result['categories'][key] = {
+                    'y': [],
+                    'names': [],
+                    'category': asset['category'],
+                    'subcategory': asset['subcategory'] if 'subcategory' in asset else None,
+                    'values': defaultdict(float)
+                }
+
+            currencyData = currencies[asset['currency']] if asset['currency'] != 'PLN' else None
+            historical = HistoricalValue(asset, currencyData)
+            values = historical()
+
+            bucket = result['categories'][key]['values']
+            for idx in range(len(values['t'])):
+                timeIdx = values['t'][idx].strftime('%Y-%m-%d')
+                if values['y'][idx] and bucket[timeIdx] is not None:
+                    bucket[timeIdx] += values['y'][idx]
+                else:
+                    bucket[timeIdx] = None
+
+            result['categories'][key]['names'].append(asset['name'])
+
+        startDate = fromTime.date()
+        nowDate = datetime.now().date()
+        while startDate < nowDate:
+            startDateStr = startDate.strftime('%Y-%m-%d')
+            result['t'].append(startDate)
+            for _, category in result['categories'].items():
+                category['y'].append(category['values'][startDateStr])
+                if category['y'][-1] is None:
+                    category['y'][-1] = 0
+            startDate += timedelta(days=1)
+
+        for _, category in result['categories'].items():
+            del category['values']
+
+        if inPercent:
+            for idx in range(len(result['t'])):
+                categorySum = sum([category['y'][idx] for _, category in result['categories'].items()])
+                for _, category in result['categories'].items():
+                    category['y'][idx] /= categorySum / 100
+
+        return Response(json.dumps(result), mimetype="application/json")
