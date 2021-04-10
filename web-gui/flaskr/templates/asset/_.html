@@ -96,13 +96,15 @@
 {% block content %}
 <div class="container-sm">
   <div class="row">
-    <div class="col-12">
+    <div class="col-9">
       <div class="card card-primary">
         <div class="card-header">
           <h3 class="card-title">{{ asset.name }}</h3>
         </div>
         <div class="card-body">
           <dl class="row">
+            <dt class="col-sm-3">Name</dt>
+            <dd class="col-sm-9">{{ asset.name }}</dd>
             <dt class="col-sm-3">Type</dt>
             <dd class="col-sm-9">{{ asset.type }}</dd>
             <dt class="col-sm-3">Category</dt>
@@ -121,7 +123,27 @@
             <dd class="col-sm-9">{{ asset.currency }}</dd>
             <dt class="col-sm-3">Current quantity</dt>
             <dd class="col-sm-9">{{ asset.finalQuantity if asset.finalQuantity else 0 }}</dd>
+            <dt class="col-sm-3">Link</dt>
+            <dd class="col-sm-9"><a href="{{ asset.link }}" target="_blank" rel="noopener noreferrer">{{ asset.link }}</a></dd>
           </dl>
+        </div>
+      </div>
+    </div>
+    <div class="col-3">
+      <div class="card card-secondary">
+        <div class="card-header">
+          <h3 class="card-title">Actions</h3>
+        </div>
+        <div class="card-body">
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('asset.receipt', id=asset._id) }}'">
+            <i class="fa fa-shopping-cart"></i> Buy or sell
+          </button>
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href=''">
+            <i class="fas fa-edit"></i> Edit
+          </button>
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href=''">
+            <i class="fa fa-upload"></i> Import quotes
+          </button>
         </div>
       </div>
     </div>
