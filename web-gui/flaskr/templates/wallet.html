@@ -259,19 +259,17 @@
 							{% for asset in assets %}
 							<tr>
 								<td>
-									{{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
+                  <a href="{{ url_for('asset', id=asset._id) }}">
+									  {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
+                  </a>
                   {%- if misc and misc.showData -%}
                   <a href="#" class="imagelink">
                     <i class="fas fa-fw fa-bug fa-pull-right"></i>
                   </a>
                   {%- endif -%}
-									{%- if asset.link -%}
-									<a href="{{asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="External asset site">
-										<i class="fas fa-chart-line fa-fw fa-pull-right"></i>
-									</a>
-									{%- else -%}
-									<i class="fas fa-fw fa-pull-right"></i>
-									{%- endif -%}
+                  <a href="{{ url_for('asset.receipt', id=asset._id) }}" class="imagelink" title="Register buy or sell">
+                    <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
+                  </a>
 								</td>
                 <td>{{ asset.institution }}</td>
                 <td data-order="{{ asset.category }}{{ (" " + asset.subcategory) if asset.subcategory else ""}}">
