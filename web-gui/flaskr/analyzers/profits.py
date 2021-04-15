@@ -1,4 +1,5 @@
 from . import _operationNetValue, _valueOr
+from datetime import datetime
 
 class Profits(object):
     def __init__(self, assetData):
@@ -13,6 +14,7 @@ class Profits(object):
 
         self.totalProfits = self.data['_totalProfits']
 
+        self.investmentStart = None
         self.averagePrice = 0.0
         self.averageNetPrice = 0.0
         self.averageProvision = 0.0
@@ -34,9 +36,13 @@ class Profits(object):
 
             self.currentQuantity = operation['finalQuantity']
 
-        self.data['_stillInvestedValue'] = self.averagePrice * self.currentQuantity
+        self.data['_averagePrice'] = self.averagePrice
+        self.data['_averageNetPrice'] = self.averageNetPrice
+        self.data['_averageProvision'] = self.averageProvision
         self.data['_stillInvestedNetValue'] = self.averageNetPrice * self.currentQuantity
-        self.data['_stillPendingProvisions'] = self.averageProvision * self.currentQuantity
+
+        if self.investmentStart is not None:
+            self.data['_holdingDays'] = (datetime.now() - self.investmentStart).days
 
         return self.data
 
@@ -47,6 +53,9 @@ class Profits(object):
         self.averagePrice = (self.averagePrice * self.currentQuantity + operation['price']) / finalQuantity
         self.averageNetPrice = (self.averageNetPrice * self.currentQuantity + _operationNetValue(operation)) / finalQuantity
         self.averageProvision = (self.averageProvision * self.currentQuantity + _valueOr(operation, 'provision', 0.0)) / finalQuantity
+
+        if self.investmentStart is None:
+            self.investmentStart = operation['date']
 
     def _sell(self, operation):
         quantity = operation['quantity']
@@ -66,3 +75,4 @@ class Profits(object):
             self.averagePrice = 0.0
             self.averageNetPrice = 0.0
             self.averageProvision = 0.0
+            self.investmentStart = None

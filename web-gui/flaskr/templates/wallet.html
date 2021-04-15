@@ -40,8 +40,8 @@
       "responsive": true,
       "columnDefs": [
         { "type": "string", "targets": [0, 1, 2, 3] },
-        { "type": "num-fmt", "targets": [4, 5, 6, 7, 8] },
-        { "orderable": false, "targets": [5] },
+        { "type": "num-fmt", "targets": [4, 5, 6, 7, 8, 9] },
+        { "orderable": false, "targets": [] },
       ],
     });
   });
@@ -233,6 +233,8 @@
 {% endblock %}
 
 {% block content %}
+{% set totalNetValue = (assets | sum(attribute='_netValue')) -%}
+{% set totalStillInvestedNetValue = (assets | sum(attribute='_stillInvestedNetValue')) -%}
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
@@ -247,12 +249,13 @@
 								<th>Name</th>
 								<th>Institution</th>
 								<th>Category</th>
-								<th>Market price</th>
-								<th>3M in %</th>
-								<th>Quantity</th>
-								<th>Investment</th>
-								<th>Net value</th>
-								<th>Holding Return</th>
+								<th>Region</th>
+                <th>Holding period <span class="smaller">[days]</span></th>
+								<th>Quaterly change</th>
+                <th>Investment <span class="smaller">[PLN]</span></th>
+                <th>Net value <span class="smaller">[PLN]</span></th>
+                <th>Wallet share</th>
+								<th>Holding return</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -279,19 +282,16 @@
                   <span class="smaller">{{ asset.subcategory }}</span>
                   {%- endif -%}
                 </td>
-                <td class="text-right" data-order="{{ asset.lastQuote.quote if asset.lastQuote else 0 }}">
-								{%- if asset.lastQuote -%}
-                {{ asset.lastQuote.quote }}&nbsp;{{ asset.currency }}
-								{%- endif -%}
-								</td>
+                <td>{{ asset.region }}</td>
+                <td class="text-right">{{ asset._holdingDays }}</td>
                 <td class="text-right color-gain">
                 {%- if asset.quote3mAgo -%}
                   {{ ((asset.lastQuote.quote - asset.quote3mAgo.quote) / asset.quote3mAgo.quote * 100) | round(2) if asset.lastQuote else 0 }}%
                 {%- endif -%}
                 </td>
-								<td>{{ asset.finalQuantity }}</td>
-                <td class="text-right" data-order="{{ asset._stillInvestedNetValue }}">{{ asset._stillInvestedNetValue | round(2) }}&nbsp;PLN</td>
-                <td class="text-right" data-order="{{ asset._netValue }}">{{ asset._netValue | round(2) }}&nbsp;PLN</td>
+                <td class="text-right">{{ asset._stillInvestedNetValue | round(2) }}</td>
+                <td class="text-right">{{ asset._netValue | round(2) }}</td>
+                <td class="text-right">{{ (asset._netValue / totalNetValue * 100) | round(1) }}%</td>
                 <td class="text-right color-gain">{{ ((asset._netValue - asset._stillInvestedNetValue) / asset._stillInvestedNetValue * 100) | round(2) }}%</td>
 							</tr>
 							{% endfor %}
@@ -304,9 +304,10 @@
                 <th></th>
                 <th></th>
                 <th></th>
-                <th>{{ assets | sum(attribute='_stillInvestedNetValue') | round(2) }}&nbsp;PLN</th>
-                <th>{{ assets | sum(attribute='_netValue') | round(2) }}&nbsp;PLN</th>
-                <th>{{ ((assets | sum(attribute='_netValue') - (assets | sum(attribute='_stillInvestedNetValue'))) / (assets | sum(attribute='_stillInvestedNetValue')) * 100) | round(2) }}%</th>
+                <th class="text-right">{{ totalStillInvestedNetValue | round(2) }}</th>
+                <th class="text-right">{{ totalNetValue | round(2) }}</th>
+                <th class="text-right">100%</th>
+                <th class="text-right color-gain">{{ ((totalNetValue - totalStillInvestedNetValue) / totalStillInvestedNetValue * 100) | round(2) }}%</th>
               </tr>
             </tfoot>
 					</table>

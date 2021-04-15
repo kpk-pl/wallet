@@ -94,10 +94,10 @@
 {% block content %}
 <div class="container-sm">
   <div class="row">
-    <div class="col-9">
+    <div class="col-5">
       <div class="card card-primary">
         <div class="card-header">
-          <h3 class="card-title">{{ asset.name }}</h3>
+          <h3 class="card-title">Info</h3>
         </div>
         <div class="card-body">
           <dl class="row">
@@ -119,12 +119,43 @@
             <dd class="col-sm-9">{{ asset.institution }}</dd>
             <dt class="col-sm-3">Currency</dt>
             <dd class="col-sm-9">{{ asset.currency }}</dd>
-            <dt class="col-sm-3">Current quantity</dt>
-            <dd class="col-sm-9">{{ asset.finalQuantity if asset.finalQuantity else 0 }}</dd>
             {% if asset.link -%}
             <dt class="col-sm-3">Link</dt>
             <dd class="col-sm-9"><a href="{{ asset.link }}" target="_blank" rel="noopener noreferrer">{{ asset.link }}</a></dd>
             {% endif %}
+          </dl>
+        </div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Status</h3>
+        </div>
+        <div class="card-body">
+          <dl class="row">
+            <dt class="col-sm-6">Status</dt>
+            <dd class="col-sm-6">
+              {%- if asset.finalQuantity and asset.finalQuantity > 0 -%}
+              <span class="text-success">Active</span>
+              {%- else -%}
+              <span class="text-muted">Inactive</span>
+              {%- endif -%}
+            </dd>
+            <dt class="col-sm-6">Holding period</dt>
+            <dd class="col-sm-6">
+              {%- if asset.finalQuantity and asset.finalQuantity > 0 -%}
+              {{ asset._holdingDays }} days
+              {%- endif -%}
+            </dd>
+            <dt class="col-sm-6">Current quantity</dt>
+            <dd class="col-sm-6">{{ asset.finalQuantity if asset.finalQuantity else 0 }}</dd>
+            <dt class="col-sm-6">Average price</dt>
+            <dd class="col-sm-6">
+              {%- if asset.finalQuantity and asset.finalQuantity > 0 -%}
+              {{ asset._averagePrice | round(2) }} {{ asset.currency }}
+              {%- endif -%}
+            </dd>
           </dl>
         </div>
       </div>

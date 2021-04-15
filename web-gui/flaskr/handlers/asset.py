@@ -1,6 +1,7 @@
 from flask import render_template, request, Response, json
 from flaskr import db, quotes
 from flaskr.analyzers.historical import HistoricalValue
+from flaskr.analyzers.profits import Profits
 from bson.objectid import ObjectId
 from dateutil import parser
 from datetime import datetime, timedelta
@@ -25,7 +26,17 @@ def asset():
         if not assets:
             return ('', 404)
 
-        return render_template("asset/_.html", asset=assets[0])
+        asset = Profits(assets[0])()
+
+        lastQuoteUpdateTime = db.last_quote_update_time()
+        misc = {
+            'lastQuoteUpdate': {
+                'timestamp': lastQuoteUpdateTime,
+                'daysPast': (datetime.now() - lastQuoteUpdateTime).days
+            }
+        }
+
+        return render_template("asset/_.html", asset=asset, misc=misc)
     elif request.method == 'POST':
         data = {}
 
@@ -43,7 +54,15 @@ def asset():
 
 def asset_add():
     if request.method == 'GET':
-        return render_template("asset/add.html")
+        lastQuoteUpdateTime = db.last_quote_update_time()
+        misc = {
+            'lastQuoteUpdate': {
+                'timestamp': lastQuoteUpdateTime,
+                'daysPast': (datetime.now() - lastQuoteUpdateTime).days
+            }
+        }
+
+        return render_template("asset/add.html", misc=misc)
 
 
 def _getPipelineForImportQuotes(assetId):

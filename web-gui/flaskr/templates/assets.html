@@ -46,6 +46,7 @@
                 <th>Institution</th>
                 <th>Type</th>
                 <th>Category</th>
+                <th>Subcategory</th>
                 <th>Region</th>
                 <th>Currency</th>
                 <th>Quantity</th>
@@ -55,7 +56,9 @@
               {% for asset in assets | sort(attribute='name') %}
               <tr>
                 <td data-title="Name">
-                  {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
+                  <a href="{{ url_for('asset', id=asset._id) }}">
+                    {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
+                  </a>
                   {% if asset.link -%}
                   <a href="{{asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="External asset site">
                     <i class="fas fa-external-link-alt fa-fw fa-pull-right"></i>
@@ -66,13 +69,11 @@
                   <a href="{{ url_for('asset.receipt', id=asset._id) }}" class="imagelink" title="Register buy or sell">
                     <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
                   </a>
-                  <a href="{{ url_for('asset', id=asset._id) }}" class="imagelink" title="Asset details">
-                    <i class="fas fa-info-circle fa-fw fa-pull-right"></i>
-                  </a>
                 </td>
                 <td data-title="Institution">{{ asset.institution }}</td>
                 <td data-title="Type">{{ asset.type }}</td>
-                <td data-title="Category">{{ asset.subcategory if asset.subcategory else asset.category }}</td>
+                <td data-title="Category">{{ asset.category }}</td>
+                <td data-title="Subcategory">{{ asset.subcategory if asset.subcategory else "" }}</td>
                 <td data-title="Region">{{ asset.region }}</td>
                 <td data-title="Currency">{{ asset.currency }}</td>
                 <td data-title="Quantity">{{ asset.finalQuantity or 0 }}</td>
