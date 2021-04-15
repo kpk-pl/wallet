@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block title %}Import quotes{% endblock %}
+
+{% block links %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css') }}">
+{% endblock %}
+
+{% block plugins_scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery-validation/jquery.validate.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js/Chart.min.js') }}"></script>
+{% endblock %}
+
+{% block user_scripts %}
+<script type="text/javascript">
+$(function () {
+  $('.f-date-group').datetimepicker({
+    locale: 'pl',
+    format: 'YYYY-MM-DD',
+  });
+})
+</script>
+<script type="text/javascript">
+  const data = {{ asset.quoteHistory | tojson }};
+  var chart = new Chart(document.getElementById('chart').getContext('2d'), {
+    type: 'line',
+    data: {
+      datasets: [{
+        label: 'Existing quotes',
+        cubicInterpolationMode: 'monotone',
+        pointRadius: 2,
+        data: data.map(function(e){ return {t: e.timestamp, y: e.quote}; }),
+        backgroundColor: 'rgba(0, 123, 255, 0.65)',
+        borderColor: 'rgba(0, 123, 255, 1)',
+        borderWidth: 2,
+        order: 1
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      responsive: true,
+      scales: {
+        xAxes: [{
+          type: 'time',
+          time: {
+            unit: 'day',
+            displayFormats: {
+              day: 'D MMM YY'
+            }
+          }
+        }],
+        yAxes: [{
+          scaleLabel: {
+            display: true,
+            labelString: '{{ asset.currency }}'
+          }
+        }],
+      }
+    }
+  });
+</script>
+<script type="text/javascript">
+$('#f-load-button').click(function(form){
+  var form = $("#f-form")
+  if (form.valid()) {
+    const formData = form.serialize()
+    $.getJSON("{{ url_for('quote.import') }}" + '?' + formData, function(data) {
+      console.log(data)
+      $("#f-submit").attr('disabled', false);
+    })
+  } else {
+    $("#f-submit").attr('disabled', true);
+  }
+});
+$.validator.setDefaults({
+  submitHandler: function(form) {
+    console.log(form);
+    console.log("Submit");
+  }
+});
+$("#f-form").validate({
+  errorElement: 'span',
+  errorPlacement: function (error, element) {
+          error.addClass('invalid-feedback');
+          element.closest('.form-group').append(error);
+        },
+  highlight: function (element, errorClass, validClass) {
+          $(element).addClass('is-invalid');
+        },
+  unhighlight: function (element, errorClass, validClass) {
+          $(element).removeClass('is-invalid');
+        }
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">{{ asset.name }}</h3>
+        </div>
+        <div class="card-body">
+          <dl class="row">
+            <dt class="col-sm-3">Name</dt>
+            <dd class="col-sm-9">{{ asset.name }}</dd>
+            {% if asset.ticker -%}
+            <dt class="col-sm-3">Ticker</dt>
+            <dd class="col-sm-9">{{ asset.ticker }}</dd>
+            {%- endif %}
+            {% if asset.link -%}
+            <dt class="col-sm-3">Link</dt>
+            <dd class="col-sm-9"><a href="{{ asset.link }}" target="_blank" rel="noopener noreferrer">{{ asset.link }}</a></dd>
+            {%- endif %}
+          </dl>
+          <form method="post" action="" id="f-form">
+            <input type="hidden" name="_id" value="{{ asset._id }}"/>
+            <div class="row">
+              <div class="col-sm-6">
+                <div class="form-group">
+                  <label for="f-date-from">From</label>
+                  <div class="input-group date f-date-group" id="f-date-from-group" data-target-input="nearest">
+                    <input type="text" id="f-date-from" name="date-from" class="form-control datetimepicker-input" data-target="#f-date-from-group" required/>
+                    <div class="input-group-append" data-target="#f-date-from-group" data-toggle="datetimepicker">
+                      <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="form-group">
+                  <label for="f-date-to">To</label>
+                  <div class="input-group date f-date-group" id="f-date-to-group" data-target-input="nearest">
+                    <input type="text" id="f-date-to" name="date-to" class="form-control datetimepicker-input" data-target="#f-date-to-group" required/>
+                    <div class="input-group-append" data-target="#f-date-to-group" data-toggle="datetimepicker">
+                      <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-sm-4">
+                <div class="form-group">
+                  <label for="f-source">Source</label>
+                  <select id="f-source" name="source" class="custom-select" required>
+                    <option value="" hidden disabled selected value></option>
+                    {% if asset.stooqSymbol -%}
+                    <option value="stooq">Online from stooq</option>
+                    {%- endif %}
+                    <option value="csv" disabled>From CSV file</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-sm-4">
+              </div>
+              <div class="col-sm-4">
+                <div class="form-group">
+                  <label for="f-method">Method</label>
+                  <select id="f-method" name="method" class="custom-select" required>
+                    <option value="replace" selected>Replace</option>
+                    <option value="fill-missing" disabled>Fill missing</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <button class="btn btn-primary" type="button" id="f-load-button">Load</button>
+              </div>
+              <div class="col">
+                <button class="btn btn-success float-right" type="submit" id="f-submit" disabled="disabled">Save</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Graph</h3>
+          <div class="card-tools">
+            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <canvas id="chart" style="min-height: 400px; height: 400px; max-height: 400px; max-width: 100%;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -165,7 +165,7 @@ $("form").validate({
             <dt class="col-sm-4">Current quantity</dt>
             <dd class="col-sm-8">{{ asset.finalQuantity if asset.finalQuantity else 0 }}</dd>
             {% if asset.lastQuote -%}
-            <dt class="col-sm-4">Current quote</dt>
+            <dt class="col-sm-4">Last quote</dt>
             <dd class="col-sm-8">{{ asset.lastQuote.quote }} {{ asset.currency }}</dd>
             {%- endif %}
           </dl>

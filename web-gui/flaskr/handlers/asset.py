@@ -35,7 +35,7 @@ def asset():
                 data[key] = request.form[key]
 
         if data['link'].startswith("https://stooq.pl"):
-            data['stooqSymbol'] = Stooq(data['link'])
+            data['stooqSymbol'] = Stooq(url=data['link']).ticker
 
         db.get_db().assets.insert(data)
         return ('', 204)
@@ -44,6 +44,34 @@ def asset():
 def asset_add():
     if request.method == 'GET':
         return render_template("asset/add.html")
+
+
+def _getPipelineForImportQuotes(assetId):
+    pipeline = []
+    pipeline.append({ "$match" : { "_id" : ObjectId(assetId) } })
+    pipeline.append({ "$project": {
+        '_id': 1,
+        'name': 1,
+        'ticker': 1,
+        'quoteHistory': 1,
+        'stooqSymbol': 1,
+        'link': 1
+    }})
+    return pipeline
+
+def asset_importQuotes():
+    if request.method == 'GET':
+        assetId = request.args.get('id')
+        if not assetId:
+            return ('', 400)
+
+        assets = list(db.get_db().assets.aggregate(_getPipelineForImportQuotes(assetId)))
+        if not assets:
+            return ('', 404)
+
+        return render_template("asset/import_quotes.html", asset=assets[0])
+    elif request.method == 'POST':
+        return ('', 204)
 
 
 # TODO: need to handle buying more of an asset that do not have
@@ -58,12 +86,15 @@ def asset_receipt():
 
         pipeline = [
             { "$match" : { "_id" : ObjectId(id) } },
-            {
-                "$addFields" : {
-                    "finalQuantity": { "$last": "$operations.finalQuantity" },
-                }
-            },
-            { "$unset" : ["quoteHistory"] }
+            { "$project" : {
+                '_id': 1,
+                'name': 1,
+                'ticker': 1,
+                'institution': 1,
+                'currency': 1,
+                'finalQuantity': { '$last': '$operations.finalQuantity' },
+                'lastQuote': { '$last': '$quoteHistory' }
+            }}
         ]
 
         assets = list(db.get_db().assets.aggregate(pipeline))
@@ -84,9 +115,11 @@ def asset_receipt():
             'price': float(request.form['price'])
         }
 
-        provision = float(request.form['provision'])
-        if provision > 0:
-            operation['provision'] = provision
+        provision = request.form['provision']
+        if provision:
+            provision = float(provision)
+            if provision > 0:
+                operation['provision'] = provision
 
         if 'currencyConversion' in request.form.keys():
             operation['currencyConversion'] = float(request.form['currencyConversion'])

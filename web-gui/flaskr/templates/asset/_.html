@@ -11,7 +11,6 @@
 {% endblock %}
 
 {% block user_scripts %}
-{% block javascript %}
 <script type="text/javascript">
   const data = {{ asset.quoteHistory | tojson }};
   const operations = {{ asset.operations | tojson }};
@@ -91,7 +90,6 @@
   });
 </script>
 {% endblock %}
-{% endblock %}
 
 {% block content %}
 <div class="container-sm">
@@ -123,8 +121,10 @@
             <dd class="col-sm-9">{{ asset.currency }}</dd>
             <dt class="col-sm-3">Current quantity</dt>
             <dd class="col-sm-9">{{ asset.finalQuantity if asset.finalQuantity else 0 }}</dd>
+            {% if asset.link -%}
             <dt class="col-sm-3">Link</dt>
             <dd class="col-sm-9"><a href="{{ asset.link }}" target="_blank" rel="noopener noreferrer">{{ asset.link }}</a></dd>
+            {% endif %}
           </dl>
         </div>
       </div>
@@ -141,7 +141,7 @@
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href=''">
             <i class="fas fa-edit"></i> Edit
           </button>
-          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href=''">
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('asset.importQuotes', id=asset._id) }}'">
             <i class="fa fa-upload"></i> Import quotes
           </button>
         </div>

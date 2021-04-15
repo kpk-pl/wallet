@@ -26,6 +26,7 @@ def quote():
             db.get_db().currencies.update(query, update)
         return Response(), 204
 
+
 def quote_add():
     if request.method == 'GET':
         assetId = request.args.get('asset')
@@ -53,3 +54,9 @@ def quote_add():
             return Response(), 404
 
         return render_template("quote/add.html", asset=assets[0], assetType=assetType, date=request.args.get('date'), ref=request.args.get('ref'))
+
+
+def quote_import():
+    if request.method == 'GET':
+        return Response(json.dumps({}), mimetype="application/json")
+
