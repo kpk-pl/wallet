@@ -6,6 +6,14 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery-validation/jquery.validate.min.js') }}"></script>
 {% endblock %}
 
+{% block styles %}
+<style>
+.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
+  background-color: var(--light)
+}
+</style>
+{% endblock %}
+
 {% block user_scripts %}
 <script type="text/javascript">
 $(document).ready(function(){
@@ -66,101 +74,115 @@ $("form").validate({
   <div class="row">
     <div class="col-12">
       <div class="card card-primary">
-        <div class="card-header">
-          <h3 class="card-title">Add new asset</h3>
+        <div class="card-header d-flex p-0">
+          <h3 class="card-title p-3">Add new asset</h3>
+          <ul class="nav nav-pills ml-auto p-2">
+            <li class="nav-item">
+              <a class="nav-link active" href="#tab-listed" data-toggle="tab">Listed</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#tab-bonds-poland" data-toggle="tab">Polish bonds</a>
+            </li>
+          </ul>
         </div>
         <form method="post" action="">
           <div class="card-body">
-            <div class="form-group">
-              <label for="f-link">Link to biznesradar.pl or pl.investing.com</label>
-              <div class="input-group">
-                <input type="url" id="f-link" name="link" class="form-control" data-lpignore="true"/>
-                <span class="input-group-append">
-                  <button type="button" class="btn btn-info" id="f-link-get">Get!</button>
-                </span>
-              </div>
-            </div>
-            <div class="row">
-              <div class="col-9">
+            <div class="tab-content">
+              <div class="tab-pane active" id="tab-listed">
                 <div class="form-group">
-                  <label for="f-name">Name</label>
-                  <input type="text" id="f-name" name="name" class="form-control" data-lpignore="true" required/>
-                </div>
-              </div>
-              <div class="col-3">
-                <div class="form-group">
-                  <label for="f-ticker">Ticker</label>
-                  <input type="text" id="f-ticker" name="ticker" class="form-control" data-lpignore="true"/>
-                </div>
-              </div>
-            </div>
-            <div class="row">
-              <div class="col-9">
-                <div class="form-group">
-                  <label for="f-currency">Currency</label>
-                  <select id="f-currency" name="currency" class="custom-select" required>
-                    <option value="" hidden disabled selected value></option>
-                    <option value="PLN">PLN</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                  </select>
-                </div>
-              </div>
-              <div class="col-3">
-                <div class="form-group">
-                  <label for="f-quote">Quote</label>
+                  <label for="f-link">Link to biznesradar.pl or pl.investing.com</label>
                   <div class="input-group">
-                    <div class="input-group-prepend">
-                      <span class="input-group-text" id="f-quote-currency-prepend">PLN</span>
+                    <input type="url" id="f-link" name="link" class="form-control" data-lpignore="true"/>
+                    <span class="input-group-append">
+                      <button type="button" class="btn btn-info" id="f-link-get">Get!</button>
+                    </span>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-9">
+                    <div class="form-group">
+                      <label for="f-name">Name</label>
+                      <input type="text" id="f-name" name="name" class="form-control" data-lpignore="true" required/>
                     </div>
-                    <input type="text" id="f-quote" name="quote" class="form-control" disabled="disabled" data-lpignore="true"/>
+                  </div>
+                  <div class="col-3">
+                    <div class="form-group">
+                      <label for="f-ticker">Ticker</label>
+                      <input type="text" id="f-ticker" name="ticker" class="form-control" data-lpignore="true"/>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-9">
+                    <div class="form-group">
+                      <label for="f-currency">Currency</label>
+                      <select id="f-currency" name="currency" class="custom-select" required>
+                        <option value="" hidden disabled selected value></option>
+                        <option value="PLN">PLN</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-3">
+                    <div class="form-group">
+                      <label for="f-quote">Quote</label>
+                      <div class="input-group">
+                        <div class="input-group-prepend">
+                          <span class="input-group-text" id="f-quote-currency-prepend">PLN</span>
+                        </div>
+                        <input type="text" id="f-quote" name="quote" class="form-control" disabled="disabled" data-lpignore="true"/>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-7">
+                    <div class="form-group">
+                      <label for="f-institution">Institution</label>
+                      <input type="text" id="f-institution" name="institution" class="form-control" data-lpignore="true" required/>
+                    </div>
+                  </div>
+                  <div class="col-5">
+                    <div class="form-group">
+                      <label for="f-type">Type</label>
+                      <select id="f-type" name="type" class="custom-select" required>
+                        <option value="" hidden disabled selected value></option>
+                        <option value="ETF">ETF</option>
+                        <option value="Equity">Equity</option>
+                        <option value="Investment Fund">Investment Fund</option>
+                        <option value="Deposit">Deposit</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-6 col-sm-4">
+                    <div class="form-group">
+                      <label for="f-category">Category</label>
+                      <select id="f-category" name="category" class="custom-select" required>
+                        <option value="" hidden disabled selected value></option>
+                        <option value="Equities">Equities</option>
+                        <option value="Bonds">Bonds</option>
+                        <option value="Cash">Cash</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-6 col-sm-4">
+                    <div class="form-group">
+                      <label for="f-subcategory">Subcategory</label>
+                      <input type="text" id="f-subcategory" name="subcategory" class="form-control" data-lpignore="true" />
+                    </div>
+                  </div>
+                  <div class="col-12 col-sm-4">
+                    <div class="form-group">
+                      <label for="f-region">Region</label>
+                      <input type="text" id="f-region" name="region" class="form-control" data-lpignore="true" required/>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div class="row">
-              <div class="col-7">
-                <div class="form-group">
-                  <label for="f-institution">Institution</label>
-                  <input type="text" id="f-institution" name="institution" class="form-control" data-lpignore="true" required/>
-                </div>
-              </div>
-              <div class="col-5">
-                <div class="form-group">
-                  <label for="f-type">Type</label>
-                  <select id="f-type" name="type" class="custom-select" required>
-                    <option value="" hidden disabled selected value></option>
-                    <option value="ETF">ETF</option>
-                    <option value="Equity">Equity</option>
-                    <option value="Investment Fund">Investment Fund</option>
-                    <option value="Deposit">Deposit</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div class="row">
-              <div class="col-6 col-sm-4">
-                <div class="form-group">
-                  <label for="f-category">Category</label>
-                  <select id="f-category" name="category" class="custom-select" required>
-                    <option value="" hidden disabled selected value></option>
-                    <option value="Equities">Equities</option>
-                    <option value="Bonds">Bonds</option>
-                    <option value="Cash">Cash</option>
-                  </select>
-                </div>
-              </div>
-              <div class="col-6 col-sm-4">
-                <div class="form-group">
-                  <label for="f-subcategory">Subcategory</label>
-                  <input type="text" id="f-subcategory" name="subcategory" class="form-control" data-lpignore="true" />
-                </div>
-              </div>
-              <div class="col-12 col-sm-4">
-                <div class="form-group">
-                  <label for="f-region">Region</label>
-                  <input type="text" id="f-region" name="region" class="form-control" data-lpignore="true" required/>
-                </div>
+              <div class="tab-pane" id="tab-bonds-poland">
               </div>
             </div>
           </div>
