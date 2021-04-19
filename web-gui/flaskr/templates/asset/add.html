@@ -151,7 +151,6 @@ $("form").validate({
                         <option value="ETF">ETF</option>
                         <option value="Equity">Equity</option>
                         <option value="Investment Fund">Investment Fund</option>
-                        <option value="Deposit">Deposit</option>
                       </select>
                     </div>
                   </div>
@@ -165,7 +164,6 @@ $("form").validate({
                         <option value="Equities">Equities</option>
                         <option value="Bonds">Bonds</option>
                         <option value="Gold">Gold</option>
-                        <option value="Cash">Cash</option>
                       </select>
                     </div>
                   </div>
@@ -184,6 +182,22 @@ $("form").validate({
                 </div>
               </div>
               <div class="tab-pane" id="tab-bonds-poland">
+                <input type="hidden" name="type" value="Polish Bonds"/>
+                <input type="hidden" name="currency" value="PLN"/>
+                <input type="hidden" name="category" value="Bonds"/>
+                <input type="hidden" name="subcategory" value="Inflation linked"/>
+                <input type="hidden" name="region" value="Poland"/>
+                <div class="row">
+                  <div class="col-9">
+                    <div class="form-group">
+                      <label for="f-name">Name</label>
+                      <select id="f-name" name="name" class="custom-select" required>
+                        <option value="" hidden disabled selected value></option>
+                        <option value="EDO">EDO</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
