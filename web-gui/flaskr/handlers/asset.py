@@ -1,4 +1,4 @@
-from flask import render_template, request, Response, json
+from flask import render_template, request, Response, json, jsonify
 from flaskr import db, quotes
 from flaskr.analyzers.historical import HistoricalValue
 from flaskr.analyzers.profits import Profits
@@ -12,7 +12,17 @@ from collections import defaultdict
 def _getPipelineForAssetDetails(assetId):
     pipeline = []
     pipeline.append({ "$match" : { "_id" : ObjectId(assetId) } })
-    pipeline.append({ "$addFields" : { "finalQuantity": { "$last": "$operations.finalQuantity" } }})
+    pipeline.append({ "$project" : {
+        "name": 1,
+        "institution": 1,
+        "category": 1,
+        "subcategory": 1,
+        "currency": 1,
+        "type": 1,
+        "quoteHistory": { "$ifNull": [ '$quoteHistory', [] ] },
+        "operations": { "$ifNull": [ '$operations', [] ] },
+        "finalQuantity": { "$last": "$operations.finalQuantity" }
+    }})
     return pipeline
 
 
@@ -48,8 +58,8 @@ def asset():
         if data['link'].startswith("https://stooq.pl"):
             data['stooqSymbol'] = Stooq(url=data['link']).ticker
 
-        db.get_db().assets.insert(data)
-        return ('', 204)
+        addedId = db.get_db().assets.insert(data)
+        return jsonify(id=str(addedId))
 
 
 def asset_add():

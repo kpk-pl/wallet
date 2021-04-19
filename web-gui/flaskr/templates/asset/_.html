@@ -217,12 +217,12 @@
                 <th>Date</th>
                 <th style="width: 30px">Type</th>
                 <th>Quantity</th>
-                <th>Price</th>
-                <th>Unit price</th>
+                <th>Price <span class="smaller">[{{ asset.currency }}]</span></th>
+                <th>Unit price <span class="smaller">[{{ asset.currency }}]</span></th>
                 {% if asset.currency != 'PLN' -%}
                 <th>Currency conversion</th>
                 {%- endif %}
-                <th>Provision</th>
+                <th>Provision <span class="smaller">[PLN]</span></th>
                 <th>Final quantity</th>
               </tr>
             </thead>
@@ -233,12 +233,12 @@
                 <td>{{ operation.date }}</td>
                 <td><span class="badge bg-{{ 'danger' if operation.type == 'SELL' else 'success' }}">{{ operation.type }}</span></td>
                 <td>{{ operation.quantity }}</td>
-                <td>{{ operation.price }} {{ asset.currency }}</td>
-                <td>{{ (operation.price / operation.quantity) | round(3) }} {{ asset.currency }}</td>
+                <td>{{ operation.price }}</td>
+                <td>{{ (operation.price / operation.quantity) | round(3) }}</td>
                 {% if asset.currency != 'PLN' -%}
-                <td>{{ operation.currencyConversion }} PLN/{{ asset.currency }}</td>
+                <td>{{ operation.currencyConversion | round(4) }}</td>
                 {%- endif %}
-                <td>{{ operation.provision }} PLN</td>
+                <td>{{ operation.provision if operation.provision else 0 }}</td>
                 <td>{{ operation.finalQuantity }}</td>
               </tr>
               {%- endfor %}

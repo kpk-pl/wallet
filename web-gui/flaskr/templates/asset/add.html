@@ -49,7 +49,7 @@ $(document).ready(function(){
 $.validator.setDefaults({
   submitHandler: function() {
     $.post('/asset', $('form').serialize(), function(data) {
-      $(location).attr("href", "{{ url_for('assets') }}");
+      $(location).attr("href", "{{ url_for('asset') }}" + '?id=' + data.id);
     })
   }
 });
@@ -90,7 +90,7 @@ $("form").validate({
             <div class="tab-content">
               <div class="tab-pane active" id="tab-listed">
                 <div class="form-group">
-                  <label for="f-link">Link to biznesradar.pl or pl.investing.com</label>
+                  <label for="f-link">Link to <a href="https://stooq.pl" target="_blank" rel="noopener noreferrer">stooq.pl</a>, <a href="https://www.biznesradar.pl/" target="_blank" rel="noopener noreferrer">biznesradar.pl</a> or <a href="https://pl.investing.com/" target="_blank" rel="noopener noreferrer">pl.investing.com</a></label>
                   <div class="input-group">
                     <input type="url" id="f-link" name="link" class="form-control" data-lpignore="true"/>
                     <span class="input-group-append">
@@ -164,6 +164,7 @@ $("form").validate({
                         <option value="" hidden disabled selected value></option>
                         <option value="Equities">Equities</option>
                         <option value="Bonds">Bonds</option>
+                        <option value="Gold">Gold</option>
                         <option value="Cash">Cash</option>
                       </select>
                     </div>
