@@ -6,6 +6,7 @@ from datetime import datetime
 def assets():
     if request.method == 'GET':
         pipeline = [
+            { "$match" : { 'trashed': { '$ne' : True } } },
             {
                 "$addFields" : {
                     "finalQuantity": { "$last": "$operations.finalQuantity" }

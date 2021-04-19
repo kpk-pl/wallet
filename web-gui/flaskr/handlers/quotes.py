@@ -13,7 +13,7 @@ def quotes():
     if request.method in ['GET', 'PUT']:
         storeQuotes = (request.method == 'PUT')
 
-        assets = list(db.get_db().assets.find({'link': {'$exists': True}}, {'_id': 1, 'name': 1, 'link': 1}))
+        assets = list(db.get_db().assets.find({'link': {'$exists': True}, 'trashed': {'$ne': True}}, {'_id': 1, 'name': 1, 'link': 1}))
         assetDict = { e['_id'] : e['link'] for e in assets }
 
         currencies = list(db.get_db().currencies.find({}, {'_id': 1, 'name': 1, 'link': 1}))

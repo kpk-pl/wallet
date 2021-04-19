@@ -297,3 +297,16 @@ def asset_historicalValue():
                     category['y'][idx] /= categorySum / 100
 
         return Response(json.dumps(result), mimetype="application/json")
+
+
+def asset_trash():
+    if request.method == 'POST':
+        assetId = request.args.get('id')
+        if not assetId:
+            return ('', 400)
+
+        query = {'_id': ObjectId(assetId)}
+        update = {'$set': {'trashed': True}}
+        db.get_db().assets.update(query, update)
+
+        return Response()

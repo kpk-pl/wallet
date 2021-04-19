@@ -38,6 +38,7 @@ def create_app(test_config=None):
     app.add_url_rule('/asset/receipt', 'asset.receipt', asset.asset_receipt, methods=['GET', 'POST'])
     app.add_url_rule('/asset/historicalValue', 'asset.historicalValue', asset.asset_historicalValue, methods=['GET'])
     app.add_url_rule('/asset/importQuotes', 'asset.importQuotes', asset.asset_importQuotes, methods=['GET', 'POST'])
+    app.add_url_rule('/asset/trash', 'asset.trash', asset.asset_trash, methods=['POST'])
 
     app.add_url_rule('/quotes', 'quotes', quotes.quotes, methods=['GET', 'PUT'])
 

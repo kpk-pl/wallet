@@ -12,6 +12,13 @@
 
 {% block user_scripts %}
 <script type="text/javascript">
+  function onTrash() {
+    $.post('{{ url_for('asset.trash', id=asset._id) }}', success=function(data){
+      location.href='{{ url_for('assets') }}'
+    })
+  }
+</script>
+<script type="text/javascript">
   const data = {{ asset.quoteHistory | tojson }};
   const operations = {{ asset.operations | tojson }};
   const operationsBuy = operations.filter(function(e){ return e.type == 'BUY'; })
@@ -175,6 +182,11 @@
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('asset.importQuotes', id=asset._id) }}'">
             <i class="fa fa-upload"></i> Import quotes
           </button>
+          {% if not asset.finalQuantity or asset.finalQuantity == 0 -%}
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="onTrash()">
+            <i class="fa fa-trash"></i> Move to trash
+          </button>
+          {%- endif %}
         </div>
       </div>
     </div>
