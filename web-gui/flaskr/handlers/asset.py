@@ -9,6 +9,20 @@ from flaskr.stooq import Stooq
 from collections import defaultdict
 
 
+def parseNumeric(value):
+    try:
+        return int(value)
+    except ValueError:
+        pass
+
+    try:
+        return float(value)
+    except ValueError:
+        pass
+
+    return None
+
+
 def _getPipelineForAssetDetails(assetId):
     pipeline = []
     pipeline.append({ "$match" : { "_id" : ObjectId(assetId) } })
@@ -139,8 +153,8 @@ def asset_receipt():
         operation = {
             'date': parser.parse(request.form['date']),
             'type': request.form['type'],
-            'quantity': float(request.form['quantity']),
-            'finalQuantity': float(request.form['finalQuantity']),
+            'quantity': parseNumeric(request.form['quantity']),
+            'finalQuantity': parseNumeric(request.form['finalQuantity']),
             'price': float(request.form['price'])
         }
 
