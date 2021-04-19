@@ -7,12 +7,18 @@ def assets():
     if request.method == 'GET':
         pipeline = [
             { "$match" : { 'trashed': { '$ne' : True } } },
-            {
-                "$addFields" : {
-                    "finalQuantity": { "$last": "$operations.finalQuantity" }
-                }
-            },
-            { "$unset" : ["quoteHistory", "operations"] }
+            { "$project" : {
+                '_id': 1,
+                'name': 1,
+                'institution': 1,
+                'type': 1,
+                'category': 1,
+                'subcategory': 1,
+                'region': 1,
+                'quantity': 1,
+                'link': 1,
+                'finalQuantity': { "$last": "$operations.finalQuantity" }
+            }}
         ]
         assets = list(db.get_db().assets.aggregate(pipeline))
 

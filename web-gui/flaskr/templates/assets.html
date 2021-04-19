@@ -48,7 +48,6 @@
                 <th>Category</th>
                 <th>Subcategory</th>
                 <th>Region</th>
-                <th>Currency</th>
                 <th>Quantity</th>
               </tr>
             </thead>
@@ -75,7 +74,6 @@
                 <td data-title="Category">{{ asset.category }}</td>
                 <td data-title="Subcategory">{{ asset.subcategory if asset.subcategory else "" }}</td>
                 <td data-title="Region">{{ asset.region }}</td>
-                <td data-title="Currency">{{ asset.currency }}</td>
                 <td data-title="Quantity">{{ asset.finalQuantity or 0 }}</td>
               </tr>
               {% endfor %}
