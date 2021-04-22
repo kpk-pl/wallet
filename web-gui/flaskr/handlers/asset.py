@@ -196,7 +196,8 @@ def _getPipelineForIdsHistorical(ids, fromTime):
             'currency': 1,
             'name': 1,
             'category': 1,
-            'subcategory': 1
+            'subcategory': 1,
+            'pricing': 1
         }}
     ]
     return pipeline

@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 from . import _operationNetValue, _valueOr
+from flaskr.pricing import Pricing
+
 
 class HistoricalValue(object):
     def __init__(self, assetData, currencyData):
@@ -33,18 +35,20 @@ class HistoricalValue(object):
                 quantity = ops[operationIdx]['finalQuantity']
                 operationIdx += 1
 
-            while quoteIdx < len(quotes) and quotes[quoteIdx]['timestamp'].date() <= dateIdx:
-                quote = quotes[quoteIdx]['quote']
-                quoteIdx += 1
+            if 'pricing' in self.data:
+                value = Pricing(self.data['pricing']).priceAsset(self.data['operations'], datetime.combine(dateIdx, datetime.min.time()))
+            else:
+                while quoteIdx < len(quotes) and quotes[quoteIdx]['timestamp'].date() <= dateIdx:
+                    quote = quotes[quoteIdx]['quote']
+                    quoteIdx += 1
+
+                value = quantity * quote if quote is not None else None
 
             if self.currencyData is not None:
                 while currencyIdx < len(self.currencyData) and self.currencyData[currencyIdx]['timestamp'].date() <= dateIdx:
                     currencyQuote = self.currencyData[currencyIdx]['quote']
                     currencyIdx += 1
 
-            value = quantity
-            value = value * quote if quote is not None else None
-            if self.currencyData is not None:
                 value = value * currencyQuote if currencyQuote is not None else None
 
             result['t'].append(dateIdx)
