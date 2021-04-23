@@ -31,7 +31,7 @@ def last_quote_update_time():
         { '$limit' : 1 }
     ]
 
-    result = list(get_db().assets.aggregate(pipeline))
+    result = list(get_db().quotes.aggregate(pipeline))
     if result:
         return result[0]['lastQuote']
 

@@ -33,10 +33,18 @@ def _getPipelineForAssetDetails(assetId):
         "subcategory": 1,
         "currency": 1,
         "type": 1,
-        "quoteHistory": { "$ifNull": [ '$quoteHistory', [] ] },
+        "pricing": 1,
+        "link": 1,
         "operations": { "$ifNull": [ '$operations', [] ] },
         "finalQuantity": { "$last": "$operations.finalQuantity" }
     }})
+    return pipeline
+
+
+def _getPipelineForAssetQuotes(quoteId):
+    pipeline = []
+    pipeline.append({'$match' : { '_id' : quoteId }})
+    pipeline.append({'$project' : { 'quoteHistory' : 1 }})
     return pipeline
 
 
@@ -51,6 +59,11 @@ def asset():
             return ('', 404)
 
         asset = Profits(assets[0])()
+
+        if 'quoteId' in asset['pricing']:
+            quoteHistory = list(db.get_db().quotes.aggregate(_getPipelineForAssetQuotes(asset['pricing']['quoteId'])))
+            if quoteHistory:
+                asset['quoteHistory'] = quoteHistory[0]['quoteHistory']
 
         lastQuoteUpdateTime = db.last_quote_update_time()
         misc = {

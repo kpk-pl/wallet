@@ -11,6 +11,7 @@ def quote():
         response = getQuote(quoteUrl)
         return Response(json.dumps(response), mimetype="application/json")
     elif request.method == 'POST':
+        raise NotImplementedError("Not implemented quote POST after movind quoteHistory to another collection")
         query = {'_id': ObjectId(request.form['_id'])}
         update = {'$push': {'quoteHistory': {
             '$each': [{
@@ -29,6 +30,7 @@ def quote():
 
 def quote_add():
     if request.method == 'GET':
+        raise NotImplementedError("Not implemented quote/add POST after movind quoteHistory to another collection")
         assetId = request.args.get('asset')
         currencyId = request.args.get('currency')
 

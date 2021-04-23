@@ -1,6 +1,6 @@
 from flask import render_template, request, json, current_app
 
-from flaskr import db, quotes
+from flaskr import db
 from flaskr.analyzers.profits import Profits
 from flaskr.analyzers.value import Value
 
@@ -35,14 +35,6 @@ def _getPipeline(official):
 
     pipeline.append({ "$match" : { "finalQuantity": { "$ne": 0 } } })
 
-    pipeline.append({ "$addFields" : {
-        "quotesAfter3m": { "$filter": {
-                 "input": "$quoteHistory",
-                 "as": "item",
-                 "cond": { "$gte": ["$$item.timestamp", threeMonthsAgo] }
-        }}
-    }})
-
     pipeline.append({ "$project" : {
         "_id": 1,
         "name": 1,
@@ -55,8 +47,6 @@ def _getPipeline(official):
         "operations": 1,
         "pricing": 1,
         "finalQuantity": 1,
-        "lastQuote": { "$last": "$quoteHistory" },
-        "quote3mAgo": { "$first": "$quotesAfter3m" }
     }})
 
     return pipeline

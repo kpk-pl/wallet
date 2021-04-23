@@ -8,14 +8,13 @@ from bson.objectid import ObjectId
 
 
 def _getPipeline(year):
-    pipeline = []
-
     nextYear = datetime(year + 1, 1, 1)
+
+    pipeline = []
 
     # include only those assets that were created up to this year
     pipeline.append({ '$match': { "operations.0.date": {'$lte': nextYear}}})
 
-#    pipeline.append({ "$match" : { "_id" : ObjectId("60153b027e1237164d0e0f97") } })
     pipeline.append({ '$project': {
         '_id': 1,
         'name': 1,
@@ -26,6 +25,7 @@ def _getPipeline(year):
         'category': 1,
         'subcategory': 1,
         'type' : 1,
+        'pricing': 1,
         'operations': { '$filter': {
             'input': '$operations',
             'as': 'op',
@@ -36,16 +36,30 @@ def _getPipeline(year):
             'as': 'q',
             'cond': { '$and': [
                 { '$gte': ['$$q.timestamp', datetime(year-1, 12, 27)] },
-                { '$lt': ['$$q.timestamp', datetime(year+1, 1, 5)] }
+                { '$lt': ['$$q.timestamp', datetime(year+1, 1, 1)] }
             ]}
         }}
     }})
 
-#    pipeline.append({ '$addFields': {
-#        'finalQuantity': { '$last': '$operations.finalQuantity' },
-#        'lastQuote': { '$last' : '$quoteHistory' }
-#    }})
+    return pipeline
 
+
+def _getQuotesPipeline(ids, year):
+    pipeline = []
+    pipeline.append({'$match': {
+        '_id': {'$in': list(ids)}
+    }})
+    pipeline.append({'$project': {
+        '_id': 1,
+        'quoteHistory': { '$filter': {
+            'input': '$quoteHistory',
+            'as': 'q',
+            'cond': { '$and': [
+                { '$gte': ['$$q.timestamp', datetime(year-1, 12, 27)] },
+                { '$lt': ['$$q.timestamp', datetime(year+1, 1, 1)] }
+            ]}
+        }}
+    }})
     return pipeline
 
 
@@ -60,7 +74,7 @@ def _getCurrencyPipeline(year):
             'as': 'q',
             'cond': { '$and': [
                 { '$gte': ['$$q.timestamp', datetime(year-1, 12, 27)] },
-                { '$lt': ['$$q.timestamp', datetime(year+1, 1, 5)] }
+                { '$lt': ['$$q.timestamp', datetime(year+1, 1, 1)] }
             ]}
         }}
     }})
@@ -70,8 +84,17 @@ def _getCurrencyPipeline(year):
 
 def results(year):
     if request.method == 'GET':
+        raise NotImplementedError("Not implemented /results to the end after moving quotes to a separate collection")
+
         assets = [Profits(asset)() for asset in db.get_db().assets.aggregate(_getPipeline(year))]
         currencies = { c['name'] : c for c in db.get_db().currencies.aggregate(_getCurrencyPipeline(year)) }
+
+        quoteIds = [asset['pricing']['quoteId'] for asset in assets if 'quoteId' in asset['pricing']]
+        quotes = {q['_id']: q for q in list(db.get_db().quotes.aggregate(_getQuotesPipeline(quoteIds, year)))}
+
+        for asset in assets:
+            if 'quoteId' in asset['pricing']:
+                asset['quoteHistory'] = quotes[asset['pricing']['quoteId']]['quoteHistory']
 
         periodEnd = min(datetime(year+1, 1, 1), datetime.now())
 
