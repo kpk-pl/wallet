@@ -2,7 +2,7 @@ from flask import render_template, request, json, current_app
 
 from flaskr import db
 from flaskr.analyzers.profits import Profits
-from flaskr.analyzers.value import Value
+from flaskr.pricing import Pricing
 
 from bson.objectid import ObjectId
 
@@ -52,15 +52,6 @@ def _getPipeline(official):
     return pipeline
 
 
-def _getCurrencyPipeline():
-    pipeline = [
-        { "$addFields" : { "lastQuote": { "$last": "$quoteHistory" } } },
-        { "$unset" : "quoteHistory" }
-    ]
-
-    return pipeline
-
-
 def wallet():
     if request.method == 'GET':
         debug = bool(request.args.get('debug'))
@@ -69,10 +60,9 @@ def wallet():
         assets = list(db.get_db().assets.aggregate(_getPipeline(official)))
         assets = [Profits(asset)() for asset in assets]
 
-        currencies = list(db.get_db().currencies.aggregate(_getCurrencyPipeline()))
-        currencies = { c['name'] : c['lastQuote'] for c in currencies }
-
-        assets = [Value(asset, currencies)() for asset in assets]
+        pricing = Pricing()
+        for asset in assets:
+            asset['_netValue'] = pricing.priceAsset(asset)
 
         categoryAllocation = defaultdict(lambda: defaultdict(int))
         for asset in assets:

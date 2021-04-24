@@ -16,20 +16,23 @@ def _getPipelineForAssets():
         'trashed': {'$ne': True}
     }})
     pipeline.append({'$project': {
-        'quoteId': '$pricing.quoteId'
+        'quoteId': '$pricing.quoteId',
+        'currency': 1
     }})
     return pipeline
 
 
-def _getPipelineForQuoteUrls(ids):
+def _getPipelineForQuoteUrls(ids, names):
     pipeline = []
-    pipeline.append({'$match': {
-        '_id': {'$in': list(ids)}
-    }})
+    pipeline.append({'$match': { '$or': [
+        {'_id': {'$in': list(ids)}},
+        {'name': {'$in': list(names)}}
+    ]}})
     pipeline.append({'$project': {
         '_id': 1,
         'name': 1,
-        'url': 1
+        'url': 1,
+        'lastQuote': {'$last': '$quoteHistory'}
     }})
     return pipeline
 
@@ -37,50 +40,32 @@ def quotes():
     if request.method in ['GET', 'PUT']:
         storeQuotes = (request.method == 'PUT')
 
-        assetQuoteIds = set(obj['quoteId'] for obj in list(db.get_db().assets.aggregate(_getPipelineForAssets())))
-        quotesIds = list(db.get_db().quotes.aggregate(_getPipelineForQuoteUrls(assetQuoteIds)))
-        quotesDict = { e['_id'] : e['url'] for e in quotesIds }
+        assetInfo = list(db.get_db().assets.aggregate(_getPipelineForAssets()))
+        assetQuoteIds = set(obj['quoteId'] for obj in assetInfo)
+        assetCurrencies = set(obj['currency'] for obj in assetInfo)
 
-        currencies = list(db.get_db().currencies.find({}, {'_id': 1, 'name': 1, 'link': 1}))
-        currenciesDict = { e['_id'] : e['link'] for e in currencies }
+        quotesIds = list(db.get_db().quotes.aggregate(_getPipelineForQuoteUrls(assetQuoteIds, assetCurrencies)))
+        liveQuotes = { e['_id'] : e['url'] for e in quotesIds }
 
-        quotes = {**quotesDict, **currenciesDict}
         with Pool(4) as pool:
-            quotes = dict(pool.map(_getQuote, quotes.items()))
+            liveQuotes = dict(pool.map(_getQuote, liveQuotes.items()))
 
         response = []
-        now = datetime.now()
-
-        for asset in quotesIds:
-            _id = asset['_id']
-            timeDiff = now - quotes[_id]['timestamp']
-            if timeDiff.days == 0:
+        for quote in quotesIds:
+            _id = quote['_id']
+            liveQuote = liveQuotes[_id]
+            stale = quote['lastQuote']['timestamp'] == liveQuote['timestamp']
+            if not stale:
                 if storeQuotes:
                     query = {'_id': _id}
                     update = {'$push': {'quoteHistory': {
-                        'timestamp': quotes[_id]['timestamp'],
-                        'quote': quotes[_id]['quote']
+                        'timestamp': liveQuote['timestamp'],
+                        'quote': liveQuote['quote']
                     }}}
                     db.get_db().quotes.update(query, update)
             else:
-                quotes[_id]['stale'] = True
+                liveQuote['stale'] = True
 
-            response.append({'name': asset['name'], 'quote': quotes[_id]})
-
-        for asset in currencies:
-            _id = asset['_id']
-            timeDiff = now - quotes[_id]['timestamp']
-            if timeDiff.days == 0:
-                if storeQuotes:
-                    query = {'_id': _id}
-                    update = {'$push': {'quoteHistory': {
-                        'timestamp': quotes[_id]['timestamp'],
-                        'quote': quotes[_id]['quote']
-                    }}}
-                    db.get_db().currencies.update(query, update)
-            else:
-                quotes[_id]['stale'] = True
-
-            response.append({'name': asset['name'], 'quote': quotes[_id]})
+            response.append({'name': quote['name'], 'quote': liveQuote})
 
         return Response(json.dumps(response), mimetype="application/json")
