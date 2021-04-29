@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from flaskr import db
 
 
@@ -12,44 +12,107 @@ def _yearsBetween(lhs, rhs):
     return yearDiff
 
 
+def _dayByDay(start, finish):
+    idx = datetime.combine(start.date(), time())
+    oneDay = timedelta(days=1)
+    result = []
+
+    while idx <= finish:
+        result.append(idx)
+        idx += oneDay
+
+    return result
+
+
+def _interpolateLinear(data, timeScale):
+    assert len(data) > 0
+
+    result = []
+    quoteIdx = 0
+
+    for dateIdx in timeScale:
+        thisQuote = data[quoteIdx]
+        while thisQuote['timestamp'] < dateIdx and quoteIdx < len(data) - 1:
+            quoteIdx += 1
+            thisQuote = data[quoteIdx]
+
+        if quoteIdx == 0:
+            result.append({'timestamp': dateIdx, 'quote': data[0]['quote']})
+        elif thisQuote['timestamp'] < dateIdx:
+            result.append({'timestamp': dateIdx, 'quote': data[-1]['quote']})
+        else:
+            prevQuote = data[quoteIdx-1]
+            linearCoef = (dateIdx.timestamp() - prevQuote['timestamp'].timestamp())/(thisQuote['timestamp'].timestamp() - prevQuote['timestamp'].timestamp())
+            linearQuote = linearCoef * (thisQuote['quote'] - prevQuote['quote']) + prevQuote['quote']
+            result.append({'timestamp': dateIdx, 'quote': linearQuote})
+
+    return result
+
+
 class PricingContext(object):
-    def __init__(self, finalDate = datetime.now()):
+    def __init__(self, finalDate = datetime.now(), startDate = None):
         super(PricingContext, self).__init__()
         self.finalDate = finalDate
-        self.finalQuotes = []
+        self.startDate = startDate
+        self.timeScale = _dayByDay(startDate, finalDate) if startDate is not None else []
+        self.quotes = []
 
-    def storedFinalIds(self):
-        return set(q['_id'] for q in self.finalQuotes)
+    def storedIds(self):
+        return set(q['_id'] for q in self.quotes)
 
-    def storedFinalNames(self):
-        return set(q['name'] for q in self.finalQuotes)
+    def storedNames(self):
+        return set(q['name'] for q in self.quotes)
 
-    def loadFinalQuotes(self, ids, names):
+    def loadQuotes(self, ids, names):
+        condition = {'$lte': ['$$item.timestamp', self.finalDate]}
+        if self.startDate:
+            condition = {'$and': [condition, {'$gte': ['$$item.timestamp', self.startDate]}]}
+            projection = '$relevantQuotes'
+        else:
+            projection = {'$slice': ['$relevantQuotes', -1]}
+
         pipeline = [
             {'$match': {'$or': [
-                {'_id': {'$in': list(set(ids) - self.storedFinalIds())}},
-                {'name': {'$in': list(set(names) - self.storedFinalNames())}}
+                {'_id': {'$in': list(set(ids) - self.storedIds())}},
+                {'name': {'$in': list(set(names) - self.storedNames())}}
             ]}},
             {'$addFields': {
                 'relevantQuotes': {'$filter': {
                         'input': '$quoteHistory',
                         'as': 'item',
-                        'cond': {'$lte': ['$$item.timestamp', self.finalDate]}
+                        'cond': condition
                 }}
             }},
-            {'$project': {
-                '_id': 1,
-                'name': 1,
-                'lastQuote': {'$last': '$relevantQuotes.quote'}
-            }}
+            {'$project': {'_id': 1, 'name': 1, 'quotes': projection}}
         ]
-        self.finalQuotes.extend(list(db.get_db().quotes.aggregate(pipeline)))
+
+        results = list(db.get_db().quotes.aggregate(pipeline))
+        if not self.startDate:
+            self.quotes.extend(results)
+        else:
+            for item in results:
+                self._appendItemWithLinearQuotes(item)
+
+    # TODO:
+    # 2: Use this algorithm for pricing operations by interest, for each op, sum results
+    # 3: Allow putting calculated in (2) quotes in the context here
+    def _appendItemWithLinearQuotes(self, item):
+        item['quotes'] = _interpolateLinear(item['quotes'], self.timeScale)
+        self.quotes.append(item)
 
     def getFinalById(self, quoteId):
-        return next(x['lastQuote'] for x in self.finalQuotes if x['_id'] == quoteId)
+        return next(x['quotes'][-1] for x in self.quotes if x['_id'] == quoteId)['quote']
 
     def getFinalByName(self, name):
-        return next(x['lastQuote'] for x in self.finalQuotes if x['name'] == name)
+        return next(x['quotes'][-1] for x in self.quotes if x['name'] == name)['quote']
+
+    def getHistoricalById(self, quoteId):
+        quotes = next(x['quotes'] for x in self.quotes if x['_id'] == quoteId)
+        return [x['quote'] for x in quotes]
+
+    def getHistoricalByName(self, name):
+        quotes = next(x['quotes'] for x in self.quotes if x['name'] == name)
+        return [x['quote'] for x in quotes]
 
 
 class Pricing(object):
@@ -65,6 +128,14 @@ class Pricing(object):
         else:
             raise NotImplementedError("Not implemented pricing scheme")
 
+    def priceAssetHistory(self, asset):
+        if 'quoteId' in asset['pricing']:
+            return self._priceAssetHistoryByQuote(asset)
+        elif 'interest' in asset['pricing']:
+            return self._priceAssetHistoryByInterest(asset)
+        else:
+            raise NotImplementedError("Not implemented pricing scheme")
+
     def _priceAssetByQuote(self, asset):
         if 'operations' not in asset or not asset['operations']:
             return 0.0
@@ -76,7 +147,7 @@ class Pricing(object):
         quoteId = asset['pricing']['quoteId']
         currencyName = asset['currency'] + 'PLN' if asset['currency'] != 'PLN' else None
 
-        self._ctx.loadFinalQuotes(ids = [quoteId], names = [currencyName] if currencyName else [])
+        self._ctx.loadQuotes(ids = [quoteId], names = [currencyName] if currencyName else [])
 
         value = quantity * self._ctx.getFinalById(quoteId)
         if currencyName:
@@ -84,20 +155,68 @@ class Pricing(object):
 
         return value
 
+    def _getNullPricingForAssetHistory(self):
+        return {'t': self._ctx.timeScale,
+                'q': [0.0] * len(self._ctx.timeScale),
+                'y': [0.0] * len(self._ctx.timeScale)}
+
+    def _priceAssetHistoryByQuote(self, asset):
+        ops = asset['operations']
+        if not ops:
+            return self._getNullPricingForAssetHistory()
+
+        result = {'t': self._ctx.timeScale, 'q': [], 'y': []}
+
+        operationIdx = 0
+        quantity = 0
+        for dateIdx in result['t']:
+            # If this is the day the next operation happened, take new quantity
+            while operationIdx < len(ops) and ops[operationIdx]['date'] <= dateIdx:
+                quantity = ops[operationIdx]['finalQuantity']
+                operationIdx += 1
+
+            result['q'].append(quantity)
+
+        quoteId = asset['pricing']['quoteId']
+        currencyName = asset['currency'] + 'PLN' if asset['currency'] != 'PLN' else None
+        self._ctx.loadQuotes(ids = [quoteId], names = [currencyName] if currencyName else [])
+
+        result['y'] = [a * b for a, b in zip(result['q'], self._ctx.getHistoricalById(quoteId))]
+        if currencyName:
+            result['y'] = [a * b for a, b in zip(result['y'], self._ctx.getHistoricalByName(currencyName))]
+
+        return result
+
+    def _priceAssetHistoryByInterest(self, asset):
+        ops = asset['operations']
+        if not ops:
+            return self._getNullPricingForAssetHistory()
+
+        result = {'t': self._ctx.timeScale, 'y': [0.0] * len(self._ctx.timeScale)}
+
+        for operation in ops:
+            if operation['type'] == 'BUY':
+                quoteHistory = self._calculateQuoteHistoryForOperationByInterest(asset, operation)
+                quotes = _interpolateLinear(quoteHistory, self._ctx.timeScale)
+                result['y'] = [a + b['quote'] for a, b in zip(result['y'], quotes)]
+            elif operation['type'] == 'SELL':
+                raise NotImplementedError("Did not implement SELL operation")
+
+        return result
+
     def _priceAssetByInterest(self, asset):
         value = 0
 
         for operation in asset['operations']:
             if operation['type'] == 'BUY':
-                value += self._priceAssetOperationByInterest(asset, operation)
+                value += self._calculateQuoteHistoryForOperationByInterest(asset, operation)[-1]['quote']
             elif operation['type'] == 'SELL':
                 raise NotImplementedError("Did not implement SELL operation")
 
         return value
 
-    def _priceAssetOperationByInterest(self, asset, operation):
+    def _calculateQuoteHistoryForOperationByInterest(self, asset, operation):
         pricing = asset['pricing']
-        value = operation['price']
 
         if pricing['length']['periodName'] != 'year':
             raise NotImplementedError("Periods other than year are not implemented")
@@ -110,9 +229,13 @@ class Pricing(object):
         if 'derived' in interestDef:
             raise NotImplementedError("Did not implement calculating derived pricing")
 
+        result = [{'timestamp': operation['date'] - timedelta(seconds=1), 'quote': 0.0},
+                  {'timestamp': operation['date'], 'quote': operation['price']}]
+
         if 'fixed' in interestDef:
             percentage = interestDef['fixed']
             daysInLastPeriod = (self._ctx.finalDate - operation['date']).days
-            value *= (1 + percentage * (daysInLastPeriod / 365))
+            result.append({'timestamp': self._ctx.finalDate,
+                           'quote': operation['price'] * (1 + percentage * (daysInLastPeriod / 365))})
 
-        return value
+        return result

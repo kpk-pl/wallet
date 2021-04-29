@@ -18,6 +18,7 @@
     })
   }
 </script>
+{% if asset.quoteHistory %}
 <script type="text/javascript">
   const data = {{ asset.quoteHistory | tojson }};
   const operations = {{ asset.operations | tojson }};
@@ -96,6 +97,7 @@
     }
   });
 </script>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -192,6 +194,7 @@
     </div>
   </div>
 </div>
+{% if asset.quoteHistory -%}
 <div class="container-sm">
   <div class="row">
     <div class="col-12">
@@ -210,6 +213,7 @@
     </div>
   </div>
 </div>
+{%- endif %}
 <div class="container-sm">
   <div class="row">
     <div class="col-12">
