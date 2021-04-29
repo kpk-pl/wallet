@@ -227,6 +227,7 @@
         </div>
         <div class="card-body">
           <table class="table table-bordered">
+            {% set operationsHaveCodes = (asset.operations | selectattr('code') | list | count) -%}
             <thead>
               <tr>
                 <th style="width: 10px">#</th>
@@ -240,6 +241,9 @@
                 {%- endif %}
                 <th>Provision <span class="smaller">[PLN]</span></th>
                 <th>Final quantity</th>
+                {% if operationsHaveCodes -%}
+                <th>Code</th>
+                {%- endif %}
               </tr>
             </thead>
             <tbody>
@@ -256,6 +260,9 @@
                 {%- endif %}
                 <td>{{ operation.provision if operation.provision else 0 }}</td>
                 <td>{{ operation.finalQuantity }}</td>
+                {% if operationsHaveCodes -%}
+                <td>{{ operation.code }}</td>
+                {%- endif %}
               </tr>
               {%- endfor %}
             </tbody>

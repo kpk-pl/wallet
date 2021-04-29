@@ -10,6 +10,7 @@ def assets():
             { "$project" : {
                 '_id': 1,
                 'name': 1,
+                'ticker': 1,
                 'institution': 1,
                 'type': 1,
                 'category': 1,
