@@ -132,6 +132,12 @@
             <dt class="col-sm-3">Link</dt>
             <dd class="col-sm-9"><a href="{{ asset.link }}" target="_blank" rel="noopener noreferrer">{{ asset.link }}</a></dd>
             {% endif %}
+            <dt class="col-sm-3">Labels</dt>
+            <dd class="col-sm-9">
+              {%- for label in asset.labels -%}
+                <span class="badge bg-info">{{ label }}</span>
+              {%- endfor -%}
+            </dd>
           </dl>
         </div>
       </div>

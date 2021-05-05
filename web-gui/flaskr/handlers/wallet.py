@@ -11,23 +11,21 @@ from dateutil.relativedelta import relativedelta
 from collections import defaultdict
 
 
-def _getPipeline(official):
+def _getPipeline(label = None):
     threeMonthsAgo = datetime.now() - relativedelta(months=3)
     threeMonthsAgo = threeMonthsAgo.replace(tzinfo=timezone.utc)
-
-    notOfficialList = []
-    if official:
-        notOfficialList = [
-            ObjectId("601535217e1237164d0e0f96"),
-            ObjectId("603ff3be723b462707408f07")
-        ]
 
     pipeline = []
 
     pipeline.append({ "$match" : {
-        "_id": { "$nin": notOfficialList },
+        'trashed': { '$ne': True },
         "operations": { "$exists": True }
     }})
+
+    if label is not None:
+        pipeline.append({ "$match" : {
+            'labels': label
+        }})
 
     pipeline.append({ "$addFields" : {
         "finalQuantity": { "$last": "$operations.finalQuantity" }
@@ -55,9 +53,9 @@ def _getPipeline(official):
 def wallet():
     if request.method == 'GET':
         debug = bool(request.args.get('debug'))
-        official = bool(request.args.get('official'))
+        label = request.args.get('label')
 
-        assets = list(db.get_db().assets.aggregate(_getPipeline(official)))
+        assets = list(db.get_db().assets.aggregate(_getPipeline(label)))
         assets = [Profits(asset)() for asset in assets]
 
         pricing = Pricing()

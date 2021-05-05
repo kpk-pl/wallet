@@ -30,10 +30,11 @@ def _getPipelineForAssetDetails(assetId):
         "institution": 1,
         "category": 1,
         "subcategory": 1,
-        "currency": 1,
+        "currency": '$currency.name',
         "type": 1,
         "pricing": 1,
         "link": 1,
+        "labels": 1,
         "operations": { "$ifNull": [ '$operations', [] ] },
         "finalQuantity": { "$last": "$operations.finalQuantity" }
     }})
