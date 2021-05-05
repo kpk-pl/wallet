@@ -63,7 +63,7 @@ class PricingContext(object):
     def storedNames(self):
         return set(q['name'] for q in self.quotes)
 
-    def loadQuotes(self, ids, names):
+    def loadQuotes(self, ids):
         condition = {'$lte': ['$$item.timestamp', self.finalDate]}
         if self.startDate:
             condition = {'$and': [condition, {'$gte': ['$$item.timestamp', self.startDate]}]}
@@ -72,10 +72,9 @@ class PricingContext(object):
             projection = {'$slice': ['$relevantQuotes', -1]}
 
         pipeline = [
-            {'$match': {'$or': [
+            {'$match':
                 {'_id': {'$in': list(set(ids) - self.storedIds())}},
-                {'name': {'$in': list(set(names) - self.storedNames())}}
-            ]}},
+            },
             {'$addFields': {
                 'relevantQuotes': {'$filter': {
                         'input': '$quoteHistory',
@@ -83,7 +82,7 @@ class PricingContext(object):
                         'cond': condition
                 }}
             }},
-            {'$project': {'_id': 1, 'name': 1, 'quotes': projection}}
+            {'$project': {'_id': 1, 'quotes': projection}}
         ]
 
         results = list(db.get_db().quotes.aggregate(pipeline))
@@ -93,9 +92,6 @@ class PricingContext(object):
             for item in results:
                 self._appendItemWithLinearQuotes(item)
 
-    # TODO:
-    # 2: Use this algorithm for pricing operations by interest, for each op, sum results
-    # 3: Allow putting calculated in (2) quotes in the context here
     def _appendItemWithLinearQuotes(self, item):
         item['quotes'] = _interpolateLinear(item['quotes'], self.timeScale)
         self.quotes.append(item)
@@ -103,15 +99,8 @@ class PricingContext(object):
     def getFinalById(self, quoteId):
         return next(x['quotes'][-1] for x in self.quotes if x['_id'] == quoteId)['quote']
 
-    def getFinalByName(self, name):
-        return next(x['quotes'][-1] for x in self.quotes if x['name'] == name)['quote']
-
     def getHistoricalById(self, quoteId):
         quotes = next(x['quotes'] for x in self.quotes if x['_id'] == quoteId)
-        return [x['quote'] for x in quotes]
-
-    def getHistoricalByName(self, name):
-        quotes = next(x['quotes'] for x in self.quotes if x['name'] == name)
         return [x['quote'] for x in quotes]
 
 
@@ -144,14 +133,21 @@ class Pricing(object):
         if quantity == 0:
             return 0.0
 
-        quoteId = asset['pricing']['quoteId']
-        currencyName = asset['currency'] + 'PLN' if asset['currency'] != 'PLN' else None
+        ids = []
 
-        self._ctx.loadQuotes(ids = [quoteId], names = [currencyName] if currencyName else [])
+        quoteId = asset['pricing']['quoteId']
+        ids.append(quoteId)
+
+        currencyId = None
+        if 'quoteId' in asset['currency']:
+            currencyId = asset['currency']['quoteId']
+            ids.append(currencyId)
+
+        self._ctx.loadQuotes(ids)
 
         value = quantity * self._ctx.getFinalById(quoteId)
-        if currencyName:
-            value *= self._ctx.getFinalByName(currencyName)
+        if currencyId:
+            value *= self._ctx.getFinalById(currencyId)
 
         return value
 
@@ -177,13 +173,21 @@ class Pricing(object):
 
             result['q'].append(quantity)
 
+        ids = []
+
         quoteId = asset['pricing']['quoteId']
-        currencyName = asset['currency'] + 'PLN' if asset['currency'] != 'PLN' else None
-        self._ctx.loadQuotes(ids = [quoteId], names = [currencyName] if currencyName else [])
+        ids.append(quoteId)
+
+        currencyId = None
+        if 'quoteId' in asset['currency']:
+            currencyId = asset['currency']['quoteId']
+            ids.append(currencyId)
+
+        self._ctx.loadQuotes(ids)
 
         result['y'] = [a * b for a, b in zip(result['q'], self._ctx.getHistoricalById(quoteId))]
-        if currencyName:
-            result['y'] = [a * b for a, b in zip(result['y'], self._ctx.getHistoricalByName(currencyName))]
+        if currencyId:
+            result['y'] = [a * b for a, b in zip(result['y'], self._ctx.getHistoricalById(currencyId))]
 
         return result
 

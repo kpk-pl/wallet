@@ -17,17 +17,14 @@ def _getPipelineForAssets():
     }})
     pipeline.append({'$project': {
         'quoteId': '$pricing.quoteId',
-        'currency': 1
+        'currencyId': '$currency.quoteId'
     }})
     return pipeline
 
 
-def _getPipelineForQuoteUrls(ids, names):
+def _getPipelineForQuoteUrls(ids):
     pipeline = []
-    pipeline.append({'$match': { '$or': [
-        {'_id': {'$in': list(ids)}},
-        {'name': {'$in': list(names)}}
-    ]}})
+    pipeline.append({'$match': {'_id': {'$in': list(ids)}}}),
     pipeline.append({'$project': {
         '_id': 1,
         'name': 1,
@@ -41,10 +38,9 @@ def quotes():
         storeQuotes = (request.method == 'PUT')
 
         assetInfo = list(db.get_db().assets.aggregate(_getPipelineForAssets()))
-        assetQuoteIds = set(obj['quoteId'] for obj in assetInfo)
-        assetCurrencies = set(obj['currency'] for obj in assetInfo)
+        ids = set(obj['quoteId'] for obj in assetInfo) | set(obj['currencyId'] for obj in assetInfo if 'currencyId' in obj)
 
-        quotesIds = list(db.get_db().quotes.aggregate(_getPipelineForQuoteUrls(assetQuoteIds, assetCurrencies)))
+        quotesIds = list(db.get_db().quotes.aggregate(_getPipelineForQuoteUrls(ids)))
         liveQuotes = { e['_id'] : e['url'] for e in quotesIds }
 
         with Pool(4) as pool:
