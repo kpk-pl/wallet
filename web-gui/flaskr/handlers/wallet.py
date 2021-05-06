@@ -70,6 +70,7 @@ def wallet():
         lastQuoteUpdateTime = db.last_quote_update_time()
         misc = {
             'showData': debug,
+            'label': label,
             'lastQuoteUpdate': {
                 'timestamp': lastQuoteUpdateTime,
                 'daysPast': (datetime.now() - lastQuoteUpdateTime).days

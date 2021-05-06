@@ -241,6 +241,11 @@
       <div class="card card-primary">
         <div class="card-header">
           <h3 class="card-title">Open assets</h3>
+          {% if misc.label %}
+          <div class="card-tools">
+            <span class="badge badge-success">{{ misc.label }}</span>
+          </div>
+          {% endif %}
         </div>
         <div class="card-body">
 					<table id="openAssets" class="table table-bordered table-striped table-hover">

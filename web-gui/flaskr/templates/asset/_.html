@@ -135,7 +135,9 @@
             <dt class="col-sm-3">Labels</dt>
             <dd class="col-sm-9">
               {%- for label in asset.labels -%}
-                <span class="badge bg-info">{{ label }}</span>
+                <a href="{{ url_for('wallet', label=label) }}">
+                  <span class="badge badge-success mr-1">{{ label }}</span>
+                </a>
               {%- endfor -%}
             </dd>
           </dl>
