@@ -20,13 +20,7 @@
         <div id="navbarCollapse" class="collapse navbar-collapse order-3">
           <ul class="navbar-nav">
             <li class="nav-item"><a class="nav-link" href="{{ url_for('wallet') }}">Wallet</a></li>
-            <li class="nav-item dropdown">
-              <a id="navAssetsDropdown" class="nav-link dropdown-toggle" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Assets</a>
-              <ul class="dropdown-menu border-0 shadow" aria-labelledby="navAssetsDropdown">
-                <li><a class="dropdown-item" href="{{ url_for('assets') }}">List</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('asset.add') }}">Add</a></li>
-              </ul>
-            </li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('assets') }}">Assets</a></li>
             <li class="nav-item dropdown">
               <a id="navResultsDropdown" class="nav-link dropdown-toggle" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Results</a>
               <ul class="dropdown-menu border-0 shadow" aria-labelledby="navResultsDropdown">
