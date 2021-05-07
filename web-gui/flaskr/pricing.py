@@ -97,7 +97,11 @@ class PricingContext(object):
         self.quotes.append(item)
 
     def getFinalById(self, quoteId):
-        return next(x['quotes'][-1] for x in self.quotes if x['_id'] == quoteId)['quote']
+        quotesForId = [x['quotes'] for x in self.quotes if x['_id'] == quoteId]
+        if not quotesForId or not quotesForId[-1]:
+            return None
+
+        return quotesForId[-1][0]['quote']
 
     def getHistoricalById(self, quoteId):
         quotes = next(x['quotes'] for x in self.quotes if x['_id'] == quoteId)
@@ -145,8 +149,10 @@ class Pricing(object):
 
         self._ctx.loadQuotes(ids)
 
-        value = quantity * self._ctx.getFinalById(quoteId)
-        if currencyId:
+        value = self._ctx.getFinalById(quoteId)
+        if value is not None:
+            value *= quantity
+        if value is not None and currencyId:
             value *= self._ctx.getFinalById(currencyId)
 
         return value

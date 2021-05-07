@@ -290,8 +290,8 @@
                 <td>{{ asset.region }}</td>
                 <td class="text-right">{{ asset._holdingDays }}</td>
                 <td class="text-right color-gain">
-                {%- if asset.quote3mAgo -%}
-                  {{ ((asset.lastQuote.quote - asset.quote3mAgo.quote) / asset.quote3mAgo.quote * 100) | round(2) if asset.lastQuote else 0 }}%
+                {%- if asset._quarterValueChange -%}
+                {{ (asset._quarterValueChange * 100) | round(2) }}%
                 {%- endif -%}
                 </td>
                 <td class="text-right">{{ asset._stillInvestedNetValue | round(2) }}</td>

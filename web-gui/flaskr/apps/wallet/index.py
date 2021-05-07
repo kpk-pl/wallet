@@ -2,7 +2,7 @@ from flask import render_template, request, json, current_app
 
 from flaskr import db
 from flaskr.analyzers.profits import Profits
-from flaskr.pricing import Pricing
+from flaskr.pricing import Pricing, PricingContext
 
 from bson.objectid import ObjectId
 
@@ -12,9 +12,6 @@ from collections import defaultdict
 
 
 def _getPipeline(label = None):
-    threeMonthsAgo = datetime.now() - relativedelta(months=3)
-    threeMonthsAgo = threeMonthsAgo.replace(tzinfo=timezone.utc)
-
     pipeline = []
 
     pipeline.append({ "$match" : {
@@ -59,8 +56,15 @@ def index():
         assets = [Profits(asset)() for asset in assets]
 
         pricing = Pricing()
+        pricingQuarterAgoCtx = PricingContext(finalDate = datetime.now() - relativedelta(months=3))
+        pricingQuarterAgo = Pricing(pricingQuarterAgoCtx)
         for asset in assets:
-            asset['_netValue'] = pricing.priceAsset(asset)
+            currentPrice = pricing.priceAsset(asset)
+            asset['_netValue'] = currentPrice
+
+            quarterAgoPrice = pricingQuarterAgo.priceAsset(asset)
+            if quarterAgoPrice is not None:
+                asset['_quarterValueChange'] = (currentPrice - quarterAgoPrice) / quarterAgoPrice
 
         categoryAllocation = defaultdict(lambda: defaultdict(int))
         for asset in assets:
