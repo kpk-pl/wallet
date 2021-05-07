@@ -50,7 +50,7 @@ def _getPipeline(label = None):
     return pipeline
 
 
-def wallet():
+def index():
     if request.method == 'GET':
         debug = bool(request.args.get('debug'))
         label = request.args.get('label')
@@ -77,7 +77,7 @@ def wallet():
             }
         }
 
-        return render_template("wallet.html",
+        return render_template("index.html",
                                assets=assets,
                                allocation=json.dumps(categoryAllocation),
                                misc=misc)

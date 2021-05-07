@@ -228,7 +228,7 @@
   {%- endfor -%}
   ];
 
-  $.getJSON("{{ url_for('asset.historicalValue') }}?daysBack=30&id=" + allAssetIds.join('&id='), updateHistoricalChart);
+  $.getJSON("{{ url_for('assets.historicalValue') }}?daysBack=30&id=" + allAssetIds.join('&id='), updateHistoricalChart);
 </script>
 {% endblock %}
 
@@ -267,7 +267,7 @@
 							{% for asset in assets %}
 							<tr>
 								<td>
-                  <a href="{{ url_for('asset', id=asset._id) }}">
+                  <a href="{{ url_for('assets.index', id=asset._id) }}">
 									  {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
                   </a>
                   {%- if misc and misc.showData -%}
@@ -275,7 +275,7 @@
                     <i class="fas fa-fw fa-bug fa-pull-right"></i>
                   </a>
                   {%- endif -%}
-                  <a href="{{ url_for('asset.receipt', id=asset._id) }}" class="imagelink" title="Register buy or sell">
+                  <a href="{{ url_for('assets.receipt', id=asset._id) }}" class="imagelink" title="Register buy or sell">
                     <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
                   </a>
 								</td>

@@ -107,7 +107,7 @@ $.validator.setDefaults({
   submitHandler: function() {
     $("#f-quantity-after").removeAttr('disabled');
     $.post('/asset/receipt?id={{ asset._id }}', $('form').serialize(), function(data) {
-      $(location).attr("href", "{{ url_for('assets') }}");
+      $(location).attr("href", "{{ url_for('assets.index', id=asset._id) }}");
     })
   }
 });

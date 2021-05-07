@@ -3,7 +3,7 @@ from flaskr import db
 from datetime import datetime
 
 
-def assets():
+def listAll():
     if request.method == 'GET':
         pipeline = [
             { "$match" : { 'trashed': { '$ne' : True } } },
@@ -30,4 +30,4 @@ def assets():
                 'daysPast': (datetime.now() - lastQuoteUpdateTime).days
             }
         }
-        return render_template("assets.html", assets=assets, misc=misc)
+        return render_template("list.html", assets=assets, misc=misc)

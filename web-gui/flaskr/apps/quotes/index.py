@@ -33,7 +33,8 @@ def _getPipelineForQuoteUrls(ids):
     }})
     return pipeline
 
-def quotes():
+
+def index():
     if request.method in ['GET', 'PUT']:
         storeQuotes = (request.method == 'PUT')
 

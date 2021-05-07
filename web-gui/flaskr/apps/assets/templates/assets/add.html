@@ -49,7 +49,7 @@ $(document).ready(function(){
 $.validator.setDefaults({
   submitHandler: function() {
     $.post('/asset', $('form').serialize(), function(data) {
-      $(location).attr("href", "{{ url_for('asset') }}" + '?id=' + data.id);
+      $(location).attr("href", "{{ url_for('assets.index') }}" + '?id=' + data.id);
     })
   }
 });
