@@ -106,7 +106,7 @@ $(document).ready(function(){
 $.validator.setDefaults({
   submitHandler: function() {
     $("#f-quantity-after").removeAttr('disabled');
-    $.post('/asset/receipt?id={{ asset._id }}', $('form').serialize(), function(data) {
+    $.post('/assets/receipt?id={{ asset._id }}', $('form').serialize(), function(data) {
       $(location).attr("href", "{{ url_for('assets.index', id=asset._id) }}");
     })
   }
@@ -167,7 +167,7 @@ $("form").validate({
             <dd class="col-sm-8">{{ asset.finalQuantity if asset.finalQuantity else 0 }}</dd>
             {% if asset.lastQuote -%}
             <dt class="col-sm-4">Last quote</dt>
-            <dd class="col-sm-8">{{ asset.lastQuote.quote }} {{ asset.currency }}</dd>
+            <dd class="col-sm-8">{{ asset.lastQuote.quote }} {{ asset.currency.name }}</dd>
             {%- endif %}
           </dl>
         </div>
@@ -233,7 +233,7 @@ $("form").validate({
                   <label for="f-unit-price">Unit price</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
-                      <span class="input-group-text">{{ asset.currency }}</span>
+                      <span class="input-group-text">{{ asset.currency.name }}</span>
                     </div>
                     <input type="number" value="0" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-unit-price" name="unit-price" required/>
                   </div>
@@ -244,18 +244,18 @@ $("form").validate({
                   <label for="f-price">Transaction value</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
-                      <span class="input-group-text">{{ asset.currency }}</span>
+                      <span class="input-group-text">{{ asset.currency.name }}</span>
                     </div>
                     <input type="number" value="0" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-price" name="price" required/>
                   </div>
                 </div>
               </div>
             </div>
-            {% if asset.currency != 'PLN' -%}
+            {% if asset.currency.name != 'PLN' -%}
             <div class="row">
               <div class="col-12">
                 <div class="form-group">
-                  <label for="f-conversion">Currency rate {{ asset.currency }}/PLN</label>
+                  <label for="f-conversion">Currency rate {{ asset.currency.name }}/PLN</label>
                   <input type="number" value="0" step="any" id="f-conversion" class="form-control" name="currencyConversion" value="1" required/>
                 </div>
               </div>

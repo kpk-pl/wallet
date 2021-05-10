@@ -11,6 +11,7 @@ def _getPipelineForAssetDetails(assetId):
     pipeline.append({ "$match" : { "_id" : ObjectId(assetId) } })
     pipeline.append({ "$project" : {
         "name": 1,
+        "ticker": 1,
         "institution": 1,
         "category": 1,
         "subcategory": 1,
