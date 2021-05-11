@@ -47,6 +47,20 @@ def _getPipeline(label = None):
     return pipeline
 
 
+def _allLabelsPipeline():
+    pipeline = []
+    pipeline.append({'$unwind': {
+        'path': '$labels',
+        'preserveNullAndEmptyArrays': False
+    }})
+    pipeline.append({'$group': {
+        '_id': None,
+        'label': {'$addToSet': '$labels'}
+    }})
+
+    return pipeline
+
+
 def index():
     if request.method == 'GET':
         debug = bool(request.args.get('debug'))
@@ -72,9 +86,11 @@ def index():
             categoryAllocation[asset['category']][subcategory] += asset['_netValue']
 
         lastQuoteUpdateTime = db.last_quote_update_time()
+        allLabels = list(db.get_db().assets.aggregate(_allLabelsPipeline()))[0]['label']
         misc = {
             'showData': debug,
             'label': label,
+            'allLabels': allLabels,
             'lastQuoteUpdate': {
                 'timestamp': lastQuoteUpdateTime,
                 'daysPast': (datetime.now() - lastQuoteUpdateTime).days

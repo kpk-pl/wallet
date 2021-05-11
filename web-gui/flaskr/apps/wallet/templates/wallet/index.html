@@ -253,6 +253,18 @@
           {% endif %}
         </div>
         <div class="card-body">
+          <div class="row mb-3 d-flex flex-row-reverse">
+            <a href="{{ url_for('wallet.index') }}">
+              <span class="badge badge-secondary mr-1">
+                <i class="fas fa-times"></i>
+              </span>
+            </a>
+            {%- for label in misc.allLabels %}
+            <a href="{{ url_for('wallet.index', label=label) }}">
+              <span class="badge badge-secondary mr-1">{{ label }}</span>
+            </a>
+            {%- endfor %}
+          </div>
           <table id="openAssets" class="table table-bordered table-striped table-hover">
             <thead>
               <tr role="row">
