@@ -5,6 +5,7 @@
 {% block links %}
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-buttons/css/buttons.bootstrap4.min.css') }}">
 {% endblock %}
 
 {% block plugins_scripts %}
@@ -12,6 +13,9 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/dataTables.buttons.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/buttons.bootstrap4.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/buttons.colVis.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js/Chart.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js-plugin-labels/chartjs-plugin-labels.min.js') }}"></script>
@@ -33,17 +37,18 @@
     $('#openAssets').DataTable({
       "paging": false,
       "lengthChange": false,
-      "searching": false,
+      "searching": true,
       "ordering": true,
       "info": false,
       "autoWidth": false,
       "responsive": true,
+      "buttons": [ "colvis" ],
       "columnDefs": [
         { "type": "string", "targets": [0, 1, 2, 3] },
         { "type": "num-fmt", "targets": [4, 5, 6, 7, 8, 9] },
         { "orderable": false, "targets": [] },
       ],
-    });
+    }).buttons().container().appendTo("#openAssets_wrapper .col-md-6:eq(0)");
   });
 </script>
 <script>
@@ -248,27 +253,27 @@
           {% endif %}
         </div>
         <div class="card-body">
-					<table id="openAssets" class="table table-bordered table-striped table-hover">
-						<thead>
-							<tr role="row">
-								<th>Name</th>
-								<th>Institution</th>
-								<th>Category</th>
-								<th>Region</th>
+          <table id="openAssets" class="table table-bordered table-striped table-hover">
+            <thead>
+              <tr role="row">
+                <th>Name</th>
+                <th>Institution</th>
+                <th>Category</th>
+                <th>Region</th>
                 <th>Holding period <span class="smaller">[days]</span></th>
-								<th>Quaterly change</th>
+                <th>Quaterly change</th>
                 <th>Investment <span class="smaller">[PLN]</span></th>
                 <th>Net value <span class="smaller">[PLN]</span></th>
                 <th>Wallet share</th>
-								<th>Holding return</th>
-							</tr>
-						</thead>
-						<tbody>
-							{% for asset in assets %}
-							<tr>
-								<td>
+                <th>Holding return</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for asset in assets %}
+              <tr>
+                <td>
                   <a href="{{ url_for('assets.index', id=asset._id) }}">
-									  {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
+                    {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
                   </a>
                   {%- if misc and misc.showData -%}
                   <a href="#" class="imagelink">
@@ -278,7 +283,7 @@
                   <a href="{{ url_for('assets.receipt', id=asset._id) }}" class="imagelink" title="Register buy or sell">
                     <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
                   </a>
-								</td>
+                </td>
                 <td>{{ asset.institution }}</td>
                 <td data-order="{{ asset.category }}{{ (" " + asset.subcategory) if asset.subcategory else ""}}">
                   {{- asset.category -}}
@@ -298,10 +303,10 @@
                 <td class="text-right">{{ asset._netValue | round(2) }}</td>
                 <td class="text-right">{{ (asset._netValue / totalNetValue * 100) | round(1) }}%</td>
                 <td class="text-right color-gain">{{ ((asset._netValue - asset._stillInvestedNetValue) / asset._stillInvestedNetValue * 100) | round(2) }}%</td>
-							</tr>
-							{% endfor %}
-						</tbody>
-						<tfoot>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
               <tr>
                 <th></th>
                 <th></th>
@@ -315,7 +320,7 @@
                 <th class="text-right color-gain">{{ ((totalNetValue - totalStillInvestedNetValue) / totalStillInvestedNetValue * 100) | round(2) }}%</th>
               </tr>
             </tfoot>
-					</table>
+          </table>
         </div>
       </div>
     </div>
