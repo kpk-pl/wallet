@@ -15,7 +15,6 @@ def _getPipelineFilters(label = None):
     pipeline = []
 
     pipeline.append({ "$match" : {
-        'trashed': { '$ne': True },
         "operations": { "$exists": True }
     }})
 
@@ -33,7 +32,10 @@ def _getPipelineFilters(label = None):
 
 def _getPipeline(label = None):
     pipeline = _getPipelineFilters(label)
-    pipeline.append({ "$match" : { "finalOperation.finalQuantity": { "$ne": 0 } } })
+    pipeline.append({ "$match" : {
+        'trashed': { '$ne': True },
+        "finalOperation.finalQuantity": { "$ne": 0 }
+    }})
     pipeline.append({ "$project" : {
         "_id": 1,
         "name": 1,
