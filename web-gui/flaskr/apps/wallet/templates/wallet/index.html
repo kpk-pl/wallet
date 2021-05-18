@@ -284,7 +284,7 @@
                     {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
                   </a>
                   {%- if misc and misc.showData -%}
-                  <a href="#" class="imagelink">
+                  <a href="#modalDebug_{{ asset._id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ asset._id }}">
                     <i class="fas fa-fw fa-bug fa-pull-right"></i>
                   </a>
                   {%- endif -%}
@@ -358,4 +358,24 @@
     </div>
   </div>
 </div>
+{%- for asset in assets %}
+<div class="modal fade" id="modalDebug_{{ asset._id }}">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h4 class="modal-title">{{ asset._id }}</h4>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
+			<div class="modal-body">
+        <pre>{{ asset | toJson(indent=4) }}</pre>
+			</div>
+			<div class="modal-footer justify-content-between">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+{%- endfor %}
 {% endblock %}
