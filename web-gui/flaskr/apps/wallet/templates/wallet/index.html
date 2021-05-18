@@ -231,9 +231,13 @@
 	{%- for asset in assets -%}
     '{{ asset._id }}',
   {%- endfor -%}
+	{%- for id in misc.recentlyClosedIds -%}
+    '{{ id }}',
+  {%- endfor -%}
   ];
 
   $.getJSON("{{ url_for('assets.historicalValue') }}?daysBack=30&id=" + allAssetIds.join('&id='), updateHistoricalChart);
+  /* When changing the daysBack parameter, change also the history context in the Python code */
 </script>
 {% endblock %}
 

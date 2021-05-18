@@ -6,12 +6,12 @@ from flaskr.pricing import Pricing, PricingContext
 
 from bson.objectid import ObjectId
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
 
 
-def _getPipeline(label = None):
+def _getPipelineFilters(label = None):
     pipeline = []
 
     pipeline.append({ "$match" : {
@@ -25,11 +25,15 @@ def _getPipeline(label = None):
         }})
 
     pipeline.append({ "$addFields" : {
-        "finalQuantity": { "$last": "$operations.finalQuantity" }
+        "finalOperation": { "$last": "$operations" },
     }})
 
-    pipeline.append({ "$match" : { "finalQuantity": { "$ne": 0 } } })
+    return pipeline
 
+
+def _getPipeline(label = None):
+    pipeline = _getPipelineFilters(label)
+    pipeline.append({ "$match" : { "finalOperation.finalQuantity": { "$ne": 0 } } })
     pipeline.append({ "$project" : {
         "_id": 1,
         "name": 1,
@@ -41,8 +45,24 @@ def _getPipeline(label = None):
         "region": 1,
         "operations": 1,
         "pricing": 1,
-        "finalQuantity": 1,
+        "finalQuantity": "$finalOperation.finalQuantity",
     }})
+
+    return pipeline
+
+
+def _getPipelineRecentlyClosed(label = None):
+    pipeline = _getPipelineFilters(label)
+
+    # when changing the history context, change also the html template for 'daysBack'
+    pipeline.append({ "$match" : {
+        "finalOperation.finalQuantity": 0,
+        "finalOperation.date": {
+          '$gte': datetime.now() - timedelta(days=31)
+        }
+    }})
+
+    pipeline.append({ "$project" : { "_id": 1 }})
 
     return pipeline
 
@@ -87,10 +107,12 @@ def index():
 
         lastQuoteUpdateTime = db.last_quote_update_time()
         allLabels = list(db.get_db().assets.aggregate(_allLabelsPipeline()))[0]['label']
+        recentlyClosedIds = [e['_id'] for e in db.get_db().assets.aggregate(_getPipelineRecentlyClosed(label))]
         misc = {
             'showData': debug,
             'label': label,
             'allLabels': allLabels,
+            'recentlyClosedIds': recentlyClosedIds,
             'lastQuoteUpdate': {
                 'timestamp': lastQuoteUpdateTime,
                 'daysPast': (datetime.now() - lastQuoteUpdateTime).days
