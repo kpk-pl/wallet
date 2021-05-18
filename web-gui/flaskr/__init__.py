@@ -2,9 +2,10 @@ import os
 from flask import Flask
 
 
-def _filter_toJson(data):
-    from bson.json_util import dumps
-    content = dumps(data, indent=2)
+def _filter_toJson(data, indent=2):
+    from bson.json_util import dumps, JSONOptions
+    opts = JSONOptions(datetime_representation=2, json_mode=1)
+    content = dumps(data, indent=indent, json_options=opts)
     return content
 
 
@@ -36,13 +37,14 @@ def create_app(test_config=None):
     from flaskr.apps.quotes.views import quotes
     app.register_blueprint(quotes, url_prefix="/quotes")
 
-    from flaskr.handlers import quote, results
+    from flaskr.apps.results.views import results
+    app.register_blueprint(results, url_prefix="/results")
+
+    from flaskr.handlers import quote
 
     app.add_url_rule('/quote', 'quote', quote.quote, methods=['GET', 'POST'])
     app.add_url_rule('/quote/add', 'quote.add', quote.quote_add, methods=['GET'])
     app.add_url_rule('/quote/import', 'quote.import', quote.quote_import, methods=['GET'])
-
-    app.add_url_rule('/results/<int:year>', 'results', results.results, methods=['GET'])
 
     app.jinja_env.filters['withSign'] = lambda x: '+'+str(x) if x > 0 else x
     app.jinja_env.filters['toJson'] = _filter_toJson
