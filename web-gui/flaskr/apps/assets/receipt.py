@@ -67,6 +67,9 @@ def receipt():
         if 'currencyConversion' in request.form.keys():
             operation['currencyConversion'] = float(request.form['currencyConversion'])
 
+        if 'code' in request.form.keys():
+            operation['code'] = request.form['code']
+
         query = {'_id': ObjectId(request.form['_id'])}
         update = {'$push': {'operations': operation }}
 
