@@ -56,11 +56,11 @@ def _getPipeline(label = None):
 def _getPipelineRecentlyClosed(label = None):
     pipeline = _getPipelineFilters(label)
 
-    # when changing the history context, change also the html template for 'daysBack'
+    # When changing the history context, change also the html template for 'daysBack'
     pipeline.append({ "$match" : {
         "finalOperation.finalQuantity": 0,
         "finalOperation.date": {
-          '$gte': datetime.now() - timedelta(days=31)
+          '$gte': datetime.now() - timedelta(days=41)
         }
     }})
 
@@ -95,7 +95,7 @@ def index():
    #     pricingQuarterAgoCtx = PricingContext(finalDate = datetime.now() - relativedelta(months=3))
    #     pricingQuarterAgo = Pricing(pricingQuarterAgoCtx)
         for asset in assets:
-            currentPrice = pricing.priceAsset(asset)
+            currentPrice, _ = pricing.priceAsset(asset)
             asset['_netValue'] = currentPrice
 
             #quarterAgoPrice = pricingQuarterAgo.priceAsset(asset)

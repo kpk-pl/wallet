@@ -131,11 +131,15 @@ class Pricing(object):
 
     def _priceAssetByQuote(self, asset):
         if 'operations' not in asset or not asset['operations']:
-            return 0.0
+            return 0.0, 0
 
-        quantity = asset['operations'][-1]['finalQuantity']
+        opsInScope = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
+        if not opsInScope:
+            return 0.0, 0
+
+        quantity = opsInScope[-1]['finalQuantity']
         if quantity == 0:
-            return 0.0
+            return 0.0, quantity
 
         ids = []
 
@@ -155,7 +159,7 @@ class Pricing(object):
         if value is not None and currencyId:
             value *= self._ctx.getFinalById(currencyId)
 
-        return value
+        return value, quantity
 
     def _getNullPricingForAssetHistory(self):
         return {'t': self._ctx.timeScale,
@@ -215,15 +219,18 @@ class Pricing(object):
         return result
 
     def _priceAssetByInterest(self, asset):
-        value = 0
+        opsInScope = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
+        if not opsInScope:
+            return 0.0, 0
 
-        for operation in asset['operations']:
+        value = 0
+        for operation in opsInScope:
             if operation['type'] == 'BUY':
                 value += self._calculateQuoteHistoryForOperationByInterest(asset, operation)[-1]['quote']
             elif operation['type'] == 'SELL':
                 raise NotImplementedError("Did not implement SELL operation")
 
-        return value
+        return value, opsInScope[-1]['finalQuantity']
 
     def _calculateQuoteHistoryForOperationByInterest(self, asset, operation):
         pricing = asset['pricing']

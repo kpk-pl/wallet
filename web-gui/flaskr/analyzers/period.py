@@ -1,78 +1,65 @@
+from flaskr.pricing import Pricing, PricingContext
 from dateutil.relativedelta import relativedelta
-from .quote import Quote
 from . import _operationNetValue
 
+
 class Period(object):
-    def __init__(self, assetData, currencyQuotes):
+    def __init__(self, startDate, finalDate):
         super(Period, self).__init__()
-        self.data = assetData
-        self.currencyQuotes = currencyQuotes
 
-        self.operations = self.data['operations']
+        self.startDate = startDate
+        self.finalDate = finalDate
 
-        self._quoteAnalyzer = Quote(self.data, self.currencyQuotes)
+        self.pricingStart = Pricing(ctx=PricingContext(finalDate=startDate))
+        self.pricingEnd = Pricing(ctx=PricingContext(finalDate=finalDate))
 
-    def calc(self, periodFrom, periodTo):
-        fromOperationId = self._fromOperationId(periodFrom)
-
-        self.data['_periodStats'] = {
-            'firstOperation': fromOperationId + 1,
-            'errors': []
-        }
-        self.stats = self.data['_periodStats']
-
-        self._initialConditions(fromOperationId, periodFrom + relativedelta(hours=12))
-        self._finalConditions(periodTo - relativedelta(hours=12))
-
-        self.stats['profits'] = {
-            'netValue': 0,
-            'quoteValue': 0,
-            'provisions': 0
+    def __call__(self, asset):
+        asset['_periodStats'] = {
+            'profits': {
+                'total': 0,
+                'netValue': 0,
+                'provisions': 0
+            }
         }
 
-        if len(self.stats['errors']) == 0:
-            self.stats['profits']['quoteValue'] = self.stats['finalNetValue'] - self.stats['initialNetValue']
+        self._initialConditions(asset)
+        self._finalConditions(asset)
 
-        for operation in self.data['operations'][self.stats['firstOperation'] : ]:
-            self._operationToProfit(operation)
+        stats = asset['_periodStats']
+        if stats['initialNetValue'] is None or stats['finalNetValue'] is None:
+            stats['error'] = True
+            return
 
-        return self.data
+        stats['profits']['total'] = stats['finalNetValue'] - stats['initialNetValue']
 
-    def _fromOperationId(self, periodFrom):
+        operations = [op for op in asset['operations'] if op['date'] >= self.startDate and op['date'] <= self.finalDate]
+        for operation in operations:
+            self._operationToProfit(stats, operation)
+
+    def _fromOperationId(self, asset):
         fromOperationId = -1
-        while fromOperationId < len(self.operations) - 1:
-            if self.operations[fromOperationId + 1]['date'] > periodFrom:
+        while fromOperationId < len(asset['operations']) - 1:
+            if asset['operations'][fromOperationId + 1]['date'] > self.startDate:
                 break
             fromOperationId += 1
 
         return fromOperationId
 
-    def _initialConditions(self, fromOperationId, periodFrom):
-        if fromOperationId < 0:  # asset has been initialized in the checked period, so it is a new asset
-            self.stats['initialQuantity'] = 0
-            self.stats['initialNetValue'] = 0
-        else:  # asset existed before the checked period
-            self.stats['initialQuantity'] = self.operations[fromOperationId]['finalQuantity']
-            quote = self._quoteAnalyzer(periodFrom, self.stats['errors'])
-            if quote is not None:
-                self.stats['initialNetValue'] = self.stats['initialQuantity'] * quote
+    def _initialConditions(self, asset):
+        stats = asset['_periodStats']
+        stats['initialNetValue'], stats['initialQuantity'] = self.pricingStart.priceAsset(asset)
 
-    def _finalConditions(self, periodTo):
-        self.stats['finalQuantity'] = self.operations[-1]['finalQuantity']
-        if self.stats['finalQuantity'] > 0:
-            finalQuote = self._quoteAnalyzer(periodTo, self.stats['errors'])
-            if finalQuote is not None:
-                self.stats['finalNetValue'] = self.stats['finalQuantity'] * finalQuote
-        else:
-            self.stats['finalNetValue'] = 0
+    def _finalConditions(self, asset):
+        stats = asset['_periodStats']
+        stats['finalNetValue'], stats['finalQuantity'] = self.pricingEnd.priceAsset(asset)
 
-    def _operationToProfit(self, operation):
+    def _operationToProfit(self, stats, operation):
         if operation['type'] == 'BUY':
-            self.stats['profits']['quoteValue'] -= _operationNetValue(operation)
+            stats['profits']['total'] -= _operationNetValue(operation)
         elif operation['type'] == 'SELL':
-            self.stats['profits']['quoteValue'] += _operationNetValue(operation)
+            stats['profits']['total'] += _operationNetValue(operation)
 
         if 'profits' in operation['_stats']:
-            self.stats['profits']['netValue'] += operation['_stats']['profits']['netValue']
-            self.stats['profits']['provisions'] += operation['_stats']['profits']['provisions']
+            stats['profits']['netValue'] += operation['_stats']['profits']['netValue']
+            stats['profits']['provisions'] += operation['_stats']['profits']['provisions']
 

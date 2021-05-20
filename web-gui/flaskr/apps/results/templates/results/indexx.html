@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Results in {{ year }}{% endblock %}
+
+{% block links %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-buttons/css/buttons.bootstrap4.min.css') }}">
+{% endblock %}
+
+{% block plugins_scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables/jquery.dataTables.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/dataTables.buttons.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/buttons.bootstrap4.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/buttons.colVis.min.js') }}"></script>
+{% endblock %}
+
+{% block user_scripts %}
+<script type="text/javascript">
+  $('.color-gain').each(function () {
+    if ($(this).text().startsWith('-')) {
+      $(this).addClass('color-gain-negative')
+    } else {
+      $(this).addClass('color-gain-positive')
+    }
+  });
+</script>
+<script type="text/javascript">
+  $(function () {
+    $('#resultsTable').DataTable({
+      "paging": false,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": true,
+      "order": [[5, "desc"]],
+      "info": false,
+      "autoWidth": false,
+      "responsive": true,
+      "buttons": [ "colvis" ],
+      "columnDefs": [
+      ],
+    }).buttons().container().appendTo("#resultsTable_wrapper .col-md-6:eq(0)");
+  });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">{{ year }} results</h3>
+        </div>
+        <div class="card-body">
+					<table id="resultsTable" class="table table-bordered table-striped table-hover">
+            <thead role="row">
+              <tr>
+                <th>Name</th>
+                <th>Institution</th>
+                <th>Category</th>
+                <th>Quantity change</th>
+                <th>Cash profit <span class="smaller">[PLN]</span></th>
+                <th>Total profit <span class="smaller">[PLN]</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for asset in assets | sort(attribute='name') %}
+              <tr class="{{ "warning-row" if asset._periodStats.error }}">
+                <td data-title="Name">
+                  {%- if asset.trashed %}
+                  <del>
+                  {%- endif %}
+                  <a href="{{ url_for('assets.index', id=asset._id) }}">
+                    {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
+                  </a>
+                  {%- if asset.trashed %}
+                  </del>
+                  {%- endif %}
+									{% if asset.link -%}
+									<a href="{{asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="External asset site">
+										<i class="fas fa-chart-line fa-fw fa-pull-right"></i>
+									</a>
+									{% else -%}
+									<i class="fas fa-fw fa-pull-right"></i>
+									{% endif %}
+                  {%- if misc and misc.showData -%}
+                  <a href="#modalDebug_{{ asset._id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ asset._id }}">
+                    <i class="fas fa-fw fa-bug fa-pull-right"></i>
+                  </a>
+                  {%- endif -%}
+                </td>
+                <td data-title="Institution">{{ asset.institution }}</td>
+                <td data-title="Category" data-order="{{ asset.category }}{{ (" " + asset.subcategory) if asset.subcategory else ""}}">
+                  {{- asset.category -}}
+                  {%- if asset.subcategory -%}
+                  <br/>
+                  <span class="smaller">{{ asset.subcategory }}</span>
+                  {%- endif -%}
+                </td>
+                <td data-title="Quantity change" class="text-right">{{ (asset._periodStats.finalQuantity - asset._periodStats.initialQuantity) | withSign }}</td>
+                <td data-title="Cash profit" class="text-right color-gain">
+                  {%- if not asset._periodStats.error %}
+                  {{ (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) | round(2) }}
+                  {%- endif %}
+                </td>
+                <td data-title="Total profit" class="text-right color-gain">
+                  {%- if not asset._periodStats.error %}
+                  {{ (asset._periodStats.profits.total - asset._periodStats.profits.provisions) | round(2) }}
+                  {%- endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th data-title="Name"></th>
+                <th data-title="Institution"></th>
+                <th data-title="Category"></th>
+                <th data-title="Quantity change"></th>
+                <th data-title="Cash profit" class="text-right">{{ assets | sum(attribute='_periodStats.profits.netValue') | round(2) }}&nbsp;PLN</th>
+                <th data-title="Total profit" class="text-right">{{ assets | sum(attribute='_periodStats.profits.total') | round(2) }}&nbsp;PLN</th>
+              </tr>
+            </tfoot>
+					</table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{%- for asset in assets %}
+<div class="modal fade" id="modalDebug_{{ asset._id }}">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h4 class="modal-title">{{ asset._id }}</h4>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
+			<div class="modal-body">
+        <pre>{{ asset | toJson(indent=4) }}</pre>
+			</div>
+			<div class="modal-footer justify-content-between">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+{%- endfor %}
+{% endblock %}
