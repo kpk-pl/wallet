@@ -40,15 +40,22 @@ $(document).ready(function(){
   $("#f-link").change(linkChange);
   $("#f-link-get").click(linkChange);
 
-  $("#f-currency").change(function () {
+  $("#f-currency").change(function() {
     $('#f-quote-currency-prepend').text($(this).val());
   });
+
+  $("#f-currency").change(function() {
+    var currency = $(this).val()
+    $("#f-price-source > option").each(function() {
+      $(this).prop('disabled', $(this).attr('data-price-source-unit') != currency)
+    })
+  })
 });
 </script>
 <script type="text/javascript">
 $.validator.setDefaults({
   submitHandler: function() {
-    $.post('/asset', $('form').serialize(), function(data) {
+    $.post("{{ url_for('assets.index') }}", $('form').serialize(), function(data) {
       $(location).attr("href", "{{ url_for('assets.index') }}" + '?id=' + data.id);
     })
   }
@@ -113,14 +120,15 @@ $("form").validate({
                   </div>
                 </div>
                 <div class="row">
-                  <div class="col-9">
+                  <div class="col-3">
                     <div class="form-group">
                       <label for="f-currency">Currency</label>
                       <select id="f-currency" name="currency" class="custom-select" required>
                         <option value="" hidden disabled selected value></option>
                         <option value="PLN">PLN</option>
-                        <option value="USD">USD</option>
                         <option value="EUR">EUR</option>
+                        <option value="USD">USD</option>
+                        <option value="GBP">GBP</option>
                       </select>
                     </div>
                   </div>
@@ -133,6 +141,17 @@ $("form").validate({
                         </div>
                         <input type="text" id="f-quote" name="quote" class="form-control" disabled="disabled" data-lpignore="true"/>
                       </div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="form-group">
+                      <label for="f-price-source">Price source</label>
+                      <select id="f-price-source" name="priceQuoteId" class="custom-select" required>
+                        <option value="" hidden disabled selected value></option>
+                        {%- for priceSource in quotesList %}
+                        <option value="{{ priceSource._id }}" {{ 'disabled' if priceSource.unit != 'PLN' }}  data-price-source-unit="{{ priceSource.unit }}">{{ priceSource.name }}</option>
+                        {%- endfor %}
+                      </select>
                     </div>
                   </div>
                 </div>
