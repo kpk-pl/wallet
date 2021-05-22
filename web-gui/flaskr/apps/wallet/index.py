@@ -2,13 +2,13 @@ from flask import render_template, request, json, current_app
 
 from flaskr import db
 from flaskr.analyzers.profits import Profits
+from flaskr.analyzers.categories import Categories
 from flaskr.pricing import Pricing, PricingContext
 
 from bson.objectid import ObjectId
 
 from datetime import datetime, timedelta, timezone
 from dateutil.relativedelta import relativedelta
-from collections import defaultdict
 
 
 def _getPipelineFilters(label = None):
@@ -83,6 +83,13 @@ def _allLabelsPipeline():
     return pipeline
 
 
+def _lastStrategyPipeline():
+    return [
+        {'$sort': {'creationDate': -1}},
+        {'$limit': 1},
+        {'$project': {'_id': 0}}
+    ]
+
 def index():
     if request.method == 'GET':
         debug = bool(request.args.get('debug'))
@@ -102,19 +109,19 @@ def index():
             #if quarterAgoPrice is not None:
             #    asset['_quarterValueChange'] = (currentPrice - quarterAgoPrice) / quarterAgoPrice
 
-        categoryAllocation = defaultdict(lambda: defaultdict(int))
-        for asset in assets:
-            subcategory = asset['subcategory'] if 'subcategory' in asset else asset['category']
-            categoryAllocation[asset['category']][subcategory] += asset['_netValue']
+        categoryAnalyzer = Categories()
+        categoryAllocation = categoryAnalyzer(assets)
+
+        strategy = next(db.get_db().strategy.aggregate(_lastStrategyPipeline()))
+        categoryAnalyzer.fillStrategy(strategy)
 
         lastQuoteUpdateTime = db.last_quote_update_time()
-        allLabels = list(db.get_db().assets.aggregate(_allLabelsPipeline()))[0]['label']
         recentlyClosedIds = [e['_id'] for e in db.get_db().assets.aggregate(_getPipelineRecentlyClosed(label))]
         misc = {
             'showData': debug,
             'label': label,
-            'allLabels': allLabels,
-            'recentlyClosedIds': recentlyClosedIds,
+            'allLabels': next(db.get_db().assets.aggregate(_allLabelsPipeline()))['label'],
+            'recentlyClosedIds': [e['_id'] for e in db.get_db().assets.aggregate(_getPipelineRecentlyClosed(label))],
             'lastQuoteUpdate': {
                 'timestamp': lastQuoteUpdateTime,
                 'daysPast': (datetime.now() - lastQuoteUpdateTime).days
@@ -124,4 +131,5 @@ def index():
         return render_template("index.html",
                                assets=assets,
                                allocation=json.dumps(categoryAllocation),
+                               strategy=strategy,
                                misc=misc)

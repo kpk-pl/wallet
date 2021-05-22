@@ -56,7 +56,7 @@
 <script>
   const categoryAllocation = JSON.parse({{ allocation | tojson }});
   const categories = Object.keys(categoryAllocation);
-  const subcategories = categories.map(function(c) { return Object.keys(categoryAllocation[c]).map(s => c + ' ' + s); }).flat();
+  const subcategories = categories.map(function(c) { return Object.keys(categoryAllocation[c]).map(s => c + (s != 'null' ? (' ' + s) : '')); }).flat();
 
   var categoryChart = new Chart(document.getElementById('allocationChart').getContext('2d'), {
     type: 'doughnut',
@@ -336,13 +336,44 @@
     </div>
   </div>
   <div class="row">
-    <div class="col-12">
+    <div class="col-7">
       <div class="card card-primary">
         <div class="card-header">
           <h3 class="card-title">Category allocation</h3>
         </div>
         <div class="card-body">
           <canvas id="allocationChart" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-5">
+      <div class="card card-info">
+        <div class="card-header">
+          <h3 class="card-title">Target allocation</h3>
+        </div>
+        <div class="card-body p-0">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Target</th>
+                <th>Net value <span class="smaller">[PLN]</span></th>
+                <th>Deviation</th>
+                <th>Required change <span class="smaller">[PLN]</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {%- for type in strategy.assetTypes %}
+              <tr>
+                <td>{{ type.name }}</td>
+                <td class="text-right">{{ type.percentage }}%</td>
+                <td class="text-right">{{ type._totalNetValue | int }}</td>
+                <td class="text-right">{{ (type._totalNetValue / totalNetValue * 100 - type.percentage) | round(1) | withSign }}%</td>
+                <td class="text-right">{{ ((type.percentage / 100 - type._totalNetValue / totalNetValue) * totalNetValue) | int | withSign }}</td>
+              </tr>
+              {%- endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -360,6 +391,7 @@
     </div>
   </div>
 </div>
+{%- if misc.showData %}
 {%- for asset in assets %}
 <div class="modal fade" id="modalDebug_{{ asset._id }}">
 	<div class="modal-dialog">
@@ -380,4 +412,5 @@
 	</div>
 </div>
 {%- endfor %}
+{%- endif %}
 {% endblock %}
