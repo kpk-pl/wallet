@@ -99,15 +99,14 @@ def index():
         assets = [Profits(asset)() for asset in assets]
 
         pricing = Pricing()
-   #     pricingQuarterAgoCtx = PricingContext(finalDate = datetime.now() - relativedelta(months=3))
-   #     pricingQuarterAgo = Pricing(pricingQuarterAgoCtx)
+        pricingQuarterAgo = Pricing(PricingContext(finalDate = datetime.now() - relativedelta(months=3)))
         for asset in assets:
-            currentPrice, _ = pricing.priceAsset(asset)
+            currentPrice, quantity = pricing.priceAsset(asset)
             asset['_netValue'] = currentPrice
 
-            #quarterAgoPrice = pricingQuarterAgo.priceAsset(asset)
-            #if quarterAgoPrice is not None:
-            #    asset['_quarterValueChange'] = (currentPrice - quarterAgoPrice) / quarterAgoPrice
+            quarterAgoPrice, quantityQuarterAgo = pricingQuarterAgo.priceAsset(asset)
+            if quarterAgoPrice is not None and quantityQuarterAgo > 0:
+                asset['_quarterValueChange'] = (currentPrice/quantity - quarterAgoPrice/quantityQuarterAgo) / (quarterAgoPrice/quantityQuarterAgo)
 
         categoryAnalyzer = Categories()
         categoryAllocation = categoryAnalyzer(assets)
