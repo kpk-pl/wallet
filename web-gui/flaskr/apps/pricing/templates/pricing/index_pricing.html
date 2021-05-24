@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Pricing{% endblock %}
+
+{% block links %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
+{% endblock %}
+
+{% block plugins_scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables/jquery.dataTables.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
+{% endblock %}
+
+{% block user_scripts %}
+<script>
+  $(function () {
+    $('#pricingTable').DataTable({
+      "paging": false,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": true,
+      "info": false,
+      "autoWidth": false,
+      "responsive": true,
+    });
+  });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-flex">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary d-flex p-0">
+        <div class="card-header">
+          <h3 class="card-title">Assets</h3>
+        </div>
+        <div class="card-body">
+					<table id="pricingTable" class="table table-bordered table-striped table-hover">
+            <thead role="row">
+              <tr>
+                <th>Name</th>
+                <th>Unit</th>
+                <th>Last quote</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for source in sources %}
+              <tr>
+                <td data-title="Name">
+                  {{ source.name }}
+                  <a href="{{source.url}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="Source feed">
+                    <i class="fas fa-external-link-alt fa-fw fa-pull-right"></i>
+                  </a>
+                </td>
+                <td data-title="Unit">{{ source.unit }}</td>
+                <td data-title="Last quote">
+                  {%- if source.lastQuote %}
+                  {{ source.lastQuote.quote }} {{ source.unit }}
+                  {%- endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+					</table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

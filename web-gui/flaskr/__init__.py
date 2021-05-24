@@ -40,6 +40,9 @@ def create_app(test_config=None):
     from flaskr.apps.results.views import results
     app.register_blueprint(results, url_prefix="/results")
 
+    from flaskr.apps.pricing.views import pricing
+    app.register_blueprint(pricing, url_prefix="/pricing")
+
     from flaskr.handlers import quote
 
     app.add_url_rule('/quote', 'quote', quote.quote, methods=['GET', 'POST'])
