@@ -14,15 +14,14 @@ from dateutil.relativedelta import relativedelta
 def _getPipelineFilters(label = None):
     pipeline = []
 
-    pipeline.append({ "$match" : {
+    match = {
         "operations": { "$exists": True }
-    }})
+    }
 
     if label is not None:
-        pipeline.append({ "$match" : {
-            'labels': label
-        }})
+        match['labels'] = label
 
+    pipeline.append({ "$match" : match })
     pipeline.append({ "$addFields" : {
         "finalOperation": { "$last": "$operations" },
     }})

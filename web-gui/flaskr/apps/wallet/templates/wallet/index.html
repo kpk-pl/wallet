@@ -273,15 +273,15 @@
                 <th>Holding period <span class="smaller">[days]</span></th>
                 <th>Quaterly change</th>
                 <th>Investment <span class="smaller">[PLN]</span></th>
-                <th>Net value <span class="smaller">[PLN]</span></th>
-                <th>Wallet share</th>
+                <th>Value <span class="smaller">[PLN]</span></th>
+                <th>Share</th>
                 <th>Holding return</th>
               </tr>
             </thead>
             <tbody>
               {% for asset in assets %}
               <tr>
-                <td>
+                <td data-order="{{ asset.name }}">
                   <a href="{{ url_for('assets.index', id=asset._id) }}">
                     {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
                   </a>
@@ -368,7 +368,7 @@
                 <td>{{ type.name }}</td>
                 <td class="text-right">{{ type.percentage }}%</td>
                 <td class="text-right">{{ type._totalNetValue | int }}</td>
-                <td class="text-right">{{ (type._totalNetValue / totalNetValue * 100 - type.percentage) | round(1) | withSign }}%</td>
+                <td class="text-right color-gain">{{ (type._totalNetValue / totalNetValue * 100 - type.percentage) | round(1) | withSign }}%</td>
                 <td class="text-right">{{ ((type.percentage / 100 - type._totalNetValue / totalNetValue) * totalNetValue) | int | withSign }}</td>
               </tr>
               {%- endfor %}
