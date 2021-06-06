@@ -1,15 +1,15 @@
 from datetime import datetime, timedelta, time
+from dateutil.relativedelta import relativedelta
 from flaskr import db
 
 
 def _yearsBetween(lhs, rhs):
-    yearDiff = rhs.year - lhs.year
+    return relativedelta(rhs, lhs).years
 
-    adjustedLhs = lhs.replace(year = rhs.year)
-    if adjustedLhs > rhs:
-        yearDiff -= 1
 
-    return yearDiff
+def _monthsBetween(lhs, rhs):
+    delta = relativedelta(rhs, lhs)
+    return delta.years * 12 + delta.months
 
 
 def _dayByDay(start, finish):
@@ -235,12 +235,18 @@ class Pricing(object):
     def _calculateQuoteHistoryForOperationByInterest(self, asset, operation):
         pricing = asset['pricing']
 
-        if pricing['length']['periodName'] != 'year':
-            raise NotImplementedError("Periods other than year are not implemented")
+        multiplier = pricing['length']['multiplier'] if 'multiplier' in pricing['length'] else 1
 
-        passedPeriods = _yearsBetween(operation['date'], self._ctx.finalDate)
-        if passedPeriods > 0:
-            raise NotImplementedError("Did not implement calculating passed periods")
+        if pricing['length']['name'] == 'year':
+            passedPeriods = int(_yearsBetween(operation['date'], self._ctx.finalDate) / multiplier)
+            if passedPeriods > 0:
+                raise NotImplementedError("Did not implement calculating passed periods")
+        elif pricing['length']['name'] == 'month':
+            passedPeriods = int(_monthsBetween(operation['date'], self._ctx.finalDate) / multiplier)
+            if passedPeriods > 0:
+                raise NotImplementedError("Did not implement calculating passed periods")
+        else:
+            raise NotImplementedError("Periods other than year and month are not implemented")
 
         interestDef = pricing['interest'][0]
         if 'derived' in interestDef:

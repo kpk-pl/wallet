@@ -13,8 +13,6 @@ def _getPipeline(startDate, finalDate):
     # include only those assets that were created up to finalDate
     pipeline.append({ '$match': { "operations.0.date": {'$lte': finalDate}}})
 
-    pipeline.append({ '$match': { "_id": {"$nin": [ObjectId("60183b55dfc7b45b3e8c4cb9")]}}})
-
     # TODO: maybe filter assets that ended before startDate, ie finalQuantity is 0 and/or is marked as trashed
 
     pipeline.append({ '$project': {
@@ -39,9 +37,8 @@ def _getPipeline(startDate, finalDate):
 
 
 def index():
-    year=2020
-    finalDate = datetime(year + 1, 1, 1)
-    startDate = datetime(year, 1, 1)
+    finalDate = datetime(2021, 1, 1)
+    startDate = datetime(2020, 1, 1)
     trueEnd = min(finalDate, datetime.now())
 
     if request.method == 'GET':
@@ -62,4 +59,4 @@ def index():
                 'daysPast': (datetime.now() - lastQuoteUpdateTime).days
             }
         }
-        return render_template("indexx.html", year=year, assets=assets, misc=misc)
+        return render_template("indexx.html", assets=assets, misc=misc)
