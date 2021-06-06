@@ -238,7 +238,7 @@
   {%- endfor -%}
   ];
 
-  $.getJSON("{{ url_for('assets.historicalValue') }}?daysBack=40&id=" + allAssetIds.join('&id='), updateHistoricalChart);
+  $.getJSON("{{ url_for('assets.historicalValue') }}?daysBack=47&id=" + allAssetIds.join('&id='), updateHistoricalChart);
   /* When changing the daysBack parameter, change also the history context in the Python code */
 </script>
 {% endblock %}
@@ -260,7 +260,7 @@
             <a href="{{ url_for('wallet.index', label=label) }}"><span class="badge badge-secondary mr-1">{{ label }}</span></a>
             {%- endif %}
             {%- endfor %}
-            <a href="{{ url_for('assets.add') }}">
+            <a href="{{ url_for('wallet.index', aggregation='institution') }}">
               <button class="btn btn-tool" type="button" title="Group assets in different institutions"><i class="fas fa-calendar-plus"></i></button>
             </a>
           </div>

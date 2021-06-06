@@ -59,7 +59,7 @@ def _getPipelineRecentlyClosed(label = None):
     pipeline.append({ "$match" : {
         "finalOperation.finalQuantity": 0,
         "finalOperation.date": {
-          '$gte': datetime.now() - timedelta(days=41)
+          '$gte': datetime.now() - timedelta(days=48)
         }
     }})
 
