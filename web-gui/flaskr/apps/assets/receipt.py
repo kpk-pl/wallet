@@ -67,7 +67,7 @@ def receipt():
         if 'currencyConversion' in request.form.keys():
             operation['currencyConversion'] = float(request.form['currencyConversion'])
 
-        if 'code' in request.form.keys():
+        if 'code' in request.form.keys() and request.form['code']:
             operation['code'] = request.form['code']
 
         query = {'_id': ObjectId(request.form['_id'])}

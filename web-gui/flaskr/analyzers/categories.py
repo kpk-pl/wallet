@@ -26,9 +26,10 @@ class Categories(object):
         for assetType in strategy['assetTypes']:
             assetType['_totalNetValue'] = 0.0
             for category in assetType['categories']:
-                if isinstance(category, str) and category in strategyAllocation:
-                    assetType['_totalNetValue'] += strategyAllocation[category]['value']
-                    strategyAllocation[category]['remainingShare'] -= 100.0
+                if isinstance(category, str):
+                    if category in strategyAllocation:
+                        assetType['_totalNetValue'] += strategyAllocation[category]['value']
+                        strategyAllocation[category]['remainingShare'] -= 100.0
                 else:
                     if category['name'] in strategyAllocation:
                         assetType['_totalNetValue'] += strategyAllocation[category['name']]['value'] * category['percentage'] / 100
