@@ -59,7 +59,7 @@ def _getPipelineRecentlyClosed(label = None):
     pipeline.append({ "$match" : {
         "finalOperation.finalQuantity": 0,
         "finalOperation.date": {
-          '$gte': datetime.now() - timedelta(days=48)
+          '$gte': datetime.now() - timedelta(days=60 + 1)
         }
     }})
 
@@ -99,8 +99,11 @@ def index():
 
         pricing = Pricing()
         pricingQuarterAgo = Pricing(PricingContext(finalDate = datetime.now() - relativedelta(months=3)))
+
         for asset in assets:
-            currentPrice, quantity = pricing.priceAsset(asset)
+            if debug:
+                asset['_pricingData'] = {}
+            currentPrice, quantity = pricing.priceAsset(asset, debug=asset['_pricingData'] if debug else None)
             asset['_netValue'] = currentPrice
 
             quarterAgoPrice, quantityQuarterAgo = pricingQuarterAgo.priceAsset(asset)

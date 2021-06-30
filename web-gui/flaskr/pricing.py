@@ -113,15 +113,20 @@ class Pricing(object):
         super(Pricing, self).__init__()
         self._ctx = ctx
 
-    def priceAsset(self, asset):
+    def priceAsset(self, asset, debug=None):
+        self._data = {}
         if 'quoteId' in asset['pricing']:
-            return self._priceAssetByQuote(asset)
+            self._priceAssetByQuote(asset)
+            if isinstance(debug, dict):
+                debug.update(self._data)
+            return self._data['netValue'], self._data['quantity']
         elif 'interest' in asset['pricing']:
             return self._priceAssetByInterest(asset)
         else:
             raise NotImplementedError("Not implemented pricing scheme")
 
     def priceAssetHistory(self, asset):
+        self._data = {}
         if 'quoteId' in asset['pricing']:
             return self._priceAssetHistoryByQuote(asset)
         elif 'interest' in asset['pricing']:
@@ -130,36 +135,41 @@ class Pricing(object):
             raise NotImplementedError("Not implemented pricing scheme")
 
     def _priceAssetByQuote(self, asset):
+        self._data['quantity'] = 0
+        self._data['netValue'] = 0.0
+
         if 'operations' not in asset or not asset['operations']:
-            return 0.0, 0
+            return
 
         opsInScope = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
         if not opsInScope:
-            return 0.0, 0
+            return
 
-        quantity = opsInScope[-1]['finalQuantity']
-        if quantity == 0:
-            return 0.0, quantity
+        self._data['quantity'] = opsInScope[-1]['finalQuantity']
+        if self._data['quantity'] == 0:
+            return
 
-        ids = []
+        self._data['ids'] = []
 
         quoteId = asset['pricing']['quoteId']
-        ids.append(quoteId)
+        self._data['ids'].append(quoteId)
 
         currencyId = None
         if 'quoteId' in asset['currency']:
             currencyId = asset['currency']['quoteId']
-            ids.append(currencyId)
+            self._data['ids'].append(currencyId)
 
-        self._ctx.loadQuotes(ids)
+        self._ctx.loadQuotes(self._data['ids'])
 
-        value = self._ctx.getFinalById(quoteId)
-        if value is not None:
-            value *= quantity
-        if value is not None and currencyId:
-            value *= self._ctx.getFinalById(currencyId)
+        self._data['assetQuote'] = self._ctx.getFinalById(quoteId)
+        if self._data['assetQuote'] is not None:
+            self._data['value'] = self._data['assetQuote'] * self._data['quantity']
 
-        return value, quantity
+            if currencyId:
+                self._data['currencyQuote'] = self._ctx.getFinalById(currencyId)
+                self._data['netValue'] = self._data['value'] * self._data['currencyQuote']
+            else:
+                self._data['netValue'] = self._data['value']
 
     def _getNullPricingForAssetHistory(self):
         return {'t': self._ctx.timeScale,

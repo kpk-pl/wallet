@@ -238,7 +238,7 @@
   {%- endfor -%}
   ];
 
-  $.getJSON("{{ url_for('assets.historicalValue') }}?daysBack=47&id=" + allAssetIds.join('&id='), updateHistoricalChart);
+  $.getJSON("{{ url_for('assets.historicalValue') }}?daysBack=60&id=" + allAssetIds.join('&id='), updateHistoricalChart);
   /* When changing the daysBack parameter, change also the history context in the Python code */
 </script>
 {% endblock %}
