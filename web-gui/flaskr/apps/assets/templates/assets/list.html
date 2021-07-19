@@ -5,6 +5,7 @@
 {% block links %}
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/datatables-buttons/css/buttons.bootstrap4.min.css') }}">
 {% endblock %}
 
 {% block plugins_scripts %}
@@ -12,6 +13,9 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/dataTables.buttons.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/buttons.bootstrap4.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/buttons.colVis.min.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
@@ -20,12 +24,13 @@
     $('#assetsTable').DataTable({
       "paging": false,
       "lengthChange": false,
-      "searching": false,
+      "searching": true,
       "ordering": true,
       "info": false,
       "autoWidth": false,
       "responsive": true,
-    });
+      "buttons": [ "colvis" ],
+    }).buttons().container().appendTo("#assetsTable_wrapper .col-md-6:eq(0)");
   });
 </script>
 {% endblock %}
