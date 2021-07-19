@@ -45,6 +45,7 @@
                 <th>Name</th>
                 <th>Unit</th>
                 <th>Last quote</th>
+                <th>Last update</th>
               </tr>
             </thead>
             <tbody>
@@ -60,6 +61,11 @@
                 <td data-title="Last quote">
                   {%- if source.lastQuote %}
                   {{ source.lastQuote.quote }} {{ source.unit }}
+                  {%- endif %}
+                </td>
+                <td data-title="Last update">
+                  {%- if source.lastQuote %}
+                  {{ source.lastQuote.timestamp }}
                   {%- endif %}
                 </td>
               </tr>
