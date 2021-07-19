@@ -115,6 +115,8 @@ class Pricing(object):
 
     def priceAsset(self, asset, debug=None):
         self._data = {}
+        self._data['finalDate'] = self._ctx.finalDate
+
         if 'quoteId' in asset['pricing']:
             self._priceAssetByQuote(asset)
             if isinstance(debug, dict):
@@ -141,11 +143,11 @@ class Pricing(object):
         if 'operations' not in asset or not asset['operations']:
             return
 
-        opsInScope = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
-        if not opsInScope:
+        self._data['opsInScope'] = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
+        if not self._data['opsInScope']:
             return
 
-        self._data['quantity'] = opsInScope[-1]['finalQuantity']
+        self._data['quantity'] = self._data['opsInScope'][-1]['finalQuantity']
         if self._data['quantity'] == 0:
             return
 
