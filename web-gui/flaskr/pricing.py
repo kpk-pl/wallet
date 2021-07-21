@@ -50,9 +50,9 @@ def _interpolateLinear(data, timeScale):
 
 
 class PricingContext(object):
-    def __init__(self, finalDate = datetime.now(), startDate = None):
+    def __init__(self, finalDate = None, startDate = None):
         super(PricingContext, self).__init__()
-        self.finalDate = finalDate
+        self.finalDate = finalDate if finalDate is not None else datetime.now()
         self.startDate = startDate
         self.timeScale = _dayByDay(startDate, finalDate) if startDate is not None else []
         self.quotes = []
@@ -109,9 +109,9 @@ class PricingContext(object):
 
 
 class Pricing(object):
-    def __init__(self, ctx = PricingContext()):
+    def __init__(self, ctx = None):
         super(Pricing, self).__init__()
-        self._ctx = ctx
+        self._ctx = ctx if ctx is not None else PricingContext()
 
     def priceAsset(self, asset, debug=None):
         self._data = {}
