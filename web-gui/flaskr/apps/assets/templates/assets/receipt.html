@@ -163,7 +163,7 @@ $("form").validate({
             {%- endif %}
             <dt class="col-sm-4">Institution</dt>
             <dd class="col-sm-8">{{ asset.institution }}</dd>
-            <dt class="col-sm-4">Current quantity</dt>
+            <dt class="col-sm-4">Volume</dt>
             <dd class="col-sm-8">{{ asset.finalQuantity if asset.finalQuantity else 0 }}</dd>
             {% if asset.lastQuote -%}
             <dt class="col-sm-4">Last quote</dt>
@@ -217,7 +217,7 @@ $("form").validate({
             <div class="row">
               <div class="col-6">
                 <div class="form-group">
-                  <label for="f-quantity">Quantity</label>
+                  <label for="f-quantity">Volume</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
                       <button class="btn btn-info" id="f-quan-all" type="button" disabled="disabled">All</button>
@@ -228,7 +228,7 @@ $("form").validate({
               </div>
               <div class="col-6">
                 <div class="form-group">
-                  <label for="f-quantity-after">Quantity after operation</label>
+                  <label for="f-quantity-after">Volume after operation</label>
                   <input type="text" id="f-quantity-after" name="finalQuantity" class="form-control" disabled="disabled" value="{{ asset.finalQuantity }}" data-lpignore="true"/>
                 </div>
               </div>
