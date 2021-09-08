@@ -47,6 +47,43 @@ def _getBiznesRadar(url):
     return result
 
 
+def _getMarketWatch(url):
+    html = requests.get(url, headers={"User-Agent" : "Mozilla/5.0"}).text
+    soup = BeautifulSoup(html, 'html.parser')
+
+    result = {}
+
+    nameHtml = soup.select('h1[class*="company__name"]')
+    if len(nameHtml) > 0:
+        result['name'] = nameHtml[0].text
+
+    tickerHtml = soup.select('span[class*="company__ticker"]')
+    if len(tickerHtml) > 0:
+        result['ticker'] = tickerHtml[0].text
+
+    quoteHtml = soup.select('h2[class*="intraday__price"]')
+    if len(quoteHtml) > 0:
+        currencySymbol = quoteHtml[0].select('sup')
+        if len(currencySymbol) > 0:
+            currencySymbol = currencySymbol[0].text
+            if currencySymbol == '€':
+                result['currency'] = 'EUR'
+            elif currencySymbol == '$':
+                result['currency'] = 'USD'
+            elif currencySymbol == 'p':
+                result['currency'] = 'GBX'
+        quote = quoteHtml[0].select('quote-bg')
+        if len(quote) > 0:
+            result['quote'] = float(quote[0].text)
+
+    timeHtml = soup.select('div[class*="intraday__timestamp"] > span[class*="timestamp__time"] > bg-quote')
+    if len(timeHtml):
+        text = timeHtml[0].text
+        result['timestamp'] = dateutil.parser.parse(text[: text.rfind(' ')])
+
+    return result
+
+
 def _investingNameHeader(nameHeader):
     nameTickerRe = re.compile(r"(.*?)\(([A-Z0-9]+)\)(?!.*\([A-Z0-9]+\))")
 
@@ -141,5 +178,7 @@ def getQuote(desc):
         return _getBiznesRadar(desc)
     elif desc.startswith("https://stooq.pl/"):
         return Stooq(url = desc).assetAddData()
+    elif desc.startswith("https://www.marketwatch.com/"):
+        return _getMarketWatch(desc)
     else:
         return None

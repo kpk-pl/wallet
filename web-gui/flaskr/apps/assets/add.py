@@ -9,7 +9,13 @@ def _quotesListPipeline():
             '_id': 1,
             'name': 1,
             'unit': 1
-        }}
+        }},
+        {
+         '$sort': {
+            'name': 1,
+            'unit': 1
+         }
+        }
     ]
 
 
