@@ -51,7 +51,7 @@ def index():
         for quote in quotesIds:
             _id = quote['_id']
             liveQuote = liveQuotes[_id]
-            stale = quote['lastQuote']['timestamp'] == liveQuote['timestamp']
+            stale = 'lastQuote' in quote and quote['lastQuote']['timestamp'] == liveQuote['timestamp']
             if not stale:
                 if storeQuotes:
                     query = {'_id': _id}
