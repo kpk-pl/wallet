@@ -1,4 +1,5 @@
 from flask import render_template, request, jsonify
+from bson.objectid import ObjectId
 from flaskr import db
 from datetime import datetime
 from flaskr.stooq import Stooq
@@ -36,7 +37,7 @@ def listAll():
     elif request.method == 'POST':
         data = {}
 
-        allowedKeys = ['name', 'ticker', 'currency', 'link', 'type', 'category', 'subcategory', 'region', 'institution']
+        allowedKeys = ['name', 'ticker', 'link', 'type', 'category', 'subcategory', 'region', 'institution']
         for key in allowedKeys:
             if key in request.form.keys() and request.form[key]:
                 data[key] = request.form[key]
@@ -45,8 +46,17 @@ def listAll():
             data['stooqSymbol'] = Stooq(url=data['link']).ticker
 
         data['pricing'] = {
-            'quoteId': request.form['priceQuoteId']
+            'quoteId': ObjectId(request.form['priceQuoteId'])
         }
+
+        currency = request.form['currency']
+        data['currency'] = {
+            'name': currency
+        }
+        if currency != 'PLN':
+            currencyId = db.get_db().quotes.find_one({"name": currency + "PLN"}, {"_id": 1})
+            if currencyId:
+                data['currency']['quoteId'] = currencyId['_id']
 
         addedId = db.get_db().assets.insert(data)
         return jsonify(id=str(addedId))

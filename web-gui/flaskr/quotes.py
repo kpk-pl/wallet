@@ -75,6 +75,10 @@ def _getMarketWatch(url):
         quote = quoteHtml[0].select('quote-bg')
         if len(quote) > 0:
             result['quote'] = float(quote[0].text)
+        else:
+            quote = quoteHtml[0].select('span[class*="value"]')
+            if len(quote) > 0:
+                result['quote'] = float(quote[0].text)
 
     timeHtml = soup.select('div[class*="intraday__timestamp"] > span[class*="timestamp__time"] > bg-quote')
     if len(timeHtml):

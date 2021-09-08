@@ -241,14 +241,14 @@
                 <th style="width: 10px">#</th>
                 <th>Date</th>
                 <th style="width: 30px">Type</th>
-                <th>Quantity</th>
+                <th>Volume</th>
                 <th>Price <span class="smaller">[{{ asset.currency }}]</span></th>
                 <th>Unit price <span class="smaller">[{{ asset.currency }}]</span></th>
                 {% if asset.currency != 'PLN' -%}
                 <th>Currency conversion</th>
                 {%- endif %}
-                <th>Provision <span class="smaller">[PLN]</span></th>
-                <th>Final quantity</th>
+                <th>Provision & tax <span class="smaller">[PLN]</span></th>
+                <th>Final volume</th>
                 {% if operationsHaveCodes -%}
                 <th>Code</th>
                 {%- endif %}
