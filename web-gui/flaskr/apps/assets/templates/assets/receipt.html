@@ -55,8 +55,14 @@ $(document).ready(function(){
     var provision = $("#f-provision")
     var price = $("#f-price")
     var conversion = $("#f-conversion")
+    var type = $("#f-type").val()
     if (price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
-      var cost = floatVal(provision) + floatVal(conversion, 1.0) * floatVal(price)
+      var cost = floatVal(conversion, 1.0) * floatVal(price)
+      if (type != "SELL")
+        cost += floatVal(provision)
+      else
+        cost -= floatVal(provision)
+
       $("#f-cost").val(Number(cost.toFixed(2)))
     }
   }
@@ -247,7 +253,7 @@ $("form").validate({
               </div>
               <div class="col-6">
                 <div class="form-group">
-                  <label for="f-price">Transaction value</label>
+                  <label for="f-price">Assets value</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
                       <span class="input-group-text">{{ asset.currency.name }}</span>
@@ -270,7 +276,7 @@ $("form").validate({
             <div class="row">
               <div class="col-6">
                 <div class="form-group">
-                  <label for="f-provision">Provision</label>
+                  <label for="f-provision">Provision and tax</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
                       <span class="input-group-text">PLN</span>
@@ -281,7 +287,7 @@ $("form").validate({
               </div>
               <div class="col-6">
                 <div class="form-group">
-                  <label for="f-cost">Total cost</label>
+                  <label for="f-cost">Payable amount</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
                       <span class="input-group-text">PLN</span>

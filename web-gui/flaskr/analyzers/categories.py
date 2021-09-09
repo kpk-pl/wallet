@@ -7,7 +7,6 @@ class Categories(object):
         self.allocation = defaultdict(lambda: defaultdict(int))
 
     def __call__(self, assets):
-
         for asset in assets:
             category = asset['category']
             subcategory = asset['subcategory'] if 'subcategory' in asset else None
