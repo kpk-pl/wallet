@@ -32,7 +32,7 @@ services:
       - "/etc/timezone:/etc/timezone:ro"
     environment:
       QUOTE_UPDATER_METHOD: PUT
-      QUOTE_UPDATER_URI: http://web-gui/quotes
+      QUOTE_UPDATER_URI: http://web-gui/quotes/
       TZ: "Europe/Warsaw"
       QUOTE_UPDATER_SCHEDULE: "21:20"
     depends_on:
