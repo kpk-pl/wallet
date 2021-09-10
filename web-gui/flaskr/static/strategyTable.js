@@ -1,12 +1,19 @@
 class StrategyTable {
   constructor(datatable, colMap) {
     this.datatable = datatable
-    this.colMap = colMap
+
+    this.colMap = {}
+    for (let key in colMap) {
+      if (typeof colMap[key] == 'number')
+        this.colMap[key] = {column: colMap[key], format: x => x}
+      else
+        this.colMap[key] = colMap[key]
+    }
   }
 
   fillStrategy(data, rowCreator) {
     if (data.strategy.assetTypes.find(t=>t.name == "Others") == undefined)
-      data.strategy.assetTypes.push({name:"Others", percentage: 0, categories:[]})
+      data.strategy.assetTypes.push({name: "Others", percentage: 0, categories:[]})
 
     for (let type of data.strategy.assetTypes) {
       this.datatable.row.add(rowCreator(type))
@@ -35,7 +42,7 @@ class StrategyTable {
     let self = this
 
     this.datatable.rows().every(function(rowIdx){
-      let category = self.datatable.cell(rowIdx, self.colMap.name).data()
+      let category = self.datatable.cell(rowIdx, self.colMap.name.column).data()
       let assetType = data.strategy.assetTypes.find(type => type.name == category);
 
       let netValue = 0;
@@ -47,14 +54,14 @@ class StrategyTable {
       }
       assetType.netValue = netValue
       netValueRemaining -= netValue
-      self.datatable.cell(rowIdx, self.colMap.netValue).data(netValue.toFixed(2))
+      self.datatable.cell(rowIdx, self.colMap.netValue.column).data(self.colMap.netValue.format(netValue))
     })
 
     let othersAsset = data.strategy.assetTypes.find(t=>t.name == "Others")
     othersAsset.netValue += netValueRemaining
 
-    const othersRowIdx = this.datatable.row((_, data)=>data[this.colMap.name] == "Others").index()
-    this.datatable.cell(othersRowIdx, this.colMap.netValue).data(othersAsset.netValue.toFixed(2))
+    const othersRowIdx = this.datatable.row((_, data)=>data[this.colMap.name.column] == "Others").index()
+    this.datatable.cell(othersRowIdx, this.colMap.netValue.column).data(this.colMap.netValue.format(othersAsset.netValue))
 
     this.datatable.draw()
   }
@@ -65,7 +72,9 @@ class StrategyTable {
     const netValueSum = data.strategy.assetTypes.map(t=>t.netValue).reduce((a,b)=>a+b)
 
     const adjustValue = function(rowIdx){
-      return Number(self.datatable.cell(rowIdx, self.colMap.netAdjust).node().getElementsByTagName('input')[0].value)
+      if ('netAdjust' in self.colMap)
+        return Number(self.datatable.cell(rowIdx, self.colMap.netAdjust.column).node().getElementsByTagName('input')[0].value)
+      return 0
     }
 
     let netAdjustSum = 0
@@ -74,17 +83,17 @@ class StrategyTable {
     })
 
     this.datatable.rows().every(function(rowIdx){
-      let category = self.datatable.cell(rowIdx, self.colMap.name).data()
+      let category = self.datatable.cell(rowIdx, self.colMap.name.column).data()
       let assetType = data.strategy.assetTypes.find(type => type.name == category);
       let value = assetType.netValue + adjustValue(rowIdx)
       let percent = value / (netValueSum + netAdjustSum) * 100
       let deviation = percent - assetType.percentage
-      self.datatable.cell(rowIdx, self.colMap.deviation).data(String(deviation.toFixed(1))+'%')
+      self.datatable.cell(rowIdx, self.colMap.deviation.column).data(self.colMap.deviation.format(deviation) + '%')
 
       let targetValue = (netValueSum + netAdjustSum) * assetType.percentage / 100
       //let requiredChange = targetValue - value
       let requiredChange = (targetValue - value) / (1-assetType.percentage/100)
-      self.datatable.cell(rowIdx, self.colMap.requiredChange).data(requiredChange.toFixed(2))
+      self.datatable.cell(rowIdx, self.colMap.requiredChange.column).data(self.colMap.requiredChange.format(requiredChange))
     })
 
     this.datatable.draw()

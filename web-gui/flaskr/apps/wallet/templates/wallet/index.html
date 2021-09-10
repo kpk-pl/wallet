@@ -20,17 +20,19 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js/Chart.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js-plugin-labels/chartjs-plugin-labels.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js-plugin-colorschemes/chartjs-plugin-colorschemes.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='strategyTable.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
 <script>
-  $('.color-gain').each(function () {
+  function colorGain() {
     if ($(this).text().startsWith('-')) {
       $(this).addClass('color-gain-negative')
     } else {
       $(this).addClass('color-gain-positive')
     }
-  });
+  }
+  $('.color-gain').each(colorGain);
 </script>
 <script>
   $(function () {
@@ -172,6 +174,59 @@
       }
     }
   });
+</script>
+<script type="text/javascript">
+  let strategyTable = null
+  $(function () {
+    strategyTable = $('#strategyTable').DataTable({
+      "paging": false,
+      "lengthChange": false,
+      "searching": false,
+      "ordering": false,
+      "order": [[1, "desc"]],
+      "info": false,
+      "autoWidth": false,
+      "responsive": false,
+      "columnDefs": [
+        { "type": "string", "targets": [0] },
+        { "type": "num-fmt", "className": "text-right", "targets": [1, 2, 4] },
+        { "type": "num-fmt", "className": "text-right color-gain", "targets": [3] }
+      ]
+    });
+    strategyTable = new StrategyTable(strategyTable, {
+      name: 0, share: 1,
+      netValue: {
+        column: 2,
+        format: x => x.toFixed(0)
+      },
+      deviation: {
+        column: 3,
+        format: x => (x > 0 ? '+' + x.toFixed(1) : x.toFixed(1))
+      },
+      requiredChange: {
+        column: 4,
+        format: x => (x > 0 ? '+' + x.toFixed(0) : x.toFixed(0))
+      }
+    });
+
+    $.getJSON("{{ url_for('wallet.strategy') }}?allocation=true&label={{ misc.label | default('', true) }}", updateStrategyAllocation);
+  });
+
+  function updateStrategyAllocation(data) {
+    strategyData = data
+
+    strategyTable.fillStrategy(data, function(assetType){
+      return [assetType.name,
+              String(assetType.percentage) + '%',
+              null,
+              null,
+              null]
+    })
+
+    strategyTable.fillAllocation(data)
+    strategyTable.updateDeviation(data)
+    $('#strategyTable td.color-gain').each(colorGain)
+  }
 </script>
 <script>
   var assetAllocationChart = new Chart(document.getElementById('assetAllocationChart').getContext('2d'), {
@@ -355,7 +410,7 @@
           <h3 class="card-title">Target allocation</h3>
         </div>
         <div class="card-body p-0">
-          <table class="table">
+          <table class="table" id="strategyTable">
             <thead>
               <tr>
                 <th>Category</th>
@@ -365,17 +420,6 @@
                 <th>Required change <span class="smaller">[PLN]</span></th>
               </tr>
             </thead>
-            <tbody>
-              {%- for type in strategy.assetTypes %}
-              <tr>
-                <td>{{ type.name }}</td>
-                <td class="text-right">{{ type.percentage }}%</td>
-                <td class="text-right">{{ type._totalNetValue | int }}</td>
-                <td class="text-right color-gain">{{ (type._totalNetValue / totalNetValue * 100 - type.percentage) | round(1) | withSign }}%</td>
-                <td class="text-right">{{ ((type.percentage / 100 - type._totalNetValue / totalNetValue) * totalNetValue) | int | withSign }}</td>
-              </tr>
-              {%- endfor %}
-            </tbody>
           </table>
         </div>
       </div>

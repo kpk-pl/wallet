@@ -82,13 +82,6 @@ def _allLabelsPipeline():
     return pipeline
 
 
-def _lastStrategyPipeline():
-    return [
-        {'$sort': {'creationDate': -1}},
-        {'$limit': 1},
-        {'$project': {'_id': 0}}
-    ]
-
 def index():
     if request.method == 'GET':
         debug = bool(request.args.get('debug'))
@@ -113,9 +106,6 @@ def index():
         categoryAnalyzer = Categories()
         categoryAllocation = categoryAnalyzer(assets)
 
-        strategy = next(db.get_db().strategy.aggregate(_lastStrategyPipeline()))
-        categoryAnalyzer.fillStrategy(strategy)
-
         lastQuoteUpdateTime = db.last_quote_update_time()
         recentlyClosedIds = [e['_id'] for e in db.get_db().assets.aggregate(_getPipelineRecentlyClosed(label))]
         misc = {
@@ -132,5 +122,4 @@ def index():
         return render_template("index.html",
                                assets=assets,
                                allocation=json.dumps(categoryAllocation),
-                               strategy=strategy,
                                misc=misc)
