@@ -255,7 +255,13 @@
                 <td class="text-right">{{ asset._stillInvestedNetValue | round(2) }}</td>
                 <td class="text-right">{{ asset._netValue | round(2) }}</td>
                 <td class="text-right">{{ (asset._netValue / totalNetValue * 100) | round(1) }}%</td>
-                <td class="text-right color-gain">{{ ((asset._netValue - asset._stillInvestedNetValue) / asset._stillInvestedNetValue * 100) | round(2) }}%</td>
+                <td class="text-right color-gain">
+                  {%- if asset._stillInvestedNetValue > 0 -%}
+                  {{ ((asset._netValue - asset._stillInvestedNetValue) / asset._stillInvestedNetValue * 100) | round(2) }}
+                  {%- else -%}
+                  0
+                  {%- endif -%}
+                %</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -270,7 +276,13 @@
                 <th class="text-right">{{ totalStillInvestedNetValue | round(2) }}</th>
                 <th class="text-right">{{ totalNetValue | round(2) }}</th>
                 <th class="text-right">100%</th>
-                <th class="text-right color-gain">{{ ((totalNetValue - totalStillInvestedNetValue) / totalStillInvestedNetValue * 100) | round(2) }}%</th>
+                <th class="text-right color-gain">
+                  {%- if totalStillInvestedNetValue > 0 -%}
+                  {{ ((totalNetValue - totalStillInvestedNetValue) / totalStillInvestedNetValue * 100) | round(2) }}
+                  {%- else -%}
+                  0
+                  {%- endif -%}
+                  %</th>
               </tr>
             </tfoot>
           </table>

@@ -15,7 +15,7 @@ def _getPipelineFilters(label = None):
     pipeline = []
 
     match = {
-        "operations": { "$exists": True }
+        "operations": { "$exists": True, "$not": { "$size": 0 } }
     }
 
     if label is not None:
