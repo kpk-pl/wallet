@@ -1,6 +1,6 @@
 from flask import render_template, request, json, current_app
 
-from flaskr import db
+from flaskr import db, header
 from flaskr.analyzers.profits import Profits
 from flaskr.analyzers.categories import Categories
 from flaskr.pricing import Pricing, PricingContext
@@ -68,20 +68,6 @@ def _getPipelineRecentlyClosed(label = None):
     return pipeline
 
 
-def _allLabelsPipeline():
-    pipeline = []
-    pipeline.append({'$unwind': {
-        'path': '$labels',
-        'preserveNullAndEmptyArrays': False
-    }})
-    pipeline.append({'$group': {
-        '_id': None,
-        'label': {'$addToSet': '$labels'}
-    }})
-
-    return pipeline
-
-
 def index():
     if request.method == 'GET':
         debug = bool(request.args.get('debug'))
@@ -106,20 +92,14 @@ def index():
         categoryAnalyzer = Categories()
         categoryAllocation = categoryAnalyzer(assets)
 
-        lastQuoteUpdateTime = db.last_quote_update_time()
         recentlyClosedIds = [e['_id'] for e in db.get_db().assets.aggregate(_getPipelineRecentlyClosed(label))]
         misc = {
             'showData': debug,
-            'label': label,
-            'allLabels': next(db.get_db().assets.aggregate(_allLabelsPipeline()))['label'],
             'recentlyClosedIds': [e['_id'] for e in db.get_db().assets.aggregate(_getPipelineRecentlyClosed(label))],
-            'lastQuoteUpdate': {
-                'timestamp': lastQuoteUpdateTime,
-                'daysPast': (datetime.now() - lastQuoteUpdateTime).days
-            }
         }
 
         return render_template("index.html",
                                assets=assets,
                                allocation=json.dumps(categoryAllocation),
+                               header = header.data(),
                                misc=misc)

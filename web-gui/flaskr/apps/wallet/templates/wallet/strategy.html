@@ -49,7 +49,7 @@
       requiredChange: {column: 6, format: x => x.toFixed(2)}
     });
 
-    $.getJSON("{{ url_for('wallet.strategy') }}?allocation=true&label={{ misc.label | default('', true) }}", updateStrategyAllocation);
+    $.getJSON("{{ url_for('wallet.strategy') }}?allocation=true&label={{ header.label | default('', true) }}", updateStrategyAllocation);
   });
 </script>
 <script type="text/javascript">
@@ -98,15 +98,6 @@
       <div class="card card-primary">
         <div class="card-header">
           <h3 class="card-title">Strategy</h3>
-          <div class="card-tools">
-            {%- for label in misc.allLabels | sort %}
-            {%- if label == misc.label %}
-            <a href="{{ url_for('wallet.strategy') }}"><span class="badge badge-success mr-1">{{ label }}</span></a>
-            {%- else %}
-            <a href="{{ url_for('wallet.strategy', label=label) }}"><span class="badge badge-secondary mr-1">{{ label }}</span></a>
-            {%- endif %}
-            {%- endfor %}
-          </div>
         </div>
         <div class="card-body">
           <table class="table table-bordered table-striped table-hover" id="strategyTable">

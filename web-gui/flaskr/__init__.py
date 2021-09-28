@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, request, url_for
 
 
 def _filter_toJson(data, indent=2):
@@ -51,6 +51,11 @@ def create_app(test_config=None):
 
     app.jinja_env.filters['withSign'] = lambda x: '+'+str(x) if x > 0 else x
     app.jinja_env.filters['toJson'] = _filter_toJson
+
+    def url_for_self(**args):
+        return url_for(request.endpoint, **dict(request.view_args, **args))
+
+    app.jinja_env.globals['url_for_self'] = url_for_self
 
     print(app.url_map)
 

@@ -26,11 +26,27 @@
             <li class="nav-item"><a class="nav-link" href="{{ url_for('pricing.index') }}">Pricing</a></li>
           </ul>
         </div>
-        <div class="order-1 order-md-3 navbar-nav navbar-no-expand ml-auto">
-          {%- if misc and misc.lastQuoteUpdate -%}
-          <i class="fas fa-fw fa-calendar-check" title="Last quote update in DB: {{ misc.lastQuoteUpdate.timestamp }}" data-toggle="tooltip" style="color: {{ "green" if misc.lastQuoteUpdate.daysPast < 3 else "red" }}"></i>
+        <ul class="order-1 order-md-3 navbar-nav navbar-no-expand ml-auto">
+          {%- for label in header.allLabels | sort %}
+            <li class="nav-item">
+              {%- if label == header.label %}
+              <a href="{{ url_for_self() }}" class="d-block" role="button">
+                <span class="badge badge-success mr-1">{{ label }}</span>
+              </a>
+              {%- else %}
+              <a href="{{ url_for_self(label=label) }}" class="d-block" role="button">
+                <span class="badge badge-secondary mr-1">{{ label }}</span>
+              </a>
+              {%- endif %}
+            </li>
+          {%- endfor %}
+
+          {%- if header and header.lastQuoteUpdate -%}
+          <li class="nav-item">
+            <i class="pl-4 fas fa-fw fa-calendar-check" title="Last quote update in DB: {{ header.lastQuoteUpdate.timestamp }}" data-toggle="tooltip" style="color: {{ "green" if header.lastQuoteUpdate.daysPast < 3 else "red" }}"></i>
+          </li>
           {%- endif -%}
-        </div>
+        </ul>
       </div>
     </nav>
     <div class="content-wrapper">

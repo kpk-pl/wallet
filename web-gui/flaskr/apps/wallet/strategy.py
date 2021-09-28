@@ -1,9 +1,8 @@
 from flask import render_template, request, json, Response
 
-from flaskr import db
+from flaskr import db, header
 from flaskr.pricing import Pricing
 from flaskr.analyzers.categories import Categories
-from datetime import datetime
 
 
 def _getPipelineFilters(label = None):
@@ -52,20 +51,6 @@ def _lastStrategyPipeline():
     ]
 
 
-def _allLabelsPipeline():
-    pipeline = []
-    pipeline.append({'$unwind': {
-        'path': '$labels',
-        'preserveNullAndEmptyArrays': False
-    }})
-    pipeline.append({'$group': {
-        '_id': None,
-        'label': {'$addToSet': '$labels'}
-    }})
-
-    return pipeline
-
-
 def _response(shouldAllocate=False, label=None):
     response = {}
 
@@ -88,20 +73,7 @@ def _response(shouldAllocate=False, label=None):
 
 def strategy():
     if request.method == 'GET':
-        label = request.args.get('label')
-        if not label:
-            label = None
-
-        lastQuoteUpdateTime = db.last_quote_update_time()
-        misc = {
-            'label': label,
-            'allLabels': next(db.get_db().assets.aggregate(_allLabelsPipeline()))['label'],
-            'lastQuoteUpdate': {
-                'timestamp': lastQuoteUpdateTime,
-                'daysPast': (datetime.now() - lastQuoteUpdateTime).days
-            }
-        }
-        return render_template("strategy.html", misc=misc)
+        return render_template("strategy.html", header=header.data())
 
 
 def strategy_json():

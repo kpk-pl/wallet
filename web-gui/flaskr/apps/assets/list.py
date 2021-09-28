@@ -1,7 +1,6 @@
 from flask import render_template, request, jsonify
 from bson.objectid import ObjectId
-from flaskr import db
-from datetime import datetime
+from flaskr import db, header
 from flaskr.stooq import Stooq
 
 
@@ -25,14 +24,7 @@ def listAll():
         ]
         assets = list(db.get_db().assets.aggregate(pipeline))
 
-        lastQuoteUpdateTime = db.last_quote_update_time()
-        misc = {
-            'lastQuoteUpdate': {
-                'timestamp': lastQuoteUpdateTime,
-                'daysPast': (datetime.now() - lastQuoteUpdateTime).days
-            }
-        }
-        return render_template("list.html", assets=assets, misc=misc)
+        return render_template("list.html", assets=assets, header=header.data())
 
     elif request.method == 'POST':
         data = {}

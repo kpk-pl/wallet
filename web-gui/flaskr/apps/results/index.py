@@ -1,5 +1,5 @@
 from flask import render_template, request
-from flaskr import db
+from flaskr import db, header
 from flaskr.analyzers.profits import Profits
 from flaskr.analyzers.period import Period
 import time
@@ -51,12 +51,6 @@ def index():
         for asset in assets:
             periodAnalyzer(asset)
 
-        lastQuoteUpdateTime = db.last_quote_update_time()
-        misc = {
-            'showData': debug,
-            'lastQuoteUpdate': {
-                'timestamp': lastQuoteUpdateTime,
-                'daysPast': (datetime.now() - lastQuoteUpdateTime).days
-            }
-        }
-        return render_template("indexx.html", assets=assets, misc=misc)
+        misc = {'showData': debug}
+
+        return render_template("indexx.html", assets=assets, misc=misc, header=header.data())

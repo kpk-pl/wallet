@@ -193,13 +193,6 @@
         <div class="card-header">
           <h3 class="card-title">Open assets</h3>
           <div class="card-tools">
-            {%- for label in misc.allLabels | sort %}
-            {%- if label == misc.label %}
-            <a href="{{ url_for('wallet.index') }}"><span class="badge badge-success mr-1">{{ label }}</span></a>
-            {%- else %}
-            <a href="{{ url_for('wallet.index', label=label) }}"><span class="badge badge-secondary mr-1">{{ label }}</span></a>
-            {%- endif %}
-            {%- endfor %}
             <a href="{{ url_for('wallet.index', aggregation='institution') }}">
               <button class="btn btn-tool" type="button" title="Group assets in different institutions"><i class="fas fa-calendar-plus"></i></button>
             </a>
