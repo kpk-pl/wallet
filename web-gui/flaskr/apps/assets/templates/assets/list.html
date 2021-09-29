@@ -30,6 +30,10 @@
       "autoWidth": false,
       "responsive": true,
       "buttons": [ "colvis" ],
+      "columnDefs": [
+        { "visible": false, "targets": [1, 6] },
+        { "orderable": false, "targets": [1] }
+      ]
     }).buttons().container().appendTo("#assetsTable_wrapper .col-md-6:eq(0)");
   });
 </script>
@@ -53,6 +57,7 @@
             <thead role="row">
               <tr>
                 <th>Name</th>
+                <th>Labels</th>
                 <th>Institution</th>
                 <th>Type</th>
                 <th>Category</th>
@@ -62,7 +67,7 @@
               </tr>
             </thead>
             <tbody>
-              {% for asset in assets | sort(attribute='name') %}
+              {% for asset in assets %}
               <tr>
                 <td data-title="Name">
                   <a href="{{ url_for('assets.index', id=asset._id) }}">
@@ -78,6 +83,11 @@
                   <a href="{{ url_for('assets.receipt', id=asset._id) }}" class="imagelink" title="Register buy or sell">
                     <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
                   </a>
+                </td>
+                <td data-title="Labels">
+                  {%- for label in asset.labels | sort %}
+                  <span class="badge badge-{{ 'success' if label == header.label else 'secondary'}} mr-1">{{ label }}</span>
+                  {%- endfor -%}
                 </td>
                 <td data-title="Institution">{{ asset.institution }}</td>
                 <td data-title="Type">{{ asset.type }}</td>
