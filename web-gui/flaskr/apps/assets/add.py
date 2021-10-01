@@ -1,6 +1,5 @@
 from flask import render_template, request
-from flaskr import db
-from datetime import datetime
+from flaskr import db, header
 
 
 def _quotesListPipeline():
@@ -23,12 +22,4 @@ def add():
     if request.method == 'GET':
         quotesList = list(db.get_db().quotes.aggregate(_quotesListPipeline()))
 
-        lastQuoteUpdateTime = db.last_quote_update_time()
-        misc = {
-            'lastQuoteUpdate': {
-                'timestamp': lastQuoteUpdateTime,
-                'daysPast': (datetime.now() - lastQuoteUpdateTime).days
-            }
-        }
-
-        return render_template("add.html", quotesList=quotesList, misc=misc)
+        return render_template("add.html", quotesList=quotesList, header=header.data())

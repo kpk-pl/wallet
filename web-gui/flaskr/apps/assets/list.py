@@ -45,6 +45,9 @@ def listAll():
             if key in request.form.keys() and request.form[key]:
                 data[key] = request.form[key]
 
+        if 'labels' in request.form:
+            data['labels'] = request.form['labels'].split(',')
+
         if data['link'].startswith("https://stooq.pl"):
             data['stooqSymbol'] = Stooq(url=data['link']).ticker
 

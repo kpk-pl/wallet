@@ -4,12 +4,23 @@
 
 {% block plugins_scripts %}
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery-validation/jquery.validate.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/typeahead/typeahead.bundle.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/bootstrap-tagsinput/bootstrap-tagsinput.min.js') }}"></script>
+{% endblock %}
+
+{% block links %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/bootstrap-tagsinput/bootstrap-tagsinput.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/typeahead/typeahead.css') }}">
 {% endblock %}
 
 {% block styles %}
 <style>
 .nav-pills .nav-link.active, .nav-pills .show > .nav-link {
   background-color: var(--light)
+}
+.bootstrap-tagsinput {
+  width: 100%;
+  height: calc(2.25rem + 2px);
 }
 </style>
 {% endblock %}
@@ -71,6 +82,14 @@ $("form").validate({
   unhighlight: function (element, errorClass, validClass) {
           $(element).removeClass('is-invalid');
         }
+});
+</script>
+<script type="text/javascript">
+$('#f-labels').tagsinput({
+  tagClass: 'badge badge-success',
+  typeaheadjs: {
+		source: function(query, sync){ sync({{ header.allLabels | safe }}); }
+  }
 });
 </script>
 {% endblock %}
@@ -155,13 +174,13 @@ $("form").validate({
                   </div>
                 </div>
                 <div class="row">
-                  <div class="col-7">
+                  <div class="col-5">
                     <div class="form-group">
                       <label for="f-institution">Institution</label>
                       <input type="text" id="f-institution" name="institution" class="form-control" data-lpignore="true" required/>
                     </div>
                   </div>
-                  <div class="col-5">
+                  <div class="col-3">
                     <div class="form-group">
                       <label for="f-type">Type</label>
                       <select id="f-type" name="type" class="custom-select" required>
@@ -170,6 +189,12 @@ $("form").validate({
                         <option value="Equity">Equity</option>
                         <option value="Investment Fund">Investment Fund</option>
                       </select>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label for="f-labels">Tags</label>
+                      <input type="text" id="f-labels" name="labels" class="form-control" data-lpignore="true" required/>
                     </div>
                   </div>
                 </div>
