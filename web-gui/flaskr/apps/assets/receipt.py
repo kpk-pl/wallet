@@ -1,5 +1,5 @@
 from flask import render_template, request, jsonify
-from flaskr import db, quotes
+from flaskr import db, quotes, header
 from bson.objectid import ObjectId
 from dateutil import parser
 
@@ -35,6 +35,8 @@ def receipt():
                 'ticker': 1,
                 'institution': 1,
                 'currency': 1,
+                'labels': 1,
+                'link': 1,
                 'finalQuantity': { '$last': '$operations.finalQuantity' },
                 'lastQuote': { '$last': '$quoteHistory' }
             }}
@@ -47,7 +49,7 @@ def receipt():
         asset = assets[0]
         if 'link' in asset:
             asset['lastQuote'] = quotes.getQuote(asset['link'])
-        return render_template("receipt.html", asset=asset)
+        return render_template("receipt.html", asset=asset, header=header.data())
 
     elif request.method == 'POST':
         operation = {

@@ -1,5 +1,5 @@
 from flask import render_template, request
-from flaskr import db
+from flaskr import db, header
 from flaskr.analyzers.profits import Profits
 from bson.objectid import ObjectId
 from datetime import datetime
@@ -49,12 +49,4 @@ def item():
             if quoteHistory:
                 asset['quoteHistory'] = quoteHistory[0]['quoteHistory']
 
-        lastQuoteUpdateTime = db.last_quote_update_time()
-        misc = {
-            'lastQuoteUpdate': {
-                'timestamp': lastQuoteUpdateTime,
-                'daysPast': (datetime.now() - lastQuoteUpdateTime).days
-            }
-        }
-
-        return render_template("item.html", asset=asset, misc=misc)
+        return render_template("item.html", asset=asset, header=header.data())
