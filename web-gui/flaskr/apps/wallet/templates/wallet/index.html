@@ -94,7 +94,7 @@
       }
     });
 
-    $.getJSON("{{ url_for('wallet.strategy') }}?allocation=true&label={{ misc.label | default('', true) }}", updateStrategyAllocation);
+    $.getJSON("{{ url_for('wallet.strategy') }}?allocation=true&label={{ header.label | default('', true) }}", updateStrategyAllocation);
   });
 
   function updateStrategyAllocation(data) {
