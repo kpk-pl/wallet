@@ -112,8 +112,8 @@ $(document).ready(function(){
 $.validator.setDefaults({
   submitHandler: function() {
     $("#f-quantity-after").removeAttr('disabled');
-    $.post('/assets/receipt?id={{ asset._id }}', $('form').serialize(), function(data) {
-      $(location).attr("href", "{{ url_for('assets.index', id=asset._id) }}");
+    $.post("{{ url_for('assets.receipt', id=asset._id }}", $('form').serialize(), function(data) {
+      $(location).attr("href", "{{ url_for('assets.index', id=asset._id, label=header.label) }}");
     })
   }
 });

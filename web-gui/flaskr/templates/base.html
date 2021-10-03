@@ -30,7 +30,7 @@
           {%- for label in header.allLabels | sort %}
             <li class="nav-item">
               {%- if label == header.label %}
-              <a href="{{ url_for_self() }}" class="d-block" role="button">
+              <a href="{{ url_for_self(label=None) }}" class="d-block" role="button">
                 <span class="badge badge-success mr-1">{{ label }}</span>
               </a>
               {%- else %}

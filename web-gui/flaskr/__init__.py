@@ -53,7 +53,7 @@ def create_app(test_config=None):
     app.jinja_env.filters['toJson'] = _filter_toJson
 
     def url_for_self(**args):
-        return url_for(request.endpoint, **dict(request.view_args, **args))
+        return url_for(request.endpoint, **dict(request.args, **args))
 
     app.jinja_env.globals['url_for_self'] = url_for_self
 
