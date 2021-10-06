@@ -1,95 +1,96 @@
 from flask import request, Response, json
 from flaskr import db
+from dataclasses import dataclass, asdict
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 from flaskr.pricing import PricingContext, Pricing
 
 
-def _getPipelineForIdsHistorical(ids):
-    pipeline = [
-        { "$match" : { "_id" : { "$in": [ObjectId(id) for id in ids] } } },
+def _getPipelineForIdsHistorical(daysBack, label = None, ids = []):
+    pipeline = []
+
+    match = {}
+    if ids:
+        match['_id'] = { "$in": [ObjectId(id) for id in ids] }
+    if label is not None:
+        match['labels'] = label
+
+    pipeline.append({ "$match" : match })
+    pipeline.append({ "$addFields" : {
+        "finalOperation": { "$last": "$operations" },
+    }})
+
+    pipeline.append({ "$match" : { '$or' : [
+        { "finalOperation.finalQuantity": { "$ne": 0 } },
+        { "finalOperation.date": {
+          '$gte': datetime.now() - timedelta(days=daysBack)
+        }}
+    ]}})
+
+    pipeline.append(
         { "$project" : {
             '_id': 1,
             'operations': 1,
             'currency': 1,
             'name': 1,
             'category': 1,
-            'subcategory': 1,
+            'subcategory': { '$ifNull': [ "$subcategory", None ] },
             'pricing': 1
         }}
-    ]
+    )
+
     return pipeline
 
 
-def _responseForSingleAssetHistoricalValue(asset):
-    raise NotImplementedError()
-    currencyData = currencies[asset['currency']] if asset['currency'] != 'PLN' else None
-    historical = HistoricalValue(asset, currencyData)
-    values = historical()
-    result = {
-        'name': asset['name'],
-        'currency': 'PLN',
-        'category': asset['category'],
-        'subcategory': asset['subcategory'] if 'subcategory' in asset else None,
-        't': values['t'],
-        'y': values['y']
-    }
-    return Response(json.dumps(result), mimetype="application/json")
+@dataclass
+class ResultAsset:
+    name: str
+    category: str
+    subcategory: str
+
+    value: list
+
+    def __init__(self, name, category, subcategory):
+        self.name = name
+        self.category = category
+        self.subcategory = subcategory
+
+
+@dataclass
+class Result:
+    t: list
+    assets: list
+
+    def __init__(self, timescale):
+        self.t = timescale
+        self.assets = []
 
 
 def historicalValue():
     if request.method == 'GET':
-        ids = request.args.getlist('id')
-        if not ids:
-            return ('', 400)
+        ids = list(set(request.args.getlist('id')))
 
-        ids = list(set(ids))
+        daysBack = None
+        if 'daysBack' in request.args:
+            daysBack = int(request.args.get('daysBack'))
 
-        daysBack = request.args.get('daysBack')
-        daysBack = int(daysBack) if daysBack is not None else int(1.5*365)
+        label = None
+        if 'label' in request.args:
+            label = request.args.get('label')
 
         now = datetime.now()
         pricingCtx = PricingContext(finalDate = now, startDate = now - timedelta(daysBack))
         pricing = Pricing(pricingCtx)
 
-        inPercent = request.args.get('inPercent') is not None
+        assets = list(db.get_db().assets.aggregate(_getPipelineForIdsHistorical(daysBack, ids=ids, label=label)))
 
-        assets = list(db.get_db().assets.aggregate(_getPipelineForIdsHistorical(ids)))
-        if len(assets) != len(ids):
-            return ('', 404)
-
-        if len(assets) == 1:
-            return _responseForSingleAssetHistoricalValue(assets[0])
-
-        result = {'t': pricingCtx.timeScale, 'categories': {}}
+        result = Result(pricingCtx.timeScale)
         for asset in assets:
-            key = asset['category']
-            if 'subcategory' in asset:
-                key += ' ' + asset['subcategory']
+            dataAsset = ResultAsset(asset['name'], asset['category'], asset['subcategory'])
 
-            if key not in result['categories']:
-                result['categories'][key] = {
-                    'y': None,
-                    'names': [],
-                    'category': asset['category'],
-                    'subcategory': asset['subcategory'] if 'subcategory' in asset else None,
-                }
+            priced = pricing.priceAssetHistory(asset)
+            dataAsset.value = priced['y']
 
-            bucket = result['categories'][key]
+            result.assets.append(dataAsset)
 
-            bucket['names'].append(asset['name'])
-
-            values = pricing.priceAssetHistory(asset)
-            if bucket['y'] is None:
-                bucket['y'] = values['y']
-            else:
-                assert len(bucket['y']) == len(values['y'])
-                bucket['y'] = [a + b for a, b in zip(bucket['y'], values['y'])]
-
-        if inPercent:
-            for idx in range(len(result['t'])):
-                categorySum = sum([category['y'][idx] for _, category in result['categories'].items()])
-                for _, category in result['categories'].items():
-                    category['y'][idx] /= categorySum / 100
-
-        return Response(json.dumps(result), mimetype="application/json")
+        return Response(json.dumps(asdict(result)), mimetype="application/json")

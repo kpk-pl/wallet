@@ -7,7 +7,7 @@ from flaskr.pricing import Pricing, PricingContext
 
 from bson.objectid import ObjectId
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 
@@ -52,22 +52,6 @@ def _getPipeline(label = None):
     return pipeline
 
 
-def _getPipelineRecentlyClosed(label = None):
-    pipeline = _getPipelineFilters(label)
-
-    # When changing the history context, change also the html template for 'daysBack'
-    pipeline.append({ "$match" : {
-        "finalOperation.finalQuantity": 0,
-        "finalOperation.date": {
-          '$gte': datetime.now() - timedelta(days=60 + 1)
-        }
-    }})
-
-    pipeline.append({ "$project" : { "_id": 1 }})
-
-    return pipeline
-
-
 def index():
     if request.method == 'GET':
         debug = bool(request.args.get('debug'))
@@ -92,11 +76,7 @@ def index():
         categoryAnalyzer = Categories()
         categoryAllocation = categoryAnalyzer(assets)
 
-        recentlyClosedIds = [e['_id'] for e in db.get_db().assets.aggregate(_getPipelineRecentlyClosed(label))]
-        misc = {
-            'showData': debug,
-            'recentlyClosedIds': [e['_id'] for e in db.get_db().assets.aggregate(_getPipelineRecentlyClosed(label))],
-        }
+        misc = {'showData': debug}
 
         return render_template("index.html",
                                assets=assets,

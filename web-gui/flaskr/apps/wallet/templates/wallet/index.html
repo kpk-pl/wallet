@@ -156,30 +156,36 @@
   function updateHistoricalChart(data){
     assetAllocationChart.data.labels = data.t
 
-    var category;
-    for (category in data.categories) {
+    function category(asset) {
+      if (asset.subcategory)
+        return asset.category + ' ' + asset.subcategory;
+      return asset.category;
+    }
+
+    let mapping = Object.create(null);
+    for (let asset of data.assets) {
+      const cat = category(asset);
+      if (cat in mapping) {
+        mapping[cat] = mapping[cat].map((v, i) => v + asset.value[i]);
+      } else {
+        mapping[cat] = asset.value;
+      }
+    }
+
+    for (let category in mapping) {
       assetAllocationChart.data.datasets.push({
-        data: data.categories[category].y,
+        data: mapping[category],
         cubicInterpolationMode: 'monotone',
         pointRadius: 1,
         borderWidth: 2,
         label: category
       });
     }
+
     assetAllocationChart.update();
   }
 
-  const allAssetIds = [
-	{%- for asset in assets -%}
-    '{{ asset._id }}',
-  {%- endfor -%}
-	{%- for id in misc.recentlyClosedIds -%}
-    '{{ id }}',
-  {%- endfor -%}
-  ];
-
-  $.getJSON("{{ url_for('assets.historicalValue') }}?daysBack=60&id=" + allAssetIds.join('&id='), updateHistoricalChart);
-  /* When changing the daysBack parameter, change also the history context in the Python code */
+  $.getJSON("{{ url_for('assets.historicalValue', daysBack=60, label=header.label) | safe }}", updateHistoricalChart);
 </script>
 {% endblock %}
 
