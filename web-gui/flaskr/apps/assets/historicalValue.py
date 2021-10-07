@@ -9,7 +9,7 @@ from flaskr.pricing import PricingContext, Pricing
 def _getPipelineForIdsHistorical(daysBack, label = None, ids = []):
     pipeline = []
 
-    match = {}
+    match = {'trashed': { '$ne': True }}
     if ids:
         match['_id'] = { "$in": [ObjectId(id) for id in ids] }
     if label is not None:
