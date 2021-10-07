@@ -4,23 +4,6 @@ from dataclasses import dataclass
 from flaskr import db
 
 
-@dataclass
-class ResultHistory:
-    timescale : list
-    value : list = None
-    investedValue : list = None
-    quantity : list = None
-
-    def __init__(self, timescale):
-        self.timescale = timescale
-
-    def null(timescale):
-        result = ResultHistory(timescale)
-        result.value = [0.0] * len(result.timescale)
-        result.investedValue = [0.0] * len(result.timescale)
-        result.quantity = [0.0] * len(result.timescale)
-
-
 def _yearsBetween(lhs, rhs):
     return relativedelta(rhs, lhs).years
 
@@ -63,6 +46,38 @@ def _interpolateLinear(data, timeScale):
             linearCoef = (dateIdx.timestamp() - prevQuote['timestamp'].timestamp())/(thisQuote['timestamp'].timestamp() - prevQuote['timestamp'].timestamp())
             linearQuote = linearCoef * (thisQuote['quote'] - prevQuote['quote']) + prevQuote['quote']
             result.append({'timestamp': dateIdx, 'quote': linearQuote})
+
+    return result
+
+
+def _calculateQuoteHistoryForOperationByInterest(asset, operation, finalDate):
+    pricing = asset['pricing']
+
+    multiplier = pricing['length']['multiplier'] if 'multiplier' in pricing['length'] else 1
+
+    if pricing['length']['name'] == 'year':
+        passedPeriods = int(_yearsBetween(operation['date'], finalDate) / multiplier)
+        if passedPeriods > 0:
+            raise NotImplementedError("Did not implement calculating passed periods")
+    elif pricing['length']['name'] == 'month':
+        passedPeriods = int(_monthsBetween(operation['date'], finalDate) / multiplier)
+        if passedPeriods > 0:
+            raise NotImplementedError("Did not implement calculating passed periods")
+    else:
+        raise NotImplementedError("Periods other than year and month are not implemented")
+
+    interestDef = pricing['interest'][0]
+    if 'derived' in interestDef:
+        raise NotImplementedError("Did not implement calculating derived pricing")
+
+    result = [{'timestamp': operation['date'] - timedelta(seconds=1), 'quote': 0.0},
+              {'timestamp': operation['date'], 'quote': operation['price']}]
+
+    if 'fixed' in interestDef:
+        percentage = interestDef['fixed']
+        daysInLastPeriod = (finalDate - operation['date']).days
+        result.append({'timestamp': finalDate,
+                       'quote': operation['price'] * (1 + percentage * (daysInLastPeriod / 365))})
 
     return result
 
@@ -145,18 +160,6 @@ class Pricing(object):
         else:
             raise NotImplementedError("Not implemented pricing scheme")
 
-    def priceAssetHistory(self, asset):
-        if not asset['operations']:
-            return ResultHistory.null(self._ctx.timeScale)
-
-        self._data = {}
-        if 'quoteId' in asset['pricing']:
-            return self._priceAssetHistoryByQuote(asset)
-        elif 'interest' in asset['pricing']:
-            return self._priceAssetHistoryByInterest(asset)
-        else:
-            raise NotImplementedError("Not implemented pricing scheme")
-
     def _priceAssetByQuote(self, asset):
         self._data['quantity'] = 0
         self._data['netValue'] = 0.0
@@ -194,7 +197,56 @@ class Pricing(object):
             else:
                 self._data['netValue'] = self._data['value']
 
-    def _getAssetHistoryQuantity(self, asset):
+    def _priceAssetByInterest(self, asset):
+        opsInScope = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
+        if not opsInScope:
+            return 0.0, 0
+
+        value = 0
+        for operation in opsInScope:
+            if operation['type'] == 'BUY':
+                value += _calculateQuoteHistoryForOperationByInterest(asset, operation, self._ctx.finalDate)[-1]['quote']
+            elif operation['type'] == 'SELL':
+                raise NotImplementedError("Did not implement SELL operation")
+
+        return value, opsInScope[-1]['finalQuantity']
+
+
+class HistoryPricing:
+    @dataclass
+    class Result:
+        timescale : list
+        value : list = None
+        investedValue : list = None
+        quantity : list = None
+
+        def __init__(self, timescale):
+            self.timescale = timescale
+
+        def null(timescale):
+            result = Result(timescale)
+            result.value = [0.0] * len(result.timescale)
+            result.investedValue = [0.0] * len(result.timescale)
+            result.quantity = [0.0] * len(result.timescale)
+
+
+    def __init__(self, ctx = None):
+        super(HistoryPricing, self).__init__()
+        self._ctx = ctx if ctx is not None else PricingContext()
+
+    def priceAsset(self, asset):
+        if not asset['operations']:
+            return self.Result.null(self._ctx.timeScale)
+
+        self._data = {}
+        if 'quoteId' in asset['pricing']:
+            return self._priceAssetByQuote(asset)
+        elif 'interest' in asset['pricing']:
+            return self._priceAssetByInterest(asset)
+        else:
+            raise NotImplementedError("Not implemented pricing scheme")
+
+    def _getAssetQuantity(self, asset):
         ops = asset['operations']
 
         operationIdx = 0
@@ -211,9 +263,9 @@ class Pricing(object):
 
         return result
 
-    def _priceAssetHistoryByQuote(self, asset):
-        result = ResultHistory(self._ctx.timeScale)
-        result.quantity = self._getAssetHistoryQuantity(asset)
+    def _priceAssetByQuote(self, asset):
+        result = self.Result(self._ctx.timeScale)
+        result.quantity = self._getAssetQuantity(asset)
 
         quoteId = asset['pricing']['quoteId']
         currencyId = asset['currency']['quoteId'] if 'quoteId' in asset['currency'] else None
@@ -226,62 +278,17 @@ class Pricing(object):
 
         return result
 
-    def _priceAssetHistoryByInterest(self, asset):
-        result = ResultHistory(self._ctx.timeScale)
-        result.quantity = self._getAssetHistoryQuantity(asset)
+    def _priceAssetByInterest(self, asset):
+        result = self.Result(self._ctx.timeScale)
+        result.quantity = self._getAssetQuantity(asset)
         result.value = [0.0] * len(result.timescale)
 
         for operation in asset['operations']:
             if operation['type'] == 'BUY':
-                quoteHistory = self._calculateQuoteHistoryForOperationByInterest(asset, operation)
+                quoteHistory = _calculateQuoteHistoryForOperationByInterest(asset, operation, self._ctx.finalDate)
                 quotes = _interpolateLinear(quoteHistory, self._ctx.timeScale)
                 result.value = [a + b['quote'] for a, b in zip(result.value, quotes)]
             elif operation['type'] == 'SELL':
                 raise NotImplementedError("Did not implement SELL operation")
-
-        return result
-
-    def _priceAssetByInterest(self, asset):
-        opsInScope = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
-        if not opsInScope:
-            return 0.0, 0
-
-        value = 0
-        for operation in opsInScope:
-            if operation['type'] == 'BUY':
-                value += self._calculateQuoteHistoryForOperationByInterest(asset, operation)[-1]['quote']
-            elif operation['type'] == 'SELL':
-                raise NotImplementedError("Did not implement SELL operation")
-
-        return value, opsInScope[-1]['finalQuantity']
-
-    def _calculateQuoteHistoryForOperationByInterest(self, asset, operation):
-        pricing = asset['pricing']
-
-        multiplier = pricing['length']['multiplier'] if 'multiplier' in pricing['length'] else 1
-
-        if pricing['length']['name'] == 'year':
-            passedPeriods = int(_yearsBetween(operation['date'], self._ctx.finalDate) / multiplier)
-            if passedPeriods > 0:
-                raise NotImplementedError("Did not implement calculating passed periods")
-        elif pricing['length']['name'] == 'month':
-            passedPeriods = int(_monthsBetween(operation['date'], self._ctx.finalDate) / multiplier)
-            if passedPeriods > 0:
-                raise NotImplementedError("Did not implement calculating passed periods")
-        else:
-            raise NotImplementedError("Periods other than year and month are not implemented")
-
-        interestDef = pricing['interest'][0]
-        if 'derived' in interestDef:
-            raise NotImplementedError("Did not implement calculating derived pricing")
-
-        result = [{'timestamp': operation['date'] - timedelta(seconds=1), 'quote': 0.0},
-                  {'timestamp': operation['date'], 'quote': operation['price']}]
-
-        if 'fixed' in interestDef:
-            percentage = interestDef['fixed']
-            daysInLastPeriod = (self._ctx.finalDate - operation['date']).days
-            result.append({'timestamp': self._ctx.finalDate,
-                           'quote': operation['price'] * (1 + percentage * (daysInLastPeriod / 365))})
 
         return result
