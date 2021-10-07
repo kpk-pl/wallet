@@ -49,6 +49,7 @@ class ResultAsset:
     subcategory: str
 
     value: list
+    quantity: list
 
     def __init__(self, name, category, subcategory):
         self.name = name
@@ -90,6 +91,7 @@ def historicalValue():
 
             priced = pricing.priceAssetHistory(asset)
             dataAsset.value = priced.value
+            dataAsset.quantity = priced.quantity
 
             result.assets.append(dataAsset)
 
