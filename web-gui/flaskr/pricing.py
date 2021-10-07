@@ -1,6 +1,24 @@
 from datetime import datetime, timedelta, time
 from dateutil.relativedelta import relativedelta
+from dataclasses import dataclass
 from flaskr import db
+
+
+@dataclass
+class ResultHistory:
+    timescale : list
+    value : list = None
+    investedValue : list = None
+    quantity : list = None
+
+    def __init__(self, timescale):
+        self.timescale = timescale
+
+    def null(timescale):
+        result = ResultHistory(timescale)
+        result.value = [0.0] * len(result.timescale)
+        result.investedValue = [0.0] * len(result.timescale)
+        result.quantity = [0.0] * len(result.timescale)
 
 
 def _yearsBetween(lhs, rhs):
@@ -128,6 +146,9 @@ class Pricing(object):
             raise NotImplementedError("Not implemented pricing scheme")
 
     def priceAssetHistory(self, asset):
+        if not asset['operations']:
+            return ResultHistory.null(self._ctx.timeScale)
+
         self._data = {}
         if 'quoteId' in asset['pricing']:
             return self._priceAssetHistoryByQuote(asset)
@@ -173,58 +194,48 @@ class Pricing(object):
             else:
                 self._data['netValue'] = self._data['value']
 
-    def _getNullPricingForAssetHistory(self):
-        return {'t': self._ctx.timeScale,
-                'q': [0.0] * len(self._ctx.timeScale),
-                'y': [0.0] * len(self._ctx.timeScale)}
-
-    def _priceAssetHistoryByQuote(self, asset):
+    def _getAssetHistoryQuantity(self, asset):
         ops = asset['operations']
-        if not ops:
-            return self._getNullPricingForAssetHistory()
-
-        result = {'t': self._ctx.timeScale, 'q': [], 'y': []}
 
         operationIdx = 0
         quantity = 0
-        for dateIdx in result['t']:
+        result = []
+
+        for dateIdx in self._ctx.timeScale:
             # If this is the day the next operation happened, take new quantity
             while operationIdx < len(ops) and ops[operationIdx]['date'] <= dateIdx:
                 quantity = ops[operationIdx]['finalQuantity']
                 operationIdx += 1
 
-            result['q'].append(quantity)
+            result.append(quantity)
 
-        ids = []
+        return result
+
+    def _priceAssetHistoryByQuote(self, asset):
+        result = ResultHistory(self._ctx.timeScale)
+        result.quantity = self._getAssetHistoryQuantity(asset)
 
         quoteId = asset['pricing']['quoteId']
-        ids.append(quoteId)
+        currencyId = asset['currency']['quoteId'] if 'quoteId' in asset['currency'] else None
 
-        currencyId = None
-        if 'quoteId' in asset['currency']:
-            currencyId = asset['currency']['quoteId']
-            ids.append(currencyId)
+        self._ctx.loadQuotes(filter(None, [quoteId, currencyId]))
 
-        self._ctx.loadQuotes(ids)
-
-        result['y'] = [a * b for a, b in zip(result['q'], self._ctx.getHistoricalById(quoteId))]
+        result.value = [a * b for a, b in zip(result.quantity, self._ctx.getHistoricalById(quoteId))]
         if currencyId:
-            result['y'] = [a * b for a, b in zip(result['y'], self._ctx.getHistoricalById(currencyId))]
+            result.value = [a * b for a, b in zip(result.value, self._ctx.getHistoricalById(currencyId))]
 
         return result
 
     def _priceAssetHistoryByInterest(self, asset):
-        ops = asset['operations']
-        if not ops:
-            return self._getNullPricingForAssetHistory()
+        result = ResultHistory(self._ctx.timeScale)
+        result.quantity = self._getAssetHistoryQuantity(asset)
+        result.value = [0.0] * len(result.timescale)
 
-        result = {'t': self._ctx.timeScale, 'y': [0.0] * len(self._ctx.timeScale)}
-
-        for operation in ops:
+        for operation in asset['operations']:
             if operation['type'] == 'BUY':
                 quoteHistory = self._calculateQuoteHistoryForOperationByInterest(asset, operation)
                 quotes = _interpolateLinear(quoteHistory, self._ctx.timeScale)
-                result['y'] = [a + b['quote'] for a, b in zip(result['y'], quotes)]
+                result.value = [a + b['quote'] for a, b in zip(result.value, quotes)]
             elif operation['type'] == 'SELL':
                 raise NotImplementedError("Did not implement SELL operation")
 

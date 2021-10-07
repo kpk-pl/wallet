@@ -89,7 +89,7 @@ def historicalValue():
             dataAsset = ResultAsset(asset['name'], asset['category'], asset['subcategory'])
 
             priced = pricing.priceAssetHistory(asset)
-            dataAsset.value = priced['y']
+            dataAsset.value = priced.value
 
             result.assets.append(dataAsset)
 
