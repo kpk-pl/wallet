@@ -114,47 +114,36 @@
   }
 </script>
 <script>
-  var assetAllocationChart = new Chart(document.getElementById('assetAllocationChart').getContext('2d'), {
-    type: 'line',
-    data: {
-      labels: [],
-      datasets: []
-    },
-    options: {
-      maintainAspectRatio: false,
-      responsive: true,
-      plugins: {
-        colorschemes: {
-          scheme: 'tableau.JewelBright9',
-          fillAlpha: 1
+  let assetAllocationCharts = Object.create(null);
+  for (let type of ['netpl', 'value', 'investment', 'share']) {
+    assetAllocationCharts[type] = new Chart(document.getElementById('assetAllocation_chart_' + type).getContext('2d'), {
+      type: 'line',
+      data: { labels: [], datasets: [] },
+      options: {
+        maintainAspectRatio: false,
+        responsive: true,
+        plugins: {
+          colorschemes: { scheme: (type == 'netpl' ? 'tableau.ColorBlind10' : 'tableau.JewelBright9'), fillAlpha: 1 }
+        },
+        hover: { mode: 'nearest' },
+        scales: {
+          xAxes: [{
+            type: 'time',
+            time: { unit: 'day', displayFormats: { day: 'D MMM YY' } }
+          }],
+          yAxes: [{
+            stacked: true,
+            scaleLabel: { display: true, labelString: (['netpl', 'share'].includes(type) ? '%' : 'PLN') }
+          }]
         }
-      },
-      hover: {
-        mode: 'nearest'
-      },
-      scales: {
-        xAxes: [{
-          type: 'time',
-          time: {
-            unit: 'day',
-            displayFormats: {
-              day: 'D MMM YY'
-            }
-          }
-        }],
-        yAxes: [{
-          stacked: true,
-          scaleLabel: {
-            display: true,
-            labelString: 'PLN'
-          }
-        }]
       }
-    }
-  });
+    });
+  }
 
-  function updateHistoricalChart(data){
-    assetAllocationChart.data.labels = data.t
+  function updateAllocationChart(data){
+    for (let [type, chart] of Object.entries(assetAllocationCharts)) {
+      chart.data.labels = data.t
+    }
 
     function category(asset) {
       if (asset.subcategory)
@@ -163,29 +152,51 @@
     }
 
     let mapping = Object.create(null);
+    let totals = {'value': new Array(data.t.length).fill(0), 'investment': new Array(data.t.length).fill(0)}
     for (let asset of data.assets) {
       const cat = category(asset);
       if (cat in mapping) {
-        mapping[cat] = mapping[cat].map((v, i) => v + asset.value[i]);
+        mapping[cat].value = mapping[cat].value.map((v, i) => v + asset.value[i]);
+        mapping[cat].investment = mapping[cat].investment.map((v, i) => v + asset.investedValue[i]);
       } else {
-        mapping[cat] = asset.value;
+        mapping[cat] = {'value': asset.value, 'investment': asset.investedValue};
       }
+
+      totals.value = totals.value.map((v, i) => v + asset.value[i]);
+      totals.investment = totals.investment.map((v, i) => v + asset.investedValue[i]);
     }
 
     for (let category in mapping) {
-      assetAllocationChart.data.datasets.push({
-        data: mapping[category],
-        cubicInterpolationMode: 'monotone',
-        pointRadius: 1,
-        borderWidth: 2,
-        label: category
+      assetAllocationCharts.value.data.datasets.push({
+        data: mapping[category].value,
+        label: category,
+        cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+      });
+      assetAllocationCharts.investment.data.datasets.push({
+        data: mapping[category].investment,
+        label: category,
+        cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+      });
+      assetAllocationCharts.share.data.datasets.push({
+        data: mapping[category].value.map((v, i) => v/totals.value[i]*100),
+        label: category,
+        cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
       });
     }
 
-    assetAllocationChart.update();
+    const netplAdjust = totals.value[0]/totals.investment[0];
+    assetAllocationCharts.netpl.data.datasets.push({
+      data: totals.value.map((v, i) => (v/totals.investment[i] - netplAdjust)*100),
+      label: 'Net P/L',
+      cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+    });
+
+    for (let [type, chart] of Object.entries(assetAllocationCharts)) {
+      chart.update();
+    }
   }
 
-  $.getJSON("{{ url_for('assets.historicalValue', daysBack=60, label=header.label) | safe }}", updateHistoricalChart);
+  $.getJSON("{{ url_for('assets.historicalValue', daysBack=180, label=header.label, investedValue=true) | safe }}", updateAllocationChart);
 </script>
 {% endblock %}
 
@@ -323,12 +334,39 @@
   </div>
   <div class="row">
     <div class="col-12">
-      <div class="card card-primary">
-        <div class="card-header">
-          <h3 class="card-title">Asset allocation</h3>
+      <div class="card card-primary card-tabs">
+        <div class="card-header d-flex p-0 pt-1">
+          <h3 class="card-title p-2 pl-3">Asset allocation</h3>
+          <ul class="nav nav-tabs ml-auto" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link active" href="#assetAllocation_tab_netpl" data-toggle="tab">Net P/L</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#assetAllocation_tab_value" data-toggle="tab">Value</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#assetAllocation_tab_investment" data-toggle="tab">Investment</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#assetAllocation_tab_share" data-toggle="tab">Share</a>
+            </li>
+          </ul>
         </div>
         <div class="card-body">
-          <canvas id="assetAllocationChart" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+          <div class="tab-content">
+            <div class="tab-pane active" id="assetAllocation_tab_netpl">
+              <canvas id="assetAllocation_chart_netpl" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+            </div>
+            <div class="tab-pane" id="assetAllocation_tab_value">
+              <canvas id="assetAllocation_chart_value" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+            </div>
+            <div class="tab-pane" id="assetAllocation_tab_investment">
+              <canvas id="assetAllocation_chart_investment" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+            </div>
+            <div class="tab-pane" id="assetAllocation_tab_share">
+              <canvas id="assetAllocation_chart_share" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+            </div>
+          </div>
         </div>
       </div>
     </div>

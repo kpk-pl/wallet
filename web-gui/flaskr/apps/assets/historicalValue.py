@@ -4,6 +4,7 @@ from dataclasses import dataclass, asdict
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 from flaskr.pricing import PricingContext, HistoryPricing
+from flaskr.analyzers.profits import Profits
 
 
 def _getPipelineForIdsHistorical(daysBack, label = None, ids = []):
@@ -49,6 +50,7 @@ class ResultAsset:
     subcategory: str
 
     value: list
+    investedValue: list
     quantity: list
 
     def __init__(self, name, category, subcategory):
@@ -79,11 +81,15 @@ def historicalValue():
         if 'label' in request.args:
             label = request.args.get('label')
 
+        investedValue = 'investedValue' in request.args
+
         now = datetime.now()
         pricingCtx = PricingContext(finalDate = now, startDate = now - timedelta(daysBack))
-        pricing = HistoryPricing(pricingCtx)
+        pricing = HistoryPricing(pricingCtx, features={'investedValue': investedValue})
 
         assets = list(db.get_db().assets.aggregate(_getPipelineForIdsHistorical(daysBack, ids=ids, label=label)))
+        if investedValue:
+            assets = [Profits(asset)() for asset in assets]
 
         result = Result(pricingCtx.timeScale)
         for asset in assets:
@@ -92,6 +98,7 @@ def historicalValue():
             priced = pricing.priceAsset(asset)
             dataAsset.value = priced.value
             dataAsset.quantity = priced.quantity
+            dataAsset.investedValue = priced.investedValue
 
             result.assets.append(dataAsset)
 

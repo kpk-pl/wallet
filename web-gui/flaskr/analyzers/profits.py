@@ -1,6 +1,7 @@
 from . import _operationNetValue, _valueOr
 from datetime import datetime
 
+
 class Profits(object):
     def __init__(self, assetData):
         super(Profits, self).__init__()

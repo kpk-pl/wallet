@@ -212,7 +212,7 @@ class Pricing(object):
         return value, opsInScope[-1]['finalQuantity']
 
 
-class HistoryPricing:
+class HistoryPricing(object):
     @dataclass
     class Result:
         timescale : list
@@ -230,21 +230,31 @@ class HistoryPricing:
             result.quantity = [0.0] * len(result.timescale)
 
 
-    def __init__(self, ctx = None):
+    def __init__(self, ctx = None, features = {}):
         super(HistoryPricing, self).__init__()
         self._ctx = ctx if ctx is not None else PricingContext()
+        self._features = features
 
     def priceAsset(self, asset):
         if not asset['operations']:
             return self.Result.null(self._ctx.timeScale)
 
         self._data = {}
+
+        result = self.Result(self._ctx.timeScale)
+        result.quantity = self._getAssetQuantity(asset)
+
         if 'quoteId' in asset['pricing']:
-            return self._priceAssetByQuote(asset)
+            result.value = self._priceAssetByQuote(asset, result)
         elif 'interest' in asset['pricing']:
-            return self._priceAssetByInterest(asset)
+            result.value = self._priceAssetByInterest(asset, result)
         else:
             raise NotImplementedError("Not implemented pricing scheme")
+
+        if 'investedValue' in self._features and self._features['investedValue']:
+            result.investedValue = self._getInvestedValue(asset)
+
+        return result
 
     def _getAssetQuantity(self, asset):
         ops = asset['operations']
@@ -263,32 +273,46 @@ class HistoryPricing:
 
         return result
 
-    def _priceAssetByQuote(self, asset):
-        result = self.Result(self._ctx.timeScale)
-        result.quantity = self._getAssetQuantity(asset)
+    def _getInvestedValue(self, asset):
+        ops = asset['operations']
 
+        operationIdx = 0
+        value = 0
+        result = []
+
+        for dateIdx in self._ctx.timeScale:
+            # If this is the day the next operation happened, take new values
+            while operationIdx < len(ops) and ops[operationIdx]['date'] <= dateIdx:
+                value = ops[operationIdx]['finalQuantity'] * ops[operationIdx]['_stats']['averageNetPrice']
+
+
+                operationIdx += 1
+
+            result.append(value)
+
+        return result
+
+    def _priceAssetByQuote(self, asset, result):
         quoteId = asset['pricing']['quoteId']
         currencyId = asset['currency']['quoteId'] if 'quoteId' in asset['currency'] else None
 
         self._ctx.loadQuotes(filter(None, [quoteId, currencyId]))
 
-        result.value = [a * b for a, b in zip(result.quantity, self._ctx.getHistoricalById(quoteId))]
+        value = [a * b for a, b in zip(result.quantity, self._ctx.getHistoricalById(quoteId))]
         if currencyId:
-            result.value = [a * b for a, b in zip(result.value, self._ctx.getHistoricalById(currencyId))]
+            value = [a * b for a, b in zip(value, self._ctx.getHistoricalById(currencyId))]
 
-        return result
+        return value
 
-    def _priceAssetByInterest(self, asset):
-        result = self.Result(self._ctx.timeScale)
-        result.quantity = self._getAssetQuantity(asset)
-        result.value = [0.0] * len(result.timescale)
+    def _priceAssetByInterest(self, asset, result):
+        value = [0.0] * len(result.timescale)
 
         for operation in asset['operations']:
             if operation['type'] == 'BUY':
                 quoteHistory = _calculateQuoteHistoryForOperationByInterest(asset, operation, self._ctx.finalDate)
                 quotes = _interpolateLinear(quoteHistory, self._ctx.timeScale)
-                result.value = [a + b['quote'] for a, b in zip(result.value, quotes)]
+                value = [a + b['quote'] for a, b in zip(value, quotes)]
             elif operation['type'] == 'SELL':
                 raise NotImplementedError("Did not implement SELL operation")
 
-        return result
+        return value
