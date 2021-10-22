@@ -44,7 +44,7 @@ def item():
 
         asset = Profits(assets[0])()
 
-        if 'quoteId' in asset['pricing']:
+        if 'pricing' in asset and 'quoteId' in asset['pricing']:
             quoteHistory = list(db.get_db().quotes.aggregate(_getPipelineForAssetQuotes(asset['pricing']['quoteId'])))
             if quoteHistory:
                 asset['quoteHistory'] = quoteHistory[0]['quoteHistory']

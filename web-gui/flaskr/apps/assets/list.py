@@ -48,12 +48,13 @@ def listAll():
         if 'labels' in request.form:
             data['labels'] = request.form['labels'].split(',')
 
-        if data['link'].startswith("https://stooq.pl"):
+        if 'link' in data and data['link'].startswith("https://stooq.pl"):
             data['stooqSymbol'] = Stooq(url=data['link']).ticker
 
-        data['pricing'] = {
-            'quoteId': ObjectId(request.form['priceQuoteId'])
-        }
+        if 'priceQuoteId' in request.form:
+            data['pricing'] = {
+                'quoteId': ObjectId(request.form['priceQuoteId'])
+            }
 
         currency = request.form['currency']
         data['currency'] = {

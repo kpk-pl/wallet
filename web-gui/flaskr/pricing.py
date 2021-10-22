@@ -284,8 +284,6 @@ class HistoryPricing(object):
             # If this is the day the next operation happened, take new values
             while operationIdx < len(ops) and ops[operationIdx]['date'] <= dateIdx:
                 value = ops[operationIdx]['finalQuantity'] * ops[operationIdx]['_stats']['averageNetPrice']
-
-
                 operationIdx += 1
 
             result.append(value)

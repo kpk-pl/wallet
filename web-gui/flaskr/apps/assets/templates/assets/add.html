@@ -15,9 +15,6 @@
 
 {% block styles %}
 <style>
-.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
-  background-color: var(--light)
-}
 .bootstrap-tagsinput {
   width: 100%;
   height: calc(2.25rem + 2px);
@@ -65,8 +62,8 @@ $(document).ready(function(){
 <script type="text/javascript">
 $.validator.setDefaults({
   submitHandler: function() {
-    $.post("{{ url_for('assets.index') }}", $('form').serialize(), function(data) {
-      $(location).attr("href", "{{ url_for('assets.index', label=header.label, id='_id') }}".replace('_id=', data.id));
+    $.post("{{ url_for('assets.index') }}", $('.tab-pane.active > form').serialize(), function(data) {
+      $(location).attr("href", "{{ url_for('assets.index', label=header.label, id='_id') }}".replace('_id', data.id));
     })
   }
 });
@@ -85,11 +82,13 @@ $("form").validate({
 });
 </script>
 <script type="text/javascript">
-$('#f-labels').tagsinput({
-  tagClass: 'badge badge-success',
-  typeaheadjs: {
-		source: function(query, sync){ sync({{ header.allLabels | safe }}); }
-  }
+['#f-labels', '#c-labels'].forEach(function(selector){
+  $(selector).tagsinput({
+    tagClass: 'badge badge-success',
+    typeaheadjs: {
+      source: function(query, sync){ sync({{ header.allLabels | safe }}); }
+    }
+  });
 });
 </script>
 {% endblock %}
@@ -98,22 +97,22 @@ $('#f-labels').tagsinput({
 <div class="container-sm">
   <div class="row">
     <div class="col-12">
-      <div class="card card-primary">
-        <div class="card-header d-flex p-0">
-          <h3 class="card-title p-3">Add new asset</h3>
-          <ul class="nav nav-pills ml-auto p-2">
+      <div class="card card-primary card-tabs">
+        <div class="card-header d-flex p-0 pt-1">
+          <h3 class="card-title p-2 pl-3">Add new asset</h3>
+          <ul class="nav nav-tabs ml-auto" role="tablist">
             <li class="nav-item">
               <a class="nav-link active" href="#tab-listed" data-toggle="tab">Listed</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#tab-bonds-poland" data-toggle="tab">Polish bonds</a>
+              <a class="nav-link" href="#tab-cash" data-toggle="tab">Cash</a>
             </li>
           </ul>
         </div>
-        <form method="post" action="">
-          <div class="card-body">
-            <div class="tab-content">
-              <div class="tab-pane active" id="tab-listed">
+        <div class="card-body">
+          <div class="tab-content">
+            <div class="tab-pane active" id="tab-listed">
+              <form method="post" action="">
                 <div class="form-group">
                   <label for="f-link">Link to <a href="https://stooq.pl" target="_blank" rel="noopener noreferrer">stooq.pl</a>, <a href="https://www.biznesradar.pl/" target="_blank" rel="noopener noreferrer">biznesradar.pl</a>, <a href="https://pl.investing.com/" target="_blank" rel="noopener noreferrer">pl.investing.com</a> or <a href="https://www.marketwatch.com" target="_blank" rel="noopener noreferrer">marketwatch.com</a></label>
                   <div class="input-group">
@@ -223,31 +222,57 @@ $('#f-labels').tagsinput({
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="tab-pane" id="tab-bonds-poland">
-                <input type="hidden" name="type" value="Polish Bonds"/>
-                <input type="hidden" name="currency" value="PLN"/>
-                <input type="hidden" name="category" value="Bonds"/>
-                <input type="hidden" name="subcategory" value="Inflation linked"/>
-                <input type="hidden" name="region" value="Poland"/>
+                <div class="row">
+                  <div class="col-12">
+                    <button class="btn btn-primary" type="submit">Submit</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="tab-pane" id="tab-cash">
+              <form method="post" action="">
+                <input type="hidden" name="type" value="Deposit"/>
+                <input type="hidden" name="category" value="Cash"/>
                 <div class="row">
                   <div class="col-9">
                     <div class="form-group">
-                      <label for="f-name">Name</label>
-                      <select id="f-name" name="name" class="custom-select" required>
+                      <label for="c-name">Name</label>
+                      <input type="text" id="c-name" name="name" class="form-control" data-lpignore="true" required/>
+                    </div>
+                  </div>
+                  <div class="col-3">
+                    <div class="form-group">
+                      <label for="c-currency">Currency</label>
+                      <select id="c-currency" name="currency" class="custom-select" required>
                         <option value="" hidden disabled selected value></option>
-                        <option value="EDO">EDO</option>
+                        <option value="PLN">PLN</option>
                       </select>
                     </div>
                   </div>
                 </div>
-              </div>
+                <div class="row">
+                  <div class="col-5">
+                    <div class="form-group">
+                      <label for="c-institution">Institution</label>
+                      <input type="text" id="c-institution" name="institution" class="form-control" data-lpignore="true" required/>
+                    </div>
+                  </div>
+                  <div class="col-7">
+                    <div class="form-group">
+                      <label for="c-labels">Tags</label>
+                      <input type="text" id="c-labels" name="labels" class="form-control" data-lpignore="true" required/>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-12">
+                    <button class="btn btn-primary" type="submit">Submit</button>
+                  </div>
+                </div>
+              </form>
             </div>
           </div>
-          <div class="card-footer">
-            <button class="btn btn-primary" type="submit">Submit</button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   </div>
