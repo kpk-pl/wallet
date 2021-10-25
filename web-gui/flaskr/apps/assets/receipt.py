@@ -32,6 +32,7 @@ def receipt():
             { "$project" : {
                 '_id': 1,
                 'name': 1,
+                'type': 1,
                 'ticker': 1,
                 'institution': 1,
                 'currency': 1,
@@ -56,13 +57,16 @@ def receipt():
             'date': parser.parse(request.form['date']),
             'type': request.form['type'],
             'quantity': _parseNumeric(request.form['quantity']),
-            'finalQuantity': _parseNumeric(request.form['finalQuantity']),
-            'price': float(request.form['price'])
+            'finalQuantity': _parseNumeric(request.form['finalQuantity'])
         }
 
-        provision = request.form['provision']
-        if provision:
-            provision = float(provision)
+        if 'price' in request.form.keys():
+            operation['price'] = float(request.form['price'])
+        else:
+            operation['price'] = operation['quantity']  # for Deposit type, default unit price is 1
+
+        if 'provision' in request.form.keys():
+            provision = float(request.form['provision'])
             if provision > 0:
                 operation['provision'] = provision
 
@@ -74,14 +78,6 @@ def receipt():
 
         query = {'_id': ObjectId(request.form['_id'])}
         update = {'$push': {'operations': operation }}
-
-        if request.form['type'] == 'BUY':
-            asset = db.get_db().assets.find_one(query)
-            if asset and 'quoteHistory' not in asset:
-                update['$push']['quoteHistory'] = {
-                    'timestamp': operation['date'],
-                    'quote': operation['price'] / operation['quantity']
-                }
 
         db.get_db().assets.update(query, update)
         return ('', 204)

@@ -165,12 +165,14 @@
             </dd>
             <dt class="col-sm-6">Volume</dt>
             <dd class="col-sm-6">{{ asset.finalQuantity if asset.finalQuantity else 0 }}</dd>
+            {%- if asset.type != 'Deposit' %}
             <dt class="col-sm-6">Average open price</dt>
             <dd class="col-sm-6">
               {%- if asset.finalQuantity and asset.finalQuantity > 0 -%}
               {{ asset._averagePrice | round(2) }} {{ asset.currency }}
               {%- endif -%}
             </dd>
+            {%- endif %}
           </dl>
         </div>
       </div>
@@ -240,12 +242,14 @@
                 <th>Date</th>
                 <th style="width: 30px">Type</th>
                 <th>Volume</th>
+                {%- if asset.type != 'Deposit' %}
                 <th>Price <span class="smaller">[{{ asset.currency }}]</span></th>
                 <th>Unit price <span class="smaller">[{{ asset.currency }}]</span></th>
+                {%- endif %}
                 {% if asset.currency != 'PLN' -%}
                 <th>Currency conversion</th>
                 {%- endif %}
-                <th>Provision & tax <span class="smaller">[PLN]</span></th>
+                <th>Provision &amp; tax <span class="smaller">[PLN]</span></th>
                 <th>Final volume</th>
                 {% if operationsHaveCodes -%}
                 <th>Code</th>
@@ -257,10 +261,20 @@
               <tr>
                 <td>{{ loop.index }}</td>
                 <td>{{ operation.date }}</td>
-                <td><span class="badge bg-{{ 'danger' if operation.type == 'SELL' else 'success' }}">{{ operation.type }}</span></td>
+                <td>
+                  <span class="badge bg-{{ 'danger' if operation.type == 'SELL' or operation.type == 'SPEND' else 'success' }}">
+                    {%- if asset.type == 'Deposit' %}
+                    {{ 'ADD' if operation.type == 'BUY' else 'SPEND' }}
+                    {%- else %}
+                    {{ operation.type }}
+                    {%- endif %}
+                  </span>
+                </td>
                 <td>{{ operation.quantity }}</td>
+                {%- if asset.type != 'Deposit' %}
                 <td>{{ operation.price }}</td>
                 <td>{{ (operation.price / operation.quantity) | round(3) }}</td>
+                {%- endif %}
                 {% if asset.currency != 'PLN' -%}
                 <td>{{ operation.currencyConversion | round(4) }}</td>
                 {%- endif %}

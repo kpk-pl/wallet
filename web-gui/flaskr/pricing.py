@@ -150,7 +150,9 @@ class Pricing(object):
         self._data = {}
         self._data['finalDate'] = self._ctx.finalDate
 
-        if 'quoteId' in asset['pricing']:
+        if 'pricing' not in asset.keys():
+            return self._priceAssetByQuantity(asset)
+        elif 'quoteId' in asset['pricing']:
             self._priceAssetByQuote(asset)
             if isinstance(debug, dict):
                 debug.update(self._data)
@@ -159,6 +161,13 @@ class Pricing(object):
             return self._priceAssetByInterest(asset)
         else:
             raise NotImplementedError("Not implemented pricing scheme")
+
+    def _priceAssetByQuantity(self, asset):
+        opsInScope = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
+        if not opsInScope:
+            return 0.0, 0
+
+        return opsInScope[-1]['finalQuantity'], opsInScope[-1]['finalQuantity']
 
     def _priceAssetByQuote(self, asset):
         self._data['quantity'] = 0
@@ -223,11 +232,13 @@ class HistoryPricing(object):
         def __init__(self, timescale):
             self.timescale = timescale
 
+        @staticmethod
         def null(timescale):
-            result = Result(timescale)
+            result = HistoryPricing.Result(timescale)
             result.value = [0.0] * len(result.timescale)
             result.investedValue = [0.0] * len(result.timescale)
             result.quantity = [0.0] * len(result.timescale)
+            return result
 
 
     def __init__(self, ctx = None, features = {}):
@@ -237,14 +248,16 @@ class HistoryPricing(object):
 
     def priceAsset(self, asset):
         if not asset['operations']:
-            return self.Result.null(self._ctx.timeScale)
+            return HistoryPricing.Result.null(self._ctx.timeScale)
 
         self._data = {}
 
         result = self.Result(self._ctx.timeScale)
         result.quantity = self._getAssetQuantity(asset)
 
-        if 'quoteId' in asset['pricing']:
+        if 'pricing' not in asset.keys():
+            result.value = self._getAssetQuantity(asset)
+        elif 'quoteId' in asset['pricing']:
             result.value = self._priceAssetByQuote(asset, result)
         elif 'interest' in asset['pricing']:
             result.value = self._priceAssetByInterest(asset, result)
