@@ -184,7 +184,7 @@
         </div>
         <div class="card-body">
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('assets.receipt', id=asset._id) }}'">
-            <i class="fa fa-shopping-cart"></i> Buy or sell
+            <i class="fa fa-shopping-cart"></i> {{ 'Add or spend' if asset.type == 'Deposit' else 'Buy or sell' }}
           </button>
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href=''">
             <i class="fas fa-edit"></i> Edit
@@ -241,7 +241,7 @@
                 <th style="width: 10px">#</th>
                 <th>Date</th>
                 <th style="width: 30px">Type</th>
-                <th>Volume</th>
+                <th>{{ 'Value' if asset.type == 'Deposit' else 'Volume' }}</th>
                 {%- if asset.type != 'Deposit' %}
                 <th>Price <span class="smaller">[{{ asset.currency }}]</span></th>
                 <th>Unit price <span class="smaller">[{{ asset.currency }}]</span></th>
@@ -250,7 +250,7 @@
                 <th>Currency conversion</th>
                 {%- endif %}
                 <th>Provision &amp; tax <span class="smaller">[PLN]</span></th>
-                <th>Final volume</th>
+                <th>Final {{ 'value' if asset.type == 'Deposit' else 'volume' }}</th>
                 {% if operationsHaveCodes -%}
                 <th>Code</th>
                 {%- endif %}

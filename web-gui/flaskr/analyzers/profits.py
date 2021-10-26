@@ -22,20 +22,21 @@ class Profits(object):
         self.currentQuantity = 0.0
 
     def __call__(self):
-        for operation in self.data['operations']:
-            operation['_stats'] = {}
+        if 'operations' in self.data:
+            for operation in self.data['operations']:
+                operation['_stats'] = {}
 
-            if operation['type'] == 'BUY':
-                self._buy(operation)
-            elif operation['type'] == 'SELL':
-                self._sell(operation)
+                if operation['type'] == 'BUY':
+                    self._buy(operation)
+                elif operation['type'] == 'SELL':
+                    self._sell(operation)
 
-            stats = operation['_stats']
-            stats['averagePrice'] = self.averagePrice
-            stats['averageNetPrice'] = self.averageNetPrice
-            stats['averageProvision'] = self.averageProvision
+                stats = operation['_stats']
+                stats['averagePrice'] = self.averagePrice
+                stats['averageNetPrice'] = self.averageNetPrice
+                stats['averageProvision'] = self.averageProvision
 
-            self.currentQuantity = operation['finalQuantity']
+                self.currentQuantity = operation['finalQuantity']
 
         self.data['_averagePrice'] = self.averagePrice
         self.data['_averageNetPrice'] = self.averageNetPrice

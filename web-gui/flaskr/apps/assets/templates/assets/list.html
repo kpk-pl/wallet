@@ -80,7 +80,7 @@
                   {% else -%}
                   <i class="fas fa-fw fa-pull-right"></i>
                   {% endif %}
-                  <a href="{{ url_for('assets.receipt', id=asset._id) }}" class="imagelink" title="Register buy or sell">
+                  <a href="{{ url_for('assets.receipt', id=asset._id) }}" class="imagelink" title="Register {{ 'add or spend' if asset.type == 'Deposit' else 'buy or sell' }}">
                     <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
                   </a>
                 </td>

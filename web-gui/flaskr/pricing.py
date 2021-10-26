@@ -247,7 +247,7 @@ class HistoryPricing(object):
         self._features = features
 
     def priceAsset(self, asset):
-        if not asset['operations']:
+        if 'operations' not in asset or not asset['operations']:
             return HistoryPricing.Result.null(self._ctx.timeScale)
 
         self._data = {}
