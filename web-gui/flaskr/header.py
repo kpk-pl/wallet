@@ -30,16 +30,17 @@ class HeaderLastQuoteUpdate:
 
 @dataclass
 class HeaderData:
-    label : str
+    showLabels : bool
     allLabels : list
     lastQuoteUpdate : HeaderLastQuoteUpdate
 
-    def __init__(self):
-        self.label = request.args.get('label')
-        if not self.label:
-            self.label = None
+    def __init__(self, showLabels = False):
+        self.showLabels = showLabels
 
-        self.allLabels = next(db.get_db().assets.aggregate(_allLabelsPipeline()))['label']
+        if self.showLabels:
+            self.allLabels = next(db.get_db().assets.aggregate(_allLabelsPipeline()))['label']
+        else:
+            self.allLabels = []
 
         self.lastQuoteUpdate = HeaderLastQuoteUpdate()
 
@@ -47,5 +48,5 @@ class HeaderData:
         return asdict(self)
 
 
-def data(*args):
-    return HeaderData(*args).asDict()
+def data(*args, **kwargs):
+    return HeaderData(*args, **kwargs).asDict()

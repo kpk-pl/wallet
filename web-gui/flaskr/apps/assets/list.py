@@ -1,4 +1,5 @@
 from flask import render_template, request, jsonify
+from flaskr.session import Session
 from bson.objectid import ObjectId
 from flaskr import db, header
 from flaskr.stooq import Stooq
@@ -32,10 +33,10 @@ def _getPipeline(label = None):
 
 def listAll():
     if request.method == 'GET':
-        label = request.args.get('label')
-        assets = list(db.get_db().assets.aggregate(_getPipeline(label)))
+        session = Session(['label', 'debug'])
+        assets = list(db.get_db().assets.aggregate(_getPipeline(session.label())))
 
-        return render_template("list.html", assets=assets, header=header.data())
+        return render_template("list.html", assets=assets, header=header.data(showLabels = True))
 
     elif request.method == 'POST':
         data = {}

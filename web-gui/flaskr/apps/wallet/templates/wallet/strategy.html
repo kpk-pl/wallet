@@ -49,7 +49,7 @@
       requiredChange: {column: 6, format: x => x.toFixed(2)}
     });
 
-    $.getJSON("{{ url_for('wallet.strategy') }}?allocation=true&label={{ header.label | default('', true) }}", updateStrategyAllocation);
+    $.getJSON("{{ url_for('wallet.strategy', allocation='true', label=session['label']) }}", updateStrategyAllocation);
   });
 </script>
 <script type="text/javascript">

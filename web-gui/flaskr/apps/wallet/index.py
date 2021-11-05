@@ -1,6 +1,7 @@
-from flask import render_template, request, json, current_app
+from flask import render_template, make_response, request, json, current_app
 
 from flaskr import db, header
+from flaskr.session import Session
 from flaskr.analyzers.profits import Profits
 from flaskr.analyzers.categories import Categories
 from flaskr.pricing import Pricing, PricingContext
@@ -54,19 +55,18 @@ def _getPipeline(label = None):
 
 def index():
     if request.method == 'GET':
-        debug = bool(request.args.get('debug'))
-        label = request.args.get('label')
+        session = Session(['label', 'debug'])
 
-        assets = list(db.get_db().assets.aggregate(_getPipeline(label)))
+        assets = list(db.get_db().assets.aggregate(_getPipeline(session.label())))
         assets = [Profits(asset)() for asset in assets]
 
         pricing = Pricing()
         pricingQuarterAgo = Pricing(PricingContext(finalDate = datetime.now() - relativedelta(months=3)))
 
         for asset in assets:
-            if debug:
+            if session.isDebug():
                 asset['_pricingData'] = {}
-            currentPrice, quantity = pricing.priceAsset(asset, debug=asset['_pricingData'] if debug else None)
+            currentPrice, quantity = pricing.priceAsset(asset, debug=asset['_pricingData'] if session.isDebug() else None)
             asset['_netValue'] = currentPrice
 
             quarterAgoPrice, quantityQuarterAgo = pricingQuarterAgo.priceAsset(asset)
@@ -76,10 +76,7 @@ def index():
         categoryAnalyzer = Categories()
         categoryAllocation = categoryAnalyzer(assets)
 
-        misc = {'showData': debug}
-
         return render_template("index.html",
                                assets=assets,
                                allocation=json.dumps(categoryAllocation),
-                               header = header.data(),
-                               misc=misc)
+                               header = header.data(showLabels = True))

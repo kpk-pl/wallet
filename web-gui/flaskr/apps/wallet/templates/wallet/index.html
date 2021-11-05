@@ -94,7 +94,7 @@
       }
     });
 
-    $.getJSON("{{ url_for('wallet.strategy') }}?allocation=true&label={{ header.label | default('', true) }}", updateStrategyAllocation);
+    $.getJSON("{{ url_for('wallet.strategy', allocation='true', label=session['label']) }}", updateStrategyAllocation);
   });
 
   function updateStrategyAllocation(data) {
@@ -196,7 +196,7 @@
     }
   }
 
-  $.getJSON("{{ url_for('assets.historicalValue', daysBack=180, label=header.label, investedValue=true) | safe }}", updateAllocationChart);
+  $.getJSON("{{ url_for('assets.historicalValue', daysBack=180, label=session['label'], investedValue=true) | safe }}", updateAllocationChart);
 </script>
 {% endblock %}
 
@@ -372,7 +372,7 @@
     </div>
   </div>
 </div>
-{%- if misc.showData %}
+{%- if session.debug %}
 {%- for asset in assets %}
 <div class="modal fade" id="modalDebug_{{ asset._id }}">
 	<div class="modal-dialog">

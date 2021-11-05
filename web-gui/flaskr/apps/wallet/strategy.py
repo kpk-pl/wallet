@@ -1,6 +1,7 @@
 from flask import render_template, request, json, Response
 
 from flaskr import db, header
+from flaskr.session import Session
 from flaskr.pricing import Pricing
 from flaskr.analyzers.categories import Categories
 
@@ -73,7 +74,8 @@ def _response(shouldAllocate=False, label=None):
 
 def strategy():
     if request.method == 'GET':
-        return render_template("strategy.html", header=header.data())
+        session = Session(['label'])
+        return render_template("strategy.html", header=header.data(showLabels = True))
 
 
 def strategy_json():
