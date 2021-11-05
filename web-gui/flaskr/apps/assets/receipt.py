@@ -66,8 +66,8 @@ def receipt():
             operation['price'] = operation['quantity']  # for Deposit type, default unit price is 1
 
         if 'provision' in request.form.keys():
-            provision = float(request.form['provision'])
-            if provision > 0:
+            provision = _parseNumeric(request.form['provision'])
+            if provision:
                 operation['provision'] = provision
 
         if 'currencyConversion' in request.form.keys():

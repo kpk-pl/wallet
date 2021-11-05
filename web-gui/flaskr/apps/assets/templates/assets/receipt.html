@@ -53,12 +53,17 @@ $(document).ready(function(){
 
   function updateCost() {
     var provision = $("#f-provision")
-    var price = $("#f-price")
     var conversion = $("#f-conversion")
     var type = $("#f-type").val()
+
+    var price = $("#f-price")
+    if (!price.length) {
+      price = $("#f-quantity")
+    }
+
     if (price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
       var cost = floatVal(conversion, 1.0) * floatVal(price)
-      if (type != "SELL")
+      if (type == "ADD")
         cost += floatVal(provision)
       else
         cost -= floatVal(provision)
@@ -66,11 +71,6 @@ $(document).ready(function(){
       $("#f-cost").val(Number(cost.toFixed(2)))
     }
   }
-
-  $("#f-provision").on('input', updateCost)
-  $("#f-conversion").on('input', updateCost)
-  $("#f-price").on('input', updateCost)
-  $("#f-unit-price").on('input', updateCost)
 
   $("#f-price").on('input', function(){
     var quantity = $("#f-quantity");
@@ -95,6 +95,10 @@ $(document).ready(function(){
 
     var price = $("#f-price");
     var unitprice = $("#f-unit-price");
+    if (!price.length || !unitprice.length) {
+      return;
+    }
+
     if (price.valid()) {
       unitprice.val(Number((floatVal(price) / floatVal(quantity)).toFixed(2)));
     } else if (unitprice.valid()) {
@@ -106,6 +110,12 @@ $(document).ready(function(){
     $("#f-quantity").val({{ asset.finalQuantity }})
     updateQuantity();
   })
+
+  $("#f-provision").on('input', updateCost)
+  $("#f-conversion").on('input', updateCost)
+  $("#f-quantity").on('input', updateCost)
+  $("#f-price").on('input', updateCost)
+  $("#f-unit-price").on('input', updateCost)
 })
 </script>
 <script type="text/javascript">
@@ -235,61 +245,33 @@ $("form").validate({
                 </div>
               </div>
             </div>
-            {%- if asset.type == 'Deposit' %}
             <div class="row">
               <div class="col-6">
                 <div class="form-group">
-                  <label for="f-quantity">Value</label>
+                  <label for="f-quantity">{{ 'Value' if asset.type == 'Deposit' else 'Volume' }}</label>
                   <div class="input-group">
+                    {%- if asset.type == 'Deposit' %}
                     <div class="input-group-prepend">
                       <span class="input-group-text">{{ asset.currency.name }}</span>
                     </div>
-                    <input type="number" value="0" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-quantity" name="quantity" required/>
-                  </div>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="form-group">
-                  <label for="f-quantity-after">Value after operation</label>
-                  <div class="input-group">
-                    <div class="input-group-prepend">
-                      <span class="input-group-text">{{ asset.currency.name }}</span>
-                    </div>
-                    <input type="text" id="f-quantity-after" name="finalQuantity" class="form-control" disabled="disabled" value="{{ asset.finalQuantity }}" data-lpignore="true"/>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {% if asset.currency.name != 'PLN' -%}
-            <div class="row">
-              <div class="col-12">
-                <div class="form-group">
-                  <label for="f-conversion">Currency rate {{ asset.currency.name }}/PLN</label>
-                  <input type="number" value="0" step="any" id="f-conversion" class="form-control" name="currencyConversion" value="1" required/>
-                </div>
-              </div>
-            </div>
-            {%- endif %}
-            {% else %}
-            <div class="row">
-              <div class="col-6">
-                <div class="form-group">
-                  <label for="f-quantity">Volume</label>
-                  <div class="input-group">
+                    {%- else %}
                     <div class="input-group-prepend">
                       <button class="btn btn-info" id="f-quan-all" type="button" disabled="disabled">All</button>
                     </div>
+                    {%- endif %}
                     <input type="number" id="f-quantity" name="quantity" class="form-control" value="0" step="any" data-lpignore="true" required/>
                   </div>
                 </div>
               </div>
               <div class="col-6">
                 <div class="form-group">
-                  <label for="f-quantity-after">Volume after operation</label>
+                  <label for="f-quantity-after">{{ 'Value' if asset.type == 'Deposit' else 'Volume' }} after operation</label>
                   <input type="text" id="f-quantity-after" name="finalQuantity" class="form-control" disabled="disabled" value="{{ asset.finalQuantity }}" data-lpignore="true"/>
                 </div>
               </div>
             </div>
+
+            {%- if asset.type != 'Deposit' %}
             <div class="row">
               <div class="col-6">
                 <div class="form-group">
@@ -314,6 +296,8 @@ $("form").validate({
                 </div>
               </div>
             </div>
+            {%- endif %}
+
             {% if asset.currency.name != 'PLN' -%}
             <div class="row">
               <div class="col-12">
@@ -338,7 +322,7 @@ $("form").validate({
               </div>
               <div class="col-6">
                 <div class="form-group">
-                  <label for="f-cost">Payable amount</label>
+                  <label for="f-cost">{{ 'Deposit value' if asset.type == 'Deposit' else 'Payable amount' }}</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
                       <span class="input-group-text">PLN</span>
@@ -348,7 +332,6 @@ $("form").validate({
                 </div>
               </div>
             </div>
-            {%- endif %}
           </div>
           <div class="card-footer">
             <button class="btn btn-primary" type="submit">Submit</button>
