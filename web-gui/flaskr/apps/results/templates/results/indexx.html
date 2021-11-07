@@ -106,13 +106,16 @@
             </thead>
             <tbody>
               {% for asset in assets | sort(attribute='name') %}
-              <tr class="{{ "warning-row" if asset._periodStats.error }}">
+              <tr>
                 <td data-title="Name">
+                  {%- if asset._periodStats.error %}
+										<i class="fas fa-exclamation-triangle fa-fw" style="color:rgb(252, 186, 3)" title="Missing pricing information"></i>
+                  {%- endif %}
                   {%- if asset.trashed %}
                   <del>
                   {%- endif %}
                   <a href="{{ url_for('assets.index', id=asset._id) }}">
-                    {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
+                    {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker }}
                   </a>
                   {%- if asset.trashed %}
                   </del>

@@ -4,11 +4,12 @@ from . import _operationNetValue
 
 
 class Period(object):
-    def __init__(self, startDate, finalDate):
+    def __init__(self, startDate, finalDate, debug=False):
         super(Period, self).__init__()
 
         self.startDate = startDate
         self.finalDate = finalDate
+        self._debug = debug
 
         self.pricingStart = Pricing(ctx=PricingContext(finalDate=startDate))
         self.pricingEnd = Pricing(ctx=PricingContext(finalDate=finalDate))
@@ -47,11 +48,21 @@ class Period(object):
 
     def _initialConditions(self, asset):
         stats = asset['_periodStats']
-        stats['initialNetValue'], stats['initialQuantity'] = self.pricingStart.priceAsset(asset)
+        debug = None
+        if self._debug:
+            stats['initialConditions'] = {}
+            debug = stats['initialConditions']
+
+        stats['initialNetValue'], stats['initialQuantity'] = self.pricingStart.priceAsset(asset, debug=debug)
 
     def _finalConditions(self, asset):
         stats = asset['_periodStats']
-        stats['finalNetValue'], stats['finalQuantity'] = self.pricingEnd.priceAsset(asset)
+        debug = None
+        if self._debug:
+            stats['finalConditions'] = {}
+            debug = stats['finalConditions']
+
+        stats['finalNetValue'], stats['finalQuantity'] = self.pricingEnd.priceAsset(asset, debug=debug)
 
     def _operationToProfit(self, stats, operation):
         if operation['type'] == 'BUY':

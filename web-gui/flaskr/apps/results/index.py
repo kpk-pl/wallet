@@ -50,7 +50,7 @@ def index():
         assets = list(db.get_db().assets.aggregate(_getPipeline(timerange['periodStart'], timerange['periodEnd'])))
         assets = [Profits(asset)() for asset in assets]
 
-        periodAnalyzer = Period(timerange['periodStart'], timerange['periodEnd'])
+        periodAnalyzer = Period(timerange['periodStart'], timerange['periodEnd'], debug=session.isDebug())
         for asset in assets:
             periodAnalyzer(asset)
 

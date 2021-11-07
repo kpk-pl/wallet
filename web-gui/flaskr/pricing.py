@@ -184,6 +184,7 @@ class Pricing(object):
         if self._data['quantity'] == 0:
             return
 
+        self._data['netValue'] = None
         self._data['ids'] = []
 
         quoteId = asset['pricing']['quoteId']
