@@ -1,5 +1,6 @@
 from flask import render_template, request
 from flaskr import db, header
+from flaskr.session import Session
 from flaskr.analyzers.profits import Profits
 from flaskr.analyzers.period import Period
 import time
@@ -29,7 +30,7 @@ def _getPipeline(startDate, finalDate):
         'operations': { '$filter': {
             'input': '$operations',
             'as': 'op',
-            'cond': {'$lte': ['$$op.date', finalDate]}
+            'cond': {'$lt': ['$$op.date', finalDate]}
         }}
     }})
 
@@ -37,20 +38,20 @@ def _getPipeline(startDate, finalDate):
 
 
 def index():
-    finalDate = datetime(2021, 1, 1)
-    startDate = datetime(2020, 1, 1)
-    trueEnd = min(finalDate, datetime.now())
-
     if request.method == 'GET':
-        debug = bool(request.args.get('debug'))
+        session = Session(['label', 'debug'])
+        rangeName = request.args.get('timerange')
+        timerange = {
+            'name': rangeName,
+            'periodStart': datetime(int(rangeName), 1, 1),
+            'periodEnd': min(datetime(int(rangeName) + 1, 1, 1), datetime.now())
+        }
 
-        assets = list(db.get_db().assets.aggregate(_getPipeline(startDate, finalDate)))
+        assets = list(db.get_db().assets.aggregate(_getPipeline(timerange['periodStart'], timerange['periodEnd'])))
         assets = [Profits(asset)() for asset in assets]
 
-        periodAnalyzer = Period(startDate, trueEnd)
+        periodAnalyzer = Period(timerange['periodStart'], timerange['periodEnd'])
         for asset in assets:
             periodAnalyzer(asset)
 
-        misc = {'showData': debug}
-
-        return render_template("indexx.html", assets=assets, misc=misc, header=header.data())
+        return render_template("indexx.html", assets=assets, timerange=timerange, header=header.data(showLabels = True))

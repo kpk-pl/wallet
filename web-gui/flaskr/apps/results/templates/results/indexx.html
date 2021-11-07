@@ -16,6 +16,7 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/dataTables.buttons.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/buttons.bootstrap4.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/buttons.colVis.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/urijs/URI.min.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
@@ -41,14 +42,50 @@
       "responsive": true,
       "buttons": [ "colvis" ],
       "columnDefs": [
+        { "visible": false, "targets": [2, 3] }
       ],
     }).buttons().container().appendTo("#resultsTable_wrapper .col-md-6:eq(0)");
   });
+</script>
+<script type="text/javascript">
+  function submitTimerangeForm(e) {
+    e.preventDefault()
+
+    let url = URI(window.location.href);
+    url.removeSearch("timerange").addSearch("timerange", $('#f-timerange').val());
+    $(location).attr("href", url.toString());
+  }
 </script>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Settings</h3>
+        </div>
+        <form method="" action="" class="form-horizontal">
+          <div class="card-body">
+            <div class="form-group row">
+              <label for="f-timerange" class="col-sm-2 col-form-label">Time range</label>
+              <div class="col-sm-9">
+                <select id="f-timerange" name="timerange" class="custom-select" required>
+                  {%- for name in ['2019', '2020', '2021', '2022'] %}
+                  <option value="{{ name }}" {{ 'selected' if timerange.name == name }}>{{ name }}</option>
+                  {%- endfor %}
+                </select>
+              </div>
+              <div class="col-1">
+                <button class="btn btn-primary float-right" type="submit" onclick="submitTimerangeForm(event)">Apply</button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
   <div class="row">
     <div class="col-12">
       <div class="card card-primary">
@@ -62,7 +99,7 @@
                 <th>Name</th>
                 <th>Institution</th>
                 <th>Category</th>
-                <th>Quantity change</th>
+                <th>Volume change</th>
                 <th>Cash profit <span class="smaller">[PLN]</span></th>
                 <th>Total profit <span class="smaller">[PLN]</span></th>
               </tr>
@@ -87,7 +124,7 @@
 									{% else -%}
 									<i class="fas fa-fw fa-pull-right"></i>
 									{% endif %}
-                  {%- if misc and misc.showData -%}
+                  {%- if session['debug'] -%}
                   <a href="#modalDebug_{{ asset._id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ asset._id }}">
                     <i class="fas fa-fw fa-bug fa-pull-right"></i>
                   </a>
@@ -100,10 +137,12 @@
                   <br/><span class="smaller">{{ asset.subcategory }}</span>
                   {%- endif -%}
                 </td>
-                <td data-title="Quantity change" class="text-right">{{ (asset._periodStats.finalQuantity - asset._periodStats.initialQuantity) | withSign }}</td>
+                <td data-title="Volume change" class="text-right">{{ (asset._periodStats.finalQuantity - asset._periodStats.initialQuantity) | withSign }}</td>
                 <td data-title="Cash profit" class="text-right color-gain">
                   {%- if not asset._periodStats.error -%}
+                  {%- if (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) != 0 -%}
                   {{ (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) | round(2) }}
+                  {%- endif -%}
                   {%- endif -%}
                 </td>
                 <td data-title="Total profit" class="text-right color-gain">
@@ -119,7 +158,7 @@
                 <th data-title="Name"></th>
                 <th data-title="Institution"></th>
                 <th data-title="Category"></th>
-                <th data-title="Quantity change"></th>
+                <th data-title="Volume change"></th>
                 <th data-title="Cash profit" class="text-right color-gain">{{ assets | sum(attribute='_periodStats.profits.netValue') | round(2) }}</th>
                 <th data-title="Total profit" class="text-right color-gain">{{ assets | sum(attribute='_periodStats.profits.total') | round(2) }}</th>
               </tr>
