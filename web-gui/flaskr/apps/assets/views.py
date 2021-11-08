@@ -35,9 +35,3 @@ def trash():
 def historicalValue():
     from .historicalValue import historicalValue
     return historicalValue()
-
-
-@assets.route("/importQuotes", methods=['GET', 'POST'])
-def importQuotes():
-    from .importQuotes import importQuotes
-    return importQuotes()

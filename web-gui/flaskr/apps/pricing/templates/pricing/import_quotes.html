@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Import quotes{% endblock %}
+{% block title %}Import '{{ quote.name }}'{% endblock %}
 
 {% block links %}
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css') }}">
@@ -23,12 +23,12 @@ $(function () {
 })
 </script>
 <script type="text/javascript">
-  const data = {{ asset.quoteHistory | tojson }};
+  const data = {{ quote.quoteHistory | tojson }};
   var chart = new Chart(document.getElementById('chart').getContext('2d'), {
     type: 'line',
     data: {
       datasets: [{
-        label: 'Existing quotes',
+        label: '{{ quote.name }}',
         cubicInterpolationMode: 'monotone',
         pointRadius: 2,
         data: data.map(function(e){ return {t: e.timestamp, y: e.quote}; }),
@@ -54,7 +54,7 @@ $(function () {
         yAxes: [{
           scaleLabel: {
             display: true,
-            labelString: '{{ asset.currency }}'
+            labelString: '{{ quote.unit }}'
           }
         }],
       }
@@ -102,23 +102,20 @@ $("#f-form").validate({
     <div class="col-12">
       <div class="card card-primary">
         <div class="card-header">
-          <h3 class="card-title">{{ asset.name }}</h3>
+          <h3 class="card-title">{{ quote.name }}</h3>
         </div>
         <div class="card-body">
           <dl class="row">
             <dt class="col-sm-3">Name</dt>
-            <dd class="col-sm-9">{{ asset.name }}</dd>
-            {% if asset.ticker -%}
-            <dt class="col-sm-3">Ticker</dt>
-            <dd class="col-sm-9">{{ asset.ticker }}</dd>
-            {%- endif %}
-            {% if asset.link -%}
+            <dd class="col-sm-9">{{ quote.name }}</dd>
+            {% if quote.url -%}
             <dt class="col-sm-3">Link</dt>
-            <dd class="col-sm-9"><a href="{{ asset.link }}" target="_blank" rel="noopener noreferrer">{{ asset.link }}</a></dd>
+            <dd class="col-sm-9"><a href="{{ quote.url }}" target="_blank" rel="noopener noreferrer">{{ quote.url }}</a></dd>
             {%- endif %}
           </dl>
           <form method="post" action="" id="f-form">
-            <input type="hidden" name="_id" value="{{ asset._id }}"/>
+            <input type="hidden" name="_id" value="{{ quote._id }}"/>
+            <!--
             <div class="row">
               <div class="col-sm-6">
                 <div class="form-group">
@@ -143,16 +140,16 @@ $("#f-form").validate({
                 </div>
               </div>
             </div>
+            -->
             <div class="row">
               <div class="col-sm-4">
                 <div class="form-group">
                   <label for="f-source">Source</label>
                   <select id="f-source" name="source" class="custom-select" required>
-                    <option value="" hidden disabled selected value></option>
-                    {% if asset.stooqSymbol -%}
-                    <option value="stooq">Online from stooq</option>
+                    {% if quote.stooqSymbol -%}
+                    <option value="stooq" disabled>Online from stooq</option>
                     {%- endif %}
-                    <option value="csv" disabled>From CSV file</option>
+                    <option value="csv" selected>From CSV file</option>
                   </select>
                 </div>
               </div>
@@ -163,6 +160,7 @@ $("#f-form").validate({
                   <label for="f-method">Method</label>
                   <select id="f-method" name="method" class="custom-select" required>
                     <option value="replace" selected>Replace</option>
+                    <option value="merge">Merge</option>
                     <option value="fill-missing" disabled>Fill missing</option>
                   </select>
                 </div>

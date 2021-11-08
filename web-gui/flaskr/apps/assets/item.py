@@ -19,6 +19,7 @@ def _getPipelineForAssetDetails(assetId):
         "pricing": 1,
         "link": 1,
         "labels": 1,
+        "trashed": 1,
         "operations": { "$ifNull": [ '$operations', [] ] },
         "finalQuantity": { "$last": "$operations.finalQuantity" }
     }})
