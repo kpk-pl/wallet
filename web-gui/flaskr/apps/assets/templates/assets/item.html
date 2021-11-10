@@ -185,9 +185,11 @@
           <h3 class="card-title">Actions</h3>
         </div>
         <div class="card-body">
+          {%- if not asset.trashed %}
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('assets.receipt', id=asset._id) }}'">
             <i class="fa fa-shopping-cart"></i> {{ 'Add or spend' if asset.type == 'Deposit' else 'Buy or sell' }}
           </button>
+          {%- endif %}
 
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href=''">
             <i class="fas fa-edit"></i> Edit
