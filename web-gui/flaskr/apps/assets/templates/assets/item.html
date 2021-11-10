@@ -194,7 +194,7 @@
           </button>
 
           {%- if asset.pricing.quoteId %}
-          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('pricing.importQuotes', id=asset.pricing.quoteId) }}'">
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('quotes.importQuotes', id=asset.pricing.quoteId) }}'">
             <i class="fa fa-upload"></i> Import quotes
           </button>
           {%- endif %}

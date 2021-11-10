@@ -7,9 +7,3 @@ pricing = Blueprint('pricing', __name__, template_folder='templates/pricing')
 def index():
     from .index import index
     return index()
-
-
-@pricing.route("/importQuotes", methods=['GET', 'POST'])
-def importQuotes():
-    from .importQuotes import importQuotes
-    return importQuotes()

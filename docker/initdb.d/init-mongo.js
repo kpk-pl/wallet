@@ -18,3 +18,5 @@ db = db.getSiblingDB('wallet')
  * db.assets.insertMany([{field: "value"}])
  * db.currencies.insertMany([{field: "value"}])
  */
+
+rs.initiate();

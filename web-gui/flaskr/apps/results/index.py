@@ -41,6 +41,9 @@ def index():
     if request.method == 'GET':
         session = Session(['label', 'debug'])
         rangeName = request.args.get('timerange')
+        if not rangeName:
+            rangeName = date.today().year
+
         timerange = {
             'name': rangeName,
             'periodStart': datetime(int(rangeName), 1, 1),

@@ -7,13 +7,18 @@
 {% endblock %}
 
 {% block plugins_scripts %}
-<script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery-validation/jquery.validate.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js/Chart.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/bs-custom-file-input/bs-custom-file-input.min.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
+<script type="text/javascript">
+  $(function () {
+    bsCustomFileInput.init();
+  });
+</script>
 <script type="text/javascript">
 $(function () {
   $('.f-date-group').datetimepicker({
@@ -23,7 +28,9 @@ $(function () {
 })
 </script>
 <script type="text/javascript">
-  const data = {{ quote.quoteHistory | tojson }};
+  const existingQuotes = {{ quote.quoteHistory | tojson }}
+    .map(function(e){ return {timestamp: Date.parse(e.timestamp), quote: e.quote}; });
+
   var chart = new Chart(document.getElementById('chart').getContext('2d'), {
     type: 'line',
     data: {
@@ -31,9 +38,18 @@ $(function () {
         label: '{{ quote.name }}',
         cubicInterpolationMode: 'monotone',
         pointRadius: 2,
-        data: data.map(function(e){ return {t: e.timestamp, y: e.quote}; }),
+        data: existingQuotes.map(function(e){ return {t: e.timestamp, y: e.quote}; }),
         backgroundColor: 'rgba(0, 123, 255, 0.65)',
         borderColor: 'rgba(0, 123, 255, 1)',
+        borderWidth: 2,
+        order: 2
+      }, {
+        label: 'Imported data',
+        cubicInterpolationMode: 'monotone',
+        pointRadius: 2,
+        data: [],
+        fill: false,
+        borderColor: 'rgba(255, 123, 0, 1)',
         borderWidth: 2,
         order: 1
       }]
@@ -41,6 +57,7 @@ $(function () {
     options: {
       maintainAspectRatio: false,
       responsive: true,
+      animation: { duration: 0 },
       scales: {
         xAxes: [{
           type: 'time',
@@ -62,37 +79,77 @@ $(function () {
   });
 </script>
 <script type="text/javascript">
-$('#f-load-button').click(function(form){
-  var form = $("#f-form")
-  if (form.valid()) {
-    const formData = form.serialize()
-    $.getJSON("{{ url_for('quote.import') }}" + '?' + formData, function(data) {
-      console.log(data)
-      $("#f-submit").attr('disabled', false);
+let importedQuotes = [];
+
+function updateUI() {
+  let method = $('#f-method').val();
+  let filteredQuotes = existingQuotes;
+  if (method == 'replace' && importedQuotes.length > 0) {
+    filteredQuotes = filteredQuotes.filter(function(q) {
+      return q.timestamp < importedQuotes.at(0).timestamp || q.timestamp > importedQuotes.at(-1).timestamp;
+    });
+  }
+
+  let combinedData = filteredQuotes.concat(importedQuotes).sort((lhs, rhs) => { return lhs.timestamp - rhs.timestamp; });
+
+  chart.data.datasets[0].data = combinedData.map(function(e){ return {t: e.timestamp, y: e.quote}; });
+  chart.data.datasets[1].data = importedQuotes.map(function(e){ return {t: e.timestamp, y: e.quote}; });
+  chart.update();
+
+  $("#f-submit").attr('disabled', importedQuotes.length == 0);
+}
+
+function resetUI() {
+  importedQuotes = [];
+  updateUI();
+}
+
+function loadCsvQuotes(event) {
+  const file = $("#f-source-file")[0].files[0];
+
+  async function fetchCsv(file) {
+    let formData = new FormData();
+    formData.append("file", file);
+
+    const ctrl = new AbortController()
+    setTimeout(() => ctrl.abort(), 5000);
+
+    try {
+      let response = await fetch("{{ url_for('quotes.csvUpload') }}", {method: "POST", body: formData, signal: ctrl.signal});
+      if (!response.ok) {
+        throw new Error("Invalid response " + r.status());
+      }
+      return response.json();
+    } catch(e) {
+      // TODO: maybe display a popup with the error
+    }
+  }
+
+  fetchCsv(file).then(function(quotes){
+    importedQuotes = quotes.map(function(e){ return {timestamp: Date.parse(e.timestamp), quote: e.quote}; });
+    updateUI();
+  });
+}
+</script>
+<script type="text/javascript">
+$('#f-method').change(updateUI);
+$('#f-source-file').change(resetUI);
+$('#f-source').change(resetUI);
+</script>
+<script type="text/javascript">
+function submitImport(event) {
+    event.preventDefault();
+
+    let payload = {
+      id: '{{ quote._id }}',
+      method: $('#f-method').val(),
+      data: JSON.stringify(importedQuotes)
+    };
+
+    $.post("{{ url_for('quotes.importQuotes') }}", payload, function(data) {
+      $(location).attr("href", "{{ url_for('pricing.index', id='{{ quote._id }}') }}");
     })
-  } else {
-    $("#f-submit").attr('disabled', true);
-  }
-});
-$.validator.setDefaults({
-  submitHandler: function(form) {
-    console.log(form);
-    console.log("Submit");
-  }
-});
-$("#f-form").validate({
-  errorElement: 'span',
-  errorPlacement: function (error, element) {
-          error.addClass('invalid-feedback');
-          element.closest('.form-group').append(error);
-        },
-  highlight: function (element, errorClass, validClass) {
-          $(element).addClass('is-invalid');
-        },
-  unhighlight: function (element, errorClass, validClass) {
-          $(element).removeClass('is-invalid');
-        }
-});
+}
 </script>
 {% endblock %}
 
@@ -114,7 +171,6 @@ $("#f-form").validate({
             {%- endif %}
           </dl>
           <form method="post" action="" id="f-form">
-            <input type="hidden" name="_id" value="{{ quote._id }}"/>
             <!--
             <div class="row">
               <div class="col-sm-6">
@@ -142,36 +198,41 @@ $("#f-form").validate({
             </div>
             -->
             <div class="row">
-              <div class="col-sm-4">
-                <div class="form-group">
-                  <label for="f-source">Source</label>
-                  <select id="f-source" name="source" class="custom-select" required>
-                    {% if quote.stooqSymbol -%}
-                    <option value="stooq" disabled>Online from stooq</option>
-                    {%- endif %}
-                    <option value="csv" selected>From CSV file</option>
-                  </select>
-                </div>
+              <div class="form-group col-sm-4">
+                <label for="f-source">Source</label>
+                <select id="f-source" name="source" class="custom-select" required>
+                  {% if quote.stooqSymbol -%}
+                  <option value="stooq" disabled>Online from stooq</option>
+                  {%- endif %}
+                  <option value="csv" selected>From CSV file</option>
+                </select>
               </div>
-              <div class="col-sm-4">
-              </div>
-              <div class="col-sm-4">
-                <div class="form-group">
-                  <label for="f-method">Method</label>
-                  <select id="f-method" name="method" class="custom-select" required>
-                    <option value="replace" selected>Replace</option>
-                    <option value="merge">Merge</option>
-                    <option value="fill-missing" disabled>Fill missing</option>
-                  </select>
+              <div class="form-group col-sm-8">
+                <label for="source-file-div">File</label>
+                <div class="input-group">
+                  <div class="custom-file" id="source-file-div">
+                    <input class="custom-file-input" type="file" id="f-source-file">
+                    <label for="f-source-file" class="custom-file-label"></label>
+                  </div>
+                  <div class="input-group-append">
+                    <button class="btn btn-primary" type="button" id="f-load-button" onclick="loadCsvQuotes(event);">Load</button>
+                  </div>
                 </div>
               </div>
             </div>
             <div class="row">
-              <div class="col">
-                <button class="btn btn-primary" type="button" id="f-load-button">Load</button>
+              <div class="form-group col-sm-4">
+                <label for="f-method">Method</label>
+                <select id="f-method" name="method" class="custom-select" required>
+                  <option value="replace">Replace</option>
+                  <option value="merge" selected>Merge</option>
+                  <option value="fill-missing" disabled>Fill missing</option>
+                </select>
               </div>
-              <div class="col">
-                <button class="btn btn-success float-right" type="submit" id="f-submit" disabled="disabled">Save</button>
+            </div>
+            <div class="row">
+              <div class="col-sm-12">
+                <button class="btn btn-success" type="submit" id="f-submit" disabled="disabled" onclick="submitImport(event)">Save</button>
               </div>
             </div>
           </form>
