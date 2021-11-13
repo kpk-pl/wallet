@@ -191,10 +191,6 @@ $("form").validate({
                 <span class="badge badge-success mr-1">{{ label }}</span>
               {%- endfor -%}
             </dd>
-            {% if asset.lastQuote -%}
-            <dt class="col-sm-3">Last quote</dt>
-            <dd class="col-sm-9">{{ asset.lastQuote.quote }} {{ asset.currency.name }}</dd>
-            {%- endif %}
           </dl>
         </div>
       </div>
@@ -280,7 +276,7 @@ $("form").validate({
                     <div class="input-group-prepend">
                       <span class="input-group-text">{{ asset.currency.name }}</span>
                     </div>
-                    <input type="number" value="0" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-unit-price" name="unit-price" required/>
+                    <input type="number" value="{{ asset.lastQuote if asset.lastQuote else 0 }}" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-unit-price" name="unit-price" required/>
                   </div>
                 </div>
               </div>
@@ -303,7 +299,7 @@ $("form").validate({
               <div class="col-12">
                 <div class="form-group">
                   <label for="f-conversion">Currency rate {{ asset.currency.name }}/PLN</label>
-                  <input type="number" value="0" step="any" id="f-conversion" class="form-control" name="currencyConversion" value="1" required/>
+                  <input type="number" value="{{ asset.lastCurrencyRate if asset.lastCurrencyRate else 0 }}" step="any" id="f-conversion" class="form-control" name="currencyConversion" value="1" required/>
                 </div>
               </div>
             </div>
