@@ -87,7 +87,7 @@
         callbacks: {
           label: function(tooltipItem, data) {
             if (tooltipItem.datasetIndex == 0)
-              return data[tooltipItem.index];
+              return tooltipItem.yLabel + " {{ asset.currency }}";
 
             const op = tooltipItem.datasetIndex == 1 ? operationsBuy[tooltipItem.index] : operationsSell[tooltipItem.index]
             return op.type + ' ' + op.quantity + ' @ ' + Number((op.price/op.quantity).toFixed(2)) + ' {{ asset.currency }}';

@@ -100,8 +100,8 @@
                 <th>Institution</th>
                 <th>Category</th>
                 <th>Volume change</th>
-                <th>Cash profit <span class="smaller">[PLN]</span></th>
-                <th>Total profit <span class="smaller">[PLN]</span></th>
+                <th title="Profits from all positions closed within the selected timeframe">Cash profit <span class="smaller">[PLN]</span></th>
+                <th title="Asset value change within the selected timeframe with new investments deduced and cash profits added">Total profit <span class="smaller">[PLN]</span></th>
               </tr>
             </thead>
             <tbody>
@@ -144,13 +144,13 @@
                 <td data-title="Cash profit" class="text-right color-gain">
                   {%- if not asset._periodStats.error -%}
                   {%- if (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) != 0 -%}
-                  {{ (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) | round(2) }}
+                  {{ '%0.2f' % (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) | round(2) }}
                   {%- endif -%}
                   {%- endif -%}
                 </td>
                 <td data-title="Total profit" class="text-right color-gain">
                   {%- if not asset._periodStats.error -%}
-                  {{ (asset._periodStats.profits.total - asset._periodStats.profits.provisions) | round(2) }}
+                  {{ '%0.2f' % (asset._periodStats.profits.total - asset._periodStats.profits.provisions) | round(2) }}
                   {%- endif -%}
                 </td>
               </tr>

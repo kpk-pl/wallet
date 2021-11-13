@@ -8,13 +8,31 @@ from datetime import datetime, date
 from bson.objectid import ObjectId
 
 
-def _getPipeline(startDate, finalDate):
+def _getPipeline(startDate, finalDate, label = None):
     pipeline = []
 
     # include only those assets that were created up to finalDate
-    pipeline.append({ '$match': { "operations.0.date": {'$lte': finalDate}}})
+    match = {
+        "operations": { "$exists": True, "$not": { "$size": 0 } },
+        "operations.0.date": { '$lte': finalDate }
+    }
 
-    # TODO: maybe filter assets that ended before startDate, ie finalQuantity is 0 and/or is marked as trashed
+    if label is not None:
+        match['labels'] = label
+
+    pipeline.append({ "$match" : match })
+    pipeline.append({ "$addFields" : {
+        "finalOperation": { "$last": "$operations" },
+    }})
+
+    # remove assets with last operation happening before startDate
+    # and resulting in finalQuantity == 0
+    pipeline.append({ "$match" : {
+        "$or" : [
+            {"finalOperation.finalQuantity" : { "$gt": 0 }},
+            {"finalOperation.date" : { "$gte": startDate }}
+        ]
+    }})
 
     pipeline.append({ '$project': {
         '_id': 1,
@@ -50,7 +68,8 @@ def index():
             'periodEnd': min(datetime(int(rangeName) + 1, 1, 1), datetime.now())
         }
 
-        assets = list(db.get_db().assets.aggregate(_getPipeline(timerange['periodStart'], timerange['periodEnd'])))
+        assets = list(db.get_db().assets.aggregate(
+            _getPipeline(timerange['periodStart'], timerange['periodEnd'], session.label())))
         assets = [Profits(asset)() for asset in assets]
 
         periodAnalyzer = Period(timerange['periodStart'], timerange['periodEnd'], debug=session.isDebug())
