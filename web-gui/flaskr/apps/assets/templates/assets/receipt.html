@@ -327,6 +327,17 @@ $("form").validate({
                   </div>
                 </div>
               </div>
+              <div class="col-12">
+                <div class="form-group">
+                  <label for="f-billing-asset">Billing asset acount</label>
+                  <select id="f-billing-asset" name="billingAsset" class="custom-select">
+                    <option value="" hidden disabled selected value></option>
+                    {%- for account in depositAccounts %}
+                    <option value="{{ account._id }}">{{ account.name }} [{{ account.currency.name }}] in {{ account.institution }}</option>
+                    {%- endfor %}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
           <div class="card-footer">
