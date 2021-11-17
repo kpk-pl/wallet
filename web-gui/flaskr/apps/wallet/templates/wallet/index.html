@@ -94,7 +94,7 @@
       }
     });
 
-    $.getJSON("{{ url_for('wallet.strategy', allocation='true', label=session['label']) }}", updateStrategyAllocation);
+    $.getJSON("{{ url_for('wallet.strategy', allocation='true', label=session['label']) | safe }}", updateStrategyAllocation);
   });
 
   function updateStrategyAllocation(data) {

@@ -63,7 +63,7 @@ $(document).ready(function(){
 $.validator.setDefaults({
   submitHandler: function() {
     $.post("{{ url_for('assets.index') }}", $('.tab-pane.active > form').serialize(), function(data) {
-      $(location).attr("href", "{{ url_for('assets.index', label=header.label, id='_id') }}".replace('_id', data.id));
+      $(location).attr("href", "{{ url_for('assets.index', label=header.label, id='_id') | safe }}".replace('_id', data.id));
     })
   }
 });
