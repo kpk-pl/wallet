@@ -187,9 +187,15 @@
       });
     }
 
-    const netplAdjust = totals.value[0]/totals.investment[0];
+    function safeRatio(nom, denom) {
+      if (denom == 0)
+        return 0;
+      return nom/denom;
+    }
+
+    const netplAdjust = safeRatio(totals.value[0] - totals.investment[0], totals.investment[0]);
     assetAllocationCharts.netpl.data.datasets.push({
-      data: totals.value.map((v, i) => (v/totals.investment[i] - netplAdjust)*100),
+      data: totals.value.map((v, i) => (safeRatio(v - totals.investment[i], totals.investment[i]) - netplAdjust) * 100),
       label: 'Net P/L',
       cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
     });
