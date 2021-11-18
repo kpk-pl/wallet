@@ -12,6 +12,9 @@ class StrategyTable {
   }
 
   fillStrategy(data, rowCreator) {
+    if (data.strategy == undefined)
+      return;
+
     if (data.strategy.assetTypes.find(t=>t.name == "Others") == undefined)
       data.strategy.assetTypes.push({name: "Others", percentage: 0, categories:[]})
 
@@ -36,6 +39,9 @@ class StrategyTable {
   }
 
   fillAllocation(data) {
+    if (data.strategy == undefined)
+      return;
+
     const allocation = this._collapseAllocation(data.allocation)
     let netValueRemaining = Object.keys(allocation).map(a=>allocation[a]).reduce((a,b)=>a+b)
 
@@ -67,6 +73,9 @@ class StrategyTable {
   }
 
   updateDeviation(data) {
+    if (data.strategy == undefined)
+      return;
+
     let self = this
 
     const netValueSum = data.strategy.assetTypes.map(t=>t.netValue).reduce((a,b)=>a+b)

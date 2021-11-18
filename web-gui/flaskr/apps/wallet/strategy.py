@@ -44,19 +44,23 @@ def _getPipeline(label = None):
     return pipeline
 
 
-def _lastStrategyPipeline():
+def _lastStrategyPipeline(label = None):
     return [
+        {'$match': {'label': label}},
         {'$sort': {'creationDate': -1}},
         {'$limit': 1},
-        {'$project': {'_id': 0}}
+        {'$project': {
+            '_id': 0
+        }}
     ]
 
 
 def _response(shouldAllocate=False, label=None):
     response = {}
 
-    strategy = next(db.get_db().strategy.aggregate(_lastStrategyPipeline()))
-    response['strategy'] = strategy
+    strategy = list(db.get_db().strategy.aggregate(_lastStrategyPipeline(label)))
+    if strategy:
+        response['strategy'] = strategy[0]
 
     if shouldAllocate:
         response['label'] = label
