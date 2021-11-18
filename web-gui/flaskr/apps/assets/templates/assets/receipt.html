@@ -123,7 +123,7 @@ $.validator.setDefaults({
   submitHandler: function() {
     $("#f-quantity-after").removeAttr('disabled');
     $.post("{{ url_for('assets.receipt', id=asset._id) }}", $('form').serialize(), function(data) {
-      $(location).attr("href", "{{ url_for('assets.index', id=asset._id, label=header.label) | safe }}");
+      $(location).attr("href", "{{ url_for('assets.index', id=asset._id) }}");
     });
   }
 });
