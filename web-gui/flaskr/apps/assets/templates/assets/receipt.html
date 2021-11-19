@@ -40,9 +40,12 @@ $(document).ready(function(){
     if (quantity.valid())
       var type = $("#f-type").val()
       var multiplier = 1
-      if (type == "SELL")
+      if (type == "SELL") {
         multiplier = -1
-      $("#f-quantity-after").val(floatVal(quantity)*multiplier + {{ asset.finalQuantity if asset.finalQuantity else 0 }})
+      }
+
+      $("#f-quantity-after").val(floatVal(quantity) * multiplier + {{ asset.finalQuantity if asset.finalQuantity else 0 }})
+                            .valid();
   }
 
   $("#f-quantity").on('input', updateQuantity)
@@ -68,7 +71,7 @@ $(document).ready(function(){
       else
         cost -= floatVal(provision)
 
-      $("#f-cost").val(Number(cost.toFixed(2)))
+      $("#f-cost").val(Number(cost.toFixed(2))).valid()
     }
   }
 
@@ -76,7 +79,7 @@ $(document).ready(function(){
     var quantity = $("#f-quantity");
     var price = $(this);
     if (quantity.valid() && price.valid()) {
-      $("#f-unit-price").val(Number((floatVal(price) / floatVal(quantity)).toFixed(2)));
+      $("#f-unit-price").val(Number((floatVal(price) / floatVal(quantity)).toFixed(2))).valid();
     }
   });
 
@@ -84,12 +87,12 @@ $(document).ready(function(){
     var quantity = $("#f-quantity");
     var unitprice = $(this);
     if (quantity.valid() && unitprice.valid()) {
-      $("#f-price").val(floatVal(unitprice) * floatVal(quantity));
+      $("#f-price").val(floatVal(unitprice) * floatVal(quantity)).valid();
     }
   });
 
-  $("#f-quantity").on('input', function(){
-    var quantity = $(this);
+  function updatePrices() {
+    var quantity = $("#f-quantity");
     if (!quantity.valid())
       return;
 
@@ -100,15 +103,18 @@ $(document).ready(function(){
     }
 
     if (price.valid()) {
-      unitprice.val(Number((floatVal(price) / floatVal(quantity)).toFixed(2)));
+      unitprice.val(Number((floatVal(price) / floatVal(quantity)).toFixed(2))).valid();
     } else if (unitprice.valid()) {
-      price.val(floatVal(unitprice) * floatVal(quantity));
+      price.val(Number((floatVal(unitprice) * floatVal(quantity)).toFixed(2))).valid();
     }
-  });
+  }
+
+  $("#f-quantity").on('input', updatePrices);
 
   $("#f-quan-all").click(function(){
     $("#f-quantity").val({{ asset.finalQuantity }})
     updateQuantity();
+    updatePrices();
   })
 
   $("#f-provision").on('input', updateCost)
