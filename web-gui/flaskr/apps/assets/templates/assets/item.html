@@ -28,7 +28,7 @@
     type: 'line',
     data: {
       datasets: [{
-        label: '{{ asset.name }}',
+        label: '{{ asset.name | safe }}',
         cubicInterpolationMode: 'monotone',
         pointRadius: 0,
         data: data.map(function(e){ return {t: e.timestamp, y: e.quote}; }),
