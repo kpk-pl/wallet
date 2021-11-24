@@ -9,16 +9,36 @@ def _getQuote(item):
     return (item[0], getQuote(item[1]))
 
 
-def _getPipelineForAssets():
+def _getPipelineForUsedQuoteIds():
     pipeline = []
     pipeline.append({'$match': {
-        'pricing.quoteId': {'$exists': True},
         'trashed': {'$ne': True}
     }})
     pipeline.append({'$project': {
-        'quoteId': '$pricing.quoteId',
-        'currencyId': '$currency.quoteId'
+        'quoteIds': {'$filter': {
+            'input': {'$setUnion': [
+                    ["$currency.quoteId", "$pricing.quoteId"],
+                    {'$ifNull': [
+                        {'$map': {
+                            'input': "$pricing.interest",
+                            'as': "pi",
+                            'in': "$$pi.derived.quoteId"
+                        }},
+                        []
+                    ]}
+            ]},
+            'as': "quoteId",
+            'cond': { '$ne': ["$$quoteId", None] }
+        }}
     }})
+    pipeline.append({'$unwind': {
+        'path': "$quoteIds",
+        'preserveNullAndEmptyArrays': False
+    }})
+    pipeline.append({'$group': {
+        '_id': None,
+        'quoteIds': {'$addToSet': "$quoteIds"}
+	}})
     return pipeline
 
 
@@ -38,8 +58,8 @@ def index():
     if request.method in ['GET', 'PUT']:
         storeQuotes = (request.method == 'PUT')
 
-        assetInfo = list(db.get_db().assets.aggregate(_getPipelineForAssets()))
-        ids = set(obj['quoteId'] for obj in assetInfo) | set(obj['currencyId'] for obj in assetInfo if 'currencyId' in obj)
+        assetInfo = list(db.get_db().assets.aggregate(_getPipelineForUsedQuoteIds()))
+        ids = assetInfo[0]['quoteIds'] if assetInfo else []
 
         quotesIds = list(db.get_db().quotes.aggregate(_getPipelineForQuoteUrls(ids)))
         liveQuotes = { e['_id'] : e['url'] for e in quotesIds }
