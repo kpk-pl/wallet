@@ -11,7 +11,7 @@ services:
       MONGO_INITDB_DATABASE: admin
     ports:
       - "27017:27017"
-    command: ['--replSet', 'rs']
+    command: ['--replSet', 'rs', '--bind_ip_all']
   web-gui:
     build: web-gui
     environment:

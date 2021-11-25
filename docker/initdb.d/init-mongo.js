@@ -19,4 +19,4 @@ db = db.getSiblingDB('wallet')
  * db.currencies.insertMany([{field: "value"}])
  */
 
-rs.initiate();
+rs.initiate({"_id": "rs", "version": 1, "members": [{"_id": 0, "priority": 2, "host": "mongo:27017"}]);
