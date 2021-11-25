@@ -52,7 +52,9 @@
               {% for source in sources %}
               <tr>
                 <td data-title="Name">
-                  {{ source.name }}
+                  <a href="{{ url_for('pricing.index', quoteId=source._id) }}">
+                    {{ source.name }}
+                  </a>
                   <a href="{{source.url}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="Source feed">
                     <i class="fas fa-external-link-alt fa-fw fa-pull-right"></i>
                   </a>

@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ item.name }}{% endblock %}
+
+{% block links %}
+{% endblock %}
+
+{% block plugins_scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js/Chart.min.js') }}"></script>
+{% endblock %}
+
+{% block user_scripts %}
+{% if item.quoteHistory %}
+<script type="text/javascript">
+  const data = {{ item.quoteHistory | tojson }};
+  var chart = new Chart(document.getElementById('chart').getContext('2d'), {
+    type: 'line',
+    data: {
+      datasets: [{
+        label: '{{ item.name | safe }}',
+        cubicInterpolationMode: 'monotone',
+        pointRadius: 0,
+        data: data.map(function(e){ return {t: e.timestamp, y: e.quote}; }),
+        backgroundColor: 'rgba(0, 123, 255, 0.65)',
+        borderColor: 'rgba(0, 123, 255, 1)',
+        borderWidth: 2,
+        order: 1
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      responsive: true,
+      scales: {
+        xAxes: [{
+          type: 'time',
+          time: {
+            unit: 'day',
+            displayFormats: { day: 'D MMM YY' }
+          }
+        }],
+        yAxes: [{
+          scaleLabel: {
+            display: true,
+            labelString: '{{ item.unit }}'
+          }
+        }],
+      },
+      hover: { mode: 'nearest' },
+      legend: { display: true }
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="row">
+    <div class="col-9">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Info</h3>
+        </div>
+        <div class="card-body">
+          <dl class="row">
+            <dt class="col-sm-3">Name</dt>
+            <dd class="col-sm-9">{{ item.name }}</dd>
+            <dt class="col-sm-3">Unit</dt>
+            <dd class="col-sm-9">{{ item.unit }}</dd>
+            {%- if item.currencyPair %}
+            <dt class="col-sm-3">Currency pair</dt>
+            <dd class="col-sm-9">{{ item.currencyPair.from }} -> {{ item.currencyPair.to }}</dd>
+            {%- endif %}
+            <dt class="col-sm-3">Link</dt>
+            <dd class="col-sm-9"><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.url }}</a></dd>
+            <dt class="col-sm-3">Update frequency</dt>
+            <dd class="col-sm-9">{{ item.updateFrequency }}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+    <div class="col-3">
+      <div class="card card-secondary">
+        <div class="card-header">
+          <h3 class="card-title">Actions</h3>
+        </div>
+        <div class="card-body">
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href=''">
+            <i class="fas fa-edit"></i> Edit
+          </button>
+
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('quotes.importQuotes', id=item._id) }}'">
+            <i class="fa fa-upload"></i> Import quotes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% if item.quoteHistory -%}
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Graph</h3>
+          <div class="card-tools">
+            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <canvas id="chart" style="min-height: 400px; height: 400px; max-height: 400px; max-width: 100%;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{%- endif %}
+{% endblock %}

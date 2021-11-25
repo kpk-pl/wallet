@@ -17,4 +17,4 @@ def index():
     if request.method == 'GET':
         sources = list(db.get_db().quotes.aggregate(_getPipeline()))
 
-        return render_template("index_pricing.html", sources=sources, header=header.data())
+        return render_template("pricing_index.html", sources=sources, header=header.data())
