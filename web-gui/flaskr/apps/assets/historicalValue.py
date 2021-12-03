@@ -77,9 +77,9 @@ def historicalValue():
         if 'daysBack' in request.args:
             daysBack = int(request.args.get('daysBack'))
 
-        label = None
-        if 'label' in request.args:
-            label = request.args.get('label')
+        label = request.args.get('label')
+        if not label:
+            label = None
 
         investedValue = 'investedValue' in request.args
 
