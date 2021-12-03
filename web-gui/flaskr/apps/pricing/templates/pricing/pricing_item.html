@@ -6,48 +6,50 @@
 {% endblock %}
 
 {% block plugins_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.6.1/chart.min.js" integrity="sha512-O2fWHvFel3xjQSi9FyzKXWLTvnom+lOYR/AUEThL/fbP4hv1Lo5LCFCGuTXBRyKC4K4DJldg5kxptkgXAzUpvA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js/Chart.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@0.1.1"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='chartjs.defaults.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
 {% if item.quoteHistory %}
 <script type="text/javascript">
   const data = {{ item.quoteHistory | tojson }};
-  var chart = new Chart(document.getElementById('chart').getContext('2d'), {
+  let chart = new Chart($('#chart'), {
     type: 'line',
     data: {
       datasets: [{
         label: '{{ item.name | safe }}',
+        data: data,
         cubicInterpolationMode: 'monotone',
-        pointRadius: 0,
-        data: data.map(function(e){ return {t: e.timestamp, y: e.quote}; }),
+        pointRadius: 1,
+        fill: true,
         backgroundColor: 'rgba(0, 123, 255, 0.65)',
         borderColor: 'rgba(0, 123, 255, 1)',
-        borderWidth: 2,
-        order: 1
+        borderWidth: 2
       }]
     },
     options: {
-      maintainAspectRatio: false,
-      responsive: true,
+      parsing: {
+        xAxisKey: 'timestamp',
+        yAxisKey: 'quote'
+      },
       scales: {
-        xAxes: [{
+        x: {
           type: 'time',
           time: {
             unit: 'day',
             displayFormats: { day: 'D MMM YY' }
           }
-        }],
-        yAxes: [{
-          scaleLabel: {
+        },
+        y: {
+          title: {
             display: true,
-            labelString: '{{ item.unit }}'
+            text: '{{ item.unit }}'
           }
-        }],
-      },
-      hover: { mode: 'nearest' },
-      legend: { display: true }
+        },
+      }
     }
   });
 </script>
