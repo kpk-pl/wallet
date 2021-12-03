@@ -20,6 +20,7 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js/Chart.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js-plugin-labels/chartjs-plugin-labels.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js-plugin-colorschemes/chartjs-plugin-colorschemes.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery-sparkline/jquery.sparkline.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='strategyTable.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='categoryChart.js') }}"></script>
 {% endblock %}
@@ -143,6 +144,28 @@
     });
   }
 
+  function historicalValueDone(data) {
+    const sparklineLineOptions = {
+      type: 'line',
+      width: '100',
+      spotColor: false,
+      minSpotColor: false,
+      maxSpotColor: false
+    };
+
+    const timeRange = moment().subtract(3, 'months');
+    const fromIdx = data.t.findIndex(t => new Date(t) >= timeRange)
+
+    for (let asset of data.assets) {
+      $('#sparkline-' + asset.id).sparkline(
+        asset.value.slice(fromIdx).map((v, i) => v > 0 ? +(v - asset.investedValue[i + fromIdx]).toFixed(2) : null),
+        sparklineLineOptions
+      );
+    }
+
+    updateAllocationChart(data);
+  }
+
   function updateAllocationChart(data){
     for (let [type, chart] of Object.entries(assetAllocationCharts)) {
       chart.data.labels = data.t
@@ -205,7 +228,7 @@
     }
   }
 
-  $.getJSON("{{ url_for('assets.historicalValue', daysBack=180, label=session['label'], investedValue=true) | safe }}", updateAllocationChart);
+  $.getJSON("{{ url_for('assets.historicalValue', daysBack=180, label=session['label'], investedValue=true) | safe }}", historicalValueDone);
 </script>
 {% endblock %}
 
@@ -266,10 +289,14 @@
                 </td>
                 <td>{{ asset.region }}</td>
                 <td class="text-right">{{ asset._holdingDays }}</td>
-                <td class="text-right color-gain">
-                {%- if asset._quarterValueChange -%}
-                {{ (asset._quarterValueChange * 100) | round(2) }}%
-                {%- endif -%}
+                <td>
+                  <span id="sparkline-{{ asset._id }}">
+                  </span>
+                  <span class="text-right color-gain float-right">
+                  {%- if asset._quarterValueChange -%}
+                  {{ (asset._quarterValueChange * 100) | round(2) }}%
+                  {%- endif -%}
+                  </span>
                 </td>
                 <td class="text-right">{{ asset._stillInvestedNetValue | round(2) }}</td>
                 <td class="text-right">{{ asset._netValue | round(2) }}</td>

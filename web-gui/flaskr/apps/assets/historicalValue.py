@@ -45,6 +45,7 @@ def _getPipelineForIdsHistorical(daysBack, label = None, ids = []):
 
 @dataclass
 class ResultAsset:
+    id: str
     name: str
     category: str
     subcategory: str
@@ -53,7 +54,8 @@ class ResultAsset:
     investedValue: list
     quantity: list
 
-    def __init__(self, name, category, subcategory):
+    def __init__(self, id, name, category, subcategory):
+        self.id = str(id)
         self.name = name
         self.category = category
         self.subcategory = subcategory
@@ -93,7 +95,7 @@ def historicalValue():
 
         result = Result(pricingCtx.timeScale)
         for asset in assets:
-            dataAsset = ResultAsset(asset['name'], asset['category'], asset['subcategory'])
+            dataAsset = ResultAsset(asset['_id'], asset['name'], asset['category'], asset['subcategory'])
 
             priced = pricing.priceAsset(asset)
             dataAsset.value = priced.value
