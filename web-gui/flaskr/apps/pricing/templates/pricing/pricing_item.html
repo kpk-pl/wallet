@@ -6,9 +6,9 @@
 {% endblock %}
 
 {% block plugins_scripts %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.6.1/chart.min.js" integrity="sha512-O2fWHvFel3xjQSi9FyzKXWLTvnom+lOYR/AUEThL/fbP4hv1Lo5LCFCGuTXBRyKC4K4DJldg5kxptkgXAzUpvA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js.3/chart.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@0.1.1"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js.3-adapter-moment/chartjs-adapter-moment.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='chartjs.defaults.js') }}"></script>
 {% endblock %}
 
@@ -38,10 +38,7 @@
       scales: {
         x: {
           type: 'time',
-          time: {
-            unit: 'day',
-            displayFormats: { day: 'D MMM YY' }
-          }
+          time: { unit: 'day', displayFormats: { day: 'D MMM YY' } }
         },
         y: {
           title: {
