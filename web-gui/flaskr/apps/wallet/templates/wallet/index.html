@@ -270,7 +270,7 @@
                   <a href="{{ url_for('assets.index', id=asset._id) }}">
                     {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
                   </a>
-                  {%- if misc and misc.showData -%}
+                  {%- if session.debug -%}
                   <a href="#modalDebug_{{ asset._id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ asset._id }}">
                     <i class="fas fa-fw fa-bug fa-pull-right"></i>
                   </a>

@@ -1,8 +1,11 @@
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from dataclasses import dataclass
-from flaskr.pricing.interp import interp
-from flaskr.pricing.context import Context
+from dataclasses import dataclass, asdict
+from typing import Optional
+from bson.objectid import ObjectId
+
+from .interp import interp
+from .context import Context
 
 
 def _yearsBetween(lhs, rhs):
@@ -12,6 +15,23 @@ def _yearsBetween(lhs, rhs):
 def _monthsBetween(lhs, rhs):
     delta = relativedelta(rhs, lhs)
     return delta.years * 12 + delta.months
+
+
+class _PricingType:
+    Quantity = 1
+    Quote = 2
+    Interest = 3
+
+    @classmethod
+    def create(cls, asset):
+        if 'pricing' not in asset.keys():
+            return cls.Quantity
+        elif 'quoteId' in asset['pricing']:
+            return cls.Quote
+        elif 'interest' in asset['pricing']:
+            return cls.Interest
+        else:
+            raise NotImplementedError("Not implemented pricing type")
 
 
 def _calculateQuoteHistoryForOperationByInterest(asset, operation, finalDate):
@@ -47,9 +67,82 @@ def _calculateQuoteHistoryForOperationByInterest(asset, operation, finalDate):
 
 
 class Pricing(object):
+    @dataclass
+    class CalcContext:
+        type: _PricingType
+        timerange: tuple[datetime, datetime]
+        quantity: float = None
+        netValue: float = None
+        value: float = None
+        operationsInScope: list[dict] = None
+        pricingIds: list[ObjectId] = None
+        quotes: dict[str, float] = None
+
     def __init__(self, ctx = None):
         super(Pricing, self).__init__()
         self._ctx = ctx if ctx is not None else Context()
+        self._data = None  # Calculation context used for pricing that can also be copied to the debug dict
+
+    def __call__(self, asset, debug=None):
+        self._data = Pricing.CalcContext(
+            type = _PricingType.create(asset),
+            timerange = (self._ctx.startDate, self._ctx.finalDate)
+        )
+
+        if self._prepare(asset):
+            if self._data.type is _PricingType.Quantity:
+                pass
+            elif self._data.type is _PricingType.Quote:
+                self._byQuote(asset)
+            elif self._data.type is _PricingType.Interest:
+                pass
+
+        if isinstance(debug, dict):
+            debug.update(asdict(self._data))
+
+        return (self._data.netValue, self._data.quantity)
+
+    def _prepare(self, asset):
+        self._data.quantity = 0
+        self._data.netValue = 0.0
+
+        if 'operations' not in asset or not asset['operations']:
+            return False
+
+        self._data.operationsInScope = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
+        if not self._data.operationsInScope:
+            return False
+
+        return True
+
+    def _byQuote(self, asset):
+        self._data.quantity = self._data.operationsInScope[-1]['finalQuantity']
+        if self._data.quantity == 0:
+            return
+
+        self._data.netValue = None
+
+        quoteId = asset['pricing']['quoteId']
+        self._data.pricingIds = [quoteId]
+
+        currencyId = None
+        if 'quoteId' in asset['currency']:
+            currencyId = asset['currency']['quoteId']
+            self._data.pricingIds.append(currencyId)
+
+        self._ctx.loadQuotes(self._data.pricingIds)
+        self._data.quotes = {}
+
+        quote = self._ctx.getFinalById(quoteId)
+        if quote is not None:
+            self._data.quotes[str(quoteId)] = quote
+            self._data.value = quote * self._data.quantity
+            self._data.netValue = self._data.value
+
+            if currencyId:
+                currencyQuote = self._ctx.getFinalById(currencyId)
+                self._data.quotes[str(currencyId)] = currencyQuote
+                self._data.netValue = self._data.value * currencyQuote
 
     def priceAsset(self, asset, debug=None):
         self._data = {}
@@ -58,10 +151,7 @@ class Pricing(object):
         if 'pricing' not in asset.keys():
             return self._priceAssetByQuantity(asset)
         elif 'quoteId' in asset['pricing']:
-            self._priceAssetByQuote(asset)
-            if isinstance(debug, dict):
-                debug.update(self._data)
-            return self._data['netValue'], self._data['quantity']
+            return self.__call__(asset, debug);
         elif 'interest' in asset['pricing']:
             return self._priceAssetByInterest(asset)
         else:
