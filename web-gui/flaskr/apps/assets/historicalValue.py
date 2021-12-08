@@ -3,7 +3,7 @@ from flaskr import db
 from dataclasses import dataclass, asdict
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
-from flaskr.pricing import PricingContext, HistoryPricing
+from flaskr.pricing import Context, HistoryPricing
 from flaskr.analyzers.profits import Profits
 
 
@@ -86,7 +86,7 @@ def historicalValue():
         investedValue = 'investedValue' in request.args
 
         now = datetime.now()
-        pricingCtx = PricingContext(finalDate = now, startDate = now - timedelta(daysBack))
+        pricingCtx = Context(finalDate = now, startDate = now - timedelta(daysBack))
         pricing = HistoryPricing(pricingCtx, features={'investedValue': investedValue})
 
         assets = list(db.get_db().assets.aggregate(_getPipelineForIdsHistorical(daysBack, ids=ids, label=label)))

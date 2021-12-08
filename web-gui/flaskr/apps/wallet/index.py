@@ -4,7 +4,7 @@ from flaskr import db, header
 from flaskr.session import Session
 from flaskr.analyzers.profits import Profits
 from flaskr.analyzers.categories import Categories
-from flaskr.pricing import Pricing, PricingContext
+from flaskr.pricing import Context, Pricing
 
 from bson.objectid import ObjectId
 
@@ -61,7 +61,7 @@ def index():
         assets = [Profits(asset)() for asset in assets]
 
         pricing = Pricing()
-        pricingQuarterAgo = Pricing(PricingContext(finalDate = datetime.now() - relativedelta(months=3)))
+        pricingQuarterAgo = Pricing(Context(finalDate = datetime.now() - relativedelta(months=3)))
 
         for asset in assets:
             if session.isDebug():

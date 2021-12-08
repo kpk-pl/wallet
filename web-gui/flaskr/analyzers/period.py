@@ -1,4 +1,4 @@
-from flaskr.pricing import Pricing, PricingContext
+from flaskr.pricing import Pricing, Context
 from dateutil.relativedelta import relativedelta
 from . import _operationNetValue
 
@@ -11,8 +11,8 @@ class Period(object):
         self.finalDate = finalDate
         self._debug = debug
 
-        self.pricingStart = Pricing(ctx=PricingContext(finalDate=startDate))
-        self.pricingEnd = Pricing(ctx=PricingContext(finalDate=finalDate))
+        self.pricingStart = Pricing(ctx=Context(finalDate=startDate))
+        self.pricingEnd = Pricing(ctx=Context(finalDate=finalDate))
 
     def __call__(self, asset):
         asset['_periodStats'] = {
