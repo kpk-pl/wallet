@@ -95,7 +95,7 @@ class Pricing(object):
             elif self._data.type is _PricingType.Quote:
                 self._byQuote(asset)
             elif self._data.type is _PricingType.Interest:
-                pass
+                self._byInterest(asset)
 
         if isinstance(debug, dict):
             debug.update(asdict(self._data))
@@ -160,32 +160,20 @@ class Pricing(object):
                 self._data.quotes[str(currencyId)] = currencyQuote
                 self._data.netValue = self._data.value * currencyQuote
 
-    def priceAsset(self, asset, debug=None):
-        self._data = {}
-        self._data['finalDate'] = self._ctx.finalDate
+    def _byInterest(self, asset):
+        self._data.quantity = self._data.operationsInScope[-1]['finalQuantity']
 
-        if 'pricing' not in asset.keys():
-            return self.__call__(asset, debug);
-        elif 'quoteId' in asset['pricing']:
-            return self.__call__(asset, debug);
-        elif 'interest' in asset['pricing']:
-            return self._priceAssetByInterest(asset)
-        else:
-            raise NotImplementedError("Not implemented pricing scheme")
-
-    def _priceAssetByInterest(self, asset):
-        opsInScope = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
-        if not opsInScope:
-            return 0.0, 0
-
-        value = 0
-        for operation in opsInScope:
+        self._data.value = 0
+        for operation in self._data.operationsInScope:
             if operation['type'] == 'BUY':
-                value += _calculateQuoteHistoryForOperationByInterest(asset, operation, self._ctx.finalDate)[-1]['quote']
+                self._data.value += _calculateQuoteHistoryForOperationByInterest(asset, operation, self._ctx.finalDate)[-1]['quote']
             elif operation['type'] == 'SELL':
                 raise NotImplementedError("Did not implement SELL operation")
 
-        return value, opsInScope[-1]['finalQuantity']
+        self._data.netValue = self._data.value
+
+    def priceAsset(self, asset, debug=None):
+        return self.__call__(asset, debug)
 
 
 class HistoryPricing(object):
