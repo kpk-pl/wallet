@@ -91,7 +91,7 @@ class Pricing(object):
 
         if self._prepare(asset):
             if self._data.type is _PricingType.Quantity:
-                pass
+                self._byQuantity(asset)
             elif self._data.type is _PricingType.Quote:
                 self._byQuote(asset)
             elif self._data.type is _PricingType.Interest:
@@ -114,6 +114,22 @@ class Pricing(object):
             return False
 
         return True
+
+    def _byQuantity(self, asset):
+        self._data.quantity = self._data.operationsInScope[-1]['finalQuantity']
+        self._data.value = self._data.quantity
+
+        if 'quoteId' in asset['currency']:
+            currencyId = asset['currency']['quoteId']
+
+            self._data.pricingIds = [currencyId]
+            self._ctx.loadQuotes(self._data.pricingIds)
+            currencyQuote = self._ctx.getFinalById(currencyId)
+
+            self._data.quotes = { str(currencyId) : currencyQuote }
+            self._data.netValue = self._data.value * currencyQuote
+        else:
+            self._data.netValue = self._data.value
 
     def _byQuote(self, asset):
         self._data.quantity = self._data.operationsInScope[-1]['finalQuantity']
@@ -149,58 +165,13 @@ class Pricing(object):
         self._data['finalDate'] = self._ctx.finalDate
 
         if 'pricing' not in asset.keys():
-            return self._priceAssetByQuantity(asset)
+            return self.__call__(asset, debug);
         elif 'quoteId' in asset['pricing']:
             return self.__call__(asset, debug);
         elif 'interest' in asset['pricing']:
             return self._priceAssetByInterest(asset)
         else:
             raise NotImplementedError("Not implemented pricing scheme")
-
-    def _priceAssetByQuantity(self, asset):
-        opsInScope = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
-        if not opsInScope:
-            return 0.0, 0
-
-        return opsInScope[-1]['finalQuantity'], opsInScope[-1]['finalQuantity']
-
-    def _priceAssetByQuote(self, asset):
-        self._data['quantity'] = 0
-        self._data['netValue'] = 0.0
-
-        if 'operations' not in asset or not asset['operations']:
-            return
-
-        self._data['opsInScope'] = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
-        if not self._data['opsInScope']:
-            return
-
-        self._data['quantity'] = self._data['opsInScope'][-1]['finalQuantity']
-        if self._data['quantity'] == 0:
-            return
-
-        self._data['netValue'] = None
-        self._data['ids'] = []
-
-        quoteId = asset['pricing']['quoteId']
-        self._data['ids'].append(quoteId)
-
-        currencyId = None
-        if 'quoteId' in asset['currency']:
-            currencyId = asset['currency']['quoteId']
-            self._data['ids'].append(currencyId)
-
-        self._ctx.loadQuotes(self._data['ids'])
-
-        self._data['assetQuote'] = self._ctx.getFinalById(quoteId)
-        if self._data['assetQuote'] is not None:
-            self._data['value'] = self._data['assetQuote'] * self._data['quantity']
-
-            if currencyId:
-                self._data['currencyQuote'] = self._ctx.getFinalById(currencyId)
-                self._data['netValue'] = self._data['value'] * self._data['currencyQuote']
-            else:
-                self._data['netValue'] = self._data['value']
 
     def _priceAssetByInterest(self, asset):
         opsInScope = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
