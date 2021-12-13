@@ -33,7 +33,7 @@ $(document).ready(function(){
     }
 
     if ($(this).valid()) {
-      $.getJSON("{{ url_for('quote') }}?url=" + encodeURIComponent($(this).val()), function(quote){
+      $.getJSON("{{ url_for('quotes.index') }}?url=" + encodeURIComponent($(this).val()), function(quote){
         console.log(quote)
         setDefault('#f-name', quote['name'])
         setDefault('#f-type', quote['type'])

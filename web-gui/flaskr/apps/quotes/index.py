@@ -86,3 +86,9 @@ def index():
             response.append({'name': quote['name'], 'quote': liveQuote})
 
         return Response(json.dumps(response), mimetype="application/json")
+
+
+def indexOne():
+    if request.method == 'GET':
+        quote = getQuote(request.args.get('url'))
+        return Response(json.dumps(quote), mimetype="application/json")

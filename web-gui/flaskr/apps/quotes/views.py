@@ -1,12 +1,16 @@
-from flask import Blueprint
+from flask import request, Blueprint
 
 
 quotes = Blueprint('quotes', __name__, template_folder='templates/quotes')
 
 @quotes.route("/", methods=['GET', 'PUT'])
 def index():
-    from .index import index
-    return index()
+    if request.args.get('url'):
+        from .index import indexOne
+        return indexOne()
+    else:
+        from .index import index
+        return index()
 
 
 @quotes.route("/import", methods=['GET', 'POST'])

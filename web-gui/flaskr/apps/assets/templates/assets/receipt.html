@@ -36,16 +36,15 @@ $(document).ready(function(){
   }
 
   function updateQuantity() {
-    var quantity = $("#f-quantity")
-    if (quantity.valid())
-      var type = $("#f-type").val()
-      var multiplier = 1
-      if (type == "SELL") {
-        multiplier = -1
-      }
+    const quantity = $("#f-quantity");
+    if (quantity.valid()) {
+      const type = $("#f-type").val();
+      const multiplier = (type == "SELL" ? -1 : 1);
+      const quantityAfter = floatVal(quantity) * multiplier + {{ asset.finalQuantity if asset.finalQuantity else 0 }};
 
-      $("#f-quantity-after").val(floatVal(quantity) * multiplier + {{ asset.finalQuantity if asset.finalQuantity else 0 }})
+      $("#f-quantity-after").val(parseFloat(quantityAfter.toFixed(10)))
                             .valid();
+    }
   }
 
   $("#f-quantity").on('input', updateQuantity)
