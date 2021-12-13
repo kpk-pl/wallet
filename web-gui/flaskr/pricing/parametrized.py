@@ -6,9 +6,19 @@ from dataclasses import dataclass
 class ParametrizedQuoting:
     SupportedLengthSpecs = ['day', 'month', 'year']
 
+
     class SpecError(RuntimeError):
         def __init__(self, err):
             super(SpecError, self).__init__("ParametrizedQuoting error: " + err)
+
+
+    @staticmethod
+    def _mustGet(desc, *keys):
+        for key in keys:
+            if key not in desc:
+                raise ParametrizedQuoting.SpecError(f"No {key} specification")
+            desc = desc[key]
+        return desc
 
 
     @dataclass
@@ -17,58 +27,87 @@ class ParametrizedQuoting:
         multiplier: float
 
 
+    @dataclass
+    class Context:
+        timePoint: datetime
+        nextTimePoint: datetime
+        interestIdx: int
+
+        def __init__(self, quoting):
+            self._quoting = quoting
+
+            self.timePoint = quoting.startDate
+            self.nextTimePoint = self.timePoint + self._quoting.interestPeriod
+            self.interestIdx = 0
+
+        def isPartial(self):
+            return self.nextTimePoint > self._quoting.finalDate
+
+        def interest(self):
+            return self._quoting._interestDesc[self.interestIdx]
+
+        def advance(self):
+            self.timePoint = self.nextTimePoint
+            self.nextTimePoint += self._quoting.interestPeriod
+            self.interestIdx = min(self.interestIdx + 1, len(self._quoting._interestDesc) - 1)
+
+        def fixedGrowth(self):
+            percentage = ParametrizedQuoting._mustGet(self.interest(), 'fixed', 'percentage')
+            if not self.isPartial():
+                return percentage
+
+            return percentage * (self._quoting.finalDate - self.timePoint).days / (self.nextTimePoint - self.timePoint).days
+
+        def derivedGrowth(self):
+            quoteId = ParametrizedQuoting._mustGet(self.interest(), 'derived', 'quoteId')
+            sample = ParametrizedQuoting._mustGet(self.interest(), 'derived', 'sample')
+            interval = ParametrizedQuoting._mustGet(sample, 'interval')
+            intervalOffset = sample['intervalOffset'] if 'intervalOffset' in sample else 0
+            choose = ParametrizedQuoting._mustGet(sample, 'choose')
+            clampBelow = sample['clampBelow'] if 'clampBelow' in sample else None
+
+
     def __init__(self, desc, startDate, finalDate = None):
         self.startDate = startDate
         self.finalDate = finalDate if finalDate != None else datetime.now();
 
-        if 'interest' not in desc:
-            raise self.SpecError("No interest specification")
-        if len(desc['interest']) == 0:
+        self._interestDesc = self._mustGet(desc, 'interest')
+        if len(self._interestDesc) == 0:
             raise self.SpecError("Incorrect interest specification")
 
-        self._interestDesc = desc['interest']
+        if self._mustGet(desc, 'profitDistribution') != 'accumulating':
+            raise NotImplementedError("Not implemented profitDistribution other than accumulating")
+
         self._initPeriods(desc)
 
     def _initPeriods(self, desc):
-        if 'length' not in desc:
-            raise self.SpecError("No length specified")
-        if 'name' not in desc['length'] or desc['length']['name'] not in self.SupportedLengthSpecs:
+        self._length = self._mustGet(desc, 'length', 'name')
+        if self._length not in self.SupportedLengthSpecs:
             raise self.SpecError("Incorrect length specification")
-
-        self._length = desc['length']['name']
         self._lengthMultiplier = desc['length']['multiplier'] if 'multiplier' in desc['length'] else 1
 
         if self._length == 'day':
-            self._interestPeriod = relativedelta(days=self._lengthMultiplier)
+            self.interestPeriod = relativedelta(days=self._lengthMultiplier)
         elif self._length == 'month':
-            self._interestPeriod = relativedelta(months=self._lengthMultiplier)
+            self.interestPeriod = relativedelta(months=self._lengthMultiplier)
         elif self._length == 'year':
-            self._interestPeriod = relativedelta(years=self._lengthMultiplier)
+            self.interestPeriod = relativedelta(years=self._lengthMultiplier)
 
     def getKeyPoints(self):
         keyPoints = [self.KeyPoint(self.startDate, 1.0)]
+        ctx = self.Context(self)
 
-        timePoint = self.startDate
-        nextTimePoint = timePoint + self._interestPeriod
-        interestIdx = 0
-
-        while timePoint < self.finalDate:
-            partialPeriod = (nextTimePoint > self.finalDate)
-            interest = self._interestDesc[interestIdx]
+        while ctx.timePoint < self.finalDate:
+            interest = ctx.interest()
             growth = 0.0
 
             if 'fixed' in interest:
-                if not partialPeriod:
-                    growth += interest['fixed']
-                else:
-                    growth += interest['fixed'] * (self.finalDate - timePoint).days / (nextTimePoint - timePoint).days
+                growth += ctx.fixedGrowth()
             if 'derived' in interest:
+                growth += ctx.derivedGrowth()
                 raise NotImplementedError("Did not implement calculating passed periods with derived pricing")
 
-            timePoint = nextTimePoint
-            nextTimePoint += self._interestPeriod
-            interestIdx = min(interestIdx + 1, len(self._interestDesc) - 1)
-
-            keyPoints.append(self.KeyPoint(timePoint, keyPoints[-1].multiplier * (1.0 + growth)));
+            keyPoints.append(self.KeyPoint(ctx.nextTimePoint, keyPoints[-1].multiplier * (1.0 + growth)));
+            ctx.advance()
 
         return keyPoints
