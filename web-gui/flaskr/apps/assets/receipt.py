@@ -53,7 +53,7 @@ def _receiptGet():
             {'$match': {'_id': ObjectId(asset['pricing']['quoteId'])}},
             {'$project': {'lastQuote': {'$last': '$quoteHistory.quote'}}}
         ]))
-        if quote:
+        if quote and 'lastQuote' in quote[0]:
             asset['lastQuote'] = quote[0]['lastQuote']
 
     if asset['currency']['name'] != 'PLN':
