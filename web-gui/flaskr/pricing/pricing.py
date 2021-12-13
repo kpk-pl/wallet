@@ -6,6 +6,7 @@ from bson.objectid import ObjectId
 
 from .interp import interp
 from .context import Context
+from .parametrized import ParametrizedQuoting
 
 
 def _yearsBetween(lhs, rhs):
@@ -32,38 +33,6 @@ class _PricingType:
             return cls.Interest
         else:
             raise NotImplementedError("Not implemented pricing type")
-
-
-def _calculateQuoteHistoryForOperationByInterest(asset, operation, finalDate):
-    pricing = asset['pricing']
-
-    multiplier = pricing['length']['multiplier'] if 'multiplier' in pricing['length'] else 1
-
-    if pricing['length']['name'] == 'year':
-        passedPeriods = int(_yearsBetween(operation['date'], finalDate) / multiplier)
-        if passedPeriods > 0:
-            raise NotImplementedError("Did not implement calculating passed periods")
-    elif pricing['length']['name'] == 'month':
-        passedPeriods = int(_monthsBetween(operation['date'], finalDate) / multiplier)
-        if passedPeriods > 0:
-            raise NotImplementedError("Did not implement calculating passed periods")
-    else:
-        raise NotImplementedError("Periods other than year and month are not implemented")
-
-    interestDef = pricing['interest'][0]
-    if 'derived' in interestDef:
-        raise NotImplementedError("Did not implement calculating derived pricing")
-
-    result = [{'timestamp': operation['date'] - timedelta(seconds=1), 'quote': 0.0},
-              {'timestamp': operation['date'], 'quote': operation['price']}]
-
-    if 'fixed' in interestDef:
-        percentage = interestDef['fixed']
-        daysInLastPeriod = (finalDate - operation['date']).days
-        result.append({'timestamp': finalDate,
-                       'quote': operation['price'] * (1 + percentage * (daysInLastPeriod / 365))})
-
-    return result
 
 
 class Pricing(object):
@@ -166,7 +135,8 @@ class Pricing(object):
         self._data.value = 0
         for operation in self._data.operationsInScope:
             if operation['type'] == 'BUY':
-                self._data.value += _calculateQuoteHistoryForOperationByInterest(asset, operation, self._ctx.finalDate)[-1]['quote']
+                quoting = ParametrizedQuoting(asset['pricing'], operation['date'], self._ctx.finalDate)
+                self._data.value += operation['price'] * quoting.getKeyPoints()[-1].multiplier
             elif operation['type'] == 'SELL':
                 raise NotImplementedError("Did not implement SELL operation")
 
@@ -275,8 +245,9 @@ class HistoryPricing(object):
 
         for operation in asset['operations']:
             if operation['type'] == 'BUY':
-                quoteHistory = _calculateQuoteHistoryForOperationByInterest(asset, operation, self._ctx.finalDate)
-                quotes = interp(quoteHistory, self._ctx.timeScale)
+                quoting = ParametrizedQuoting(asset['pricing'], operation['date'], self._ctx.finalDate)
+                quoteHistory = list(map(lambda kp: {'timestamp': kp.timestamp, 'quote': operation['price'] * kp.multiplier}, quoting.getKeyPoints()))
+                quotes = interp(quoteHistory, self._ctx.timeScale, leftFill = 0.0)
                 value = [a + b['quote'] for a, b in zip(value, quotes)]
             elif operation['type'] == 'SELL':
                 raise NotImplementedError("Did not implement SELL operation")
