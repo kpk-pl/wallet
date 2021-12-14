@@ -30,19 +30,14 @@ $(document).ready(function(){
   }
   $("#f-date").val(formatDate(new Date()))
 
-  function floatVal(element, def = 0.0) {
-    var res = parseFloat(element.val());
-    return isNaN(res) ? def : res;
-  }
-
   function updateQuantity() {
     const quantity = $("#f-quantity");
     if (quantity.valid()) {
       const type = $("#f-type").val();
       const multiplier = (type == "SELL" ? -1 : 1);
-      const quantityAfter = floatVal(quantity) * multiplier + {{ asset.finalQuantity if asset.finalQuantity else 0 }};
+      const quantityAfter = utils.float.parse(quantity) * multiplier + {{ asset.finalQuantity if asset.finalQuantity else 0 }};
 
-      $("#f-quantity-after").val(parseFloat(quantityAfter.toFixed(10)))
+      $("#f-quantity-after").val(utils.float.normalize(quantityAfter))
                             .valid();
     }
   }
@@ -64,11 +59,11 @@ $(document).ready(function(){
     }
 
     if (price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
-      var cost = floatVal(conversion, 1.0) * floatVal(price)
+      var cost = utils.float.parse(conversion, 1.0) * utils.float.parse(price)
       if (type == "ADD")
-        cost += floatVal(provision)
+        cost += utils.float.parse(provision)
       else
-        cost -= floatVal(provision)
+        cost -= utils.float.parse(provision)
 
       $("#f-cost").val(Number(cost.toFixed(2))).valid()
     }
@@ -78,7 +73,7 @@ $(document).ready(function(){
     var quantity = $("#f-quantity");
     var price = $(this);
     if (quantity.valid() && price.valid()) {
-      $("#f-unit-price").val(Number((floatVal(price) / floatVal(quantity)).toFixed(2))).valid();
+      $("#f-unit-price").val(Number((utils.float.parse(price) / utils.float.parse(quantity)).toFixed(2))).valid();
     }
   });
 
@@ -86,7 +81,7 @@ $(document).ready(function(){
     var quantity = $("#f-quantity");
     var unitprice = $(this);
     if (quantity.valid() && unitprice.valid()) {
-      $("#f-price").val(floatVal(unitprice) * floatVal(quantity)).valid();
+      $("#f-price").val(utils.float.parse(unitprice) * utils.float.parse(quantity)).valid();
     }
   });
 
@@ -102,9 +97,9 @@ $(document).ready(function(){
     }
 
     if (price.valid()) {
-      unitprice.val(Number((floatVal(price) / floatVal(quantity)).toFixed(2))).valid();
+      unitprice.val(Number((utils.float.parse(price) / utils.float.parse(quantity)).toFixed(2))).valid();
     } else if (unitprice.valid()) {
-      price.val(Number((floatVal(unitprice) * floatVal(quantity)).toFixed(2))).valid();
+      price.val(Number((utils.float.parse(unitprice) * utils.float.parse(quantity)).toFixed(2))).valid();
     }
   }
 
