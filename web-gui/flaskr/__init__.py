@@ -1,5 +1,6 @@
-import os
 from flask import Flask, request, url_for
+import os
+from flaskr import typing
 
 
 def _filter_toJson(data, indent=2):
@@ -52,6 +53,13 @@ def create_app(test_config=None):
         return url_for(request.endpoint, **dict(request.args, **args))
 
     app.jinja_env.globals['url_for_self'] = url_for_self
+
+    @app.context_processor
+    def constants():
+        return dict(
+            currencyMain = typing.Currency.main,
+            currencyMainDecimals = typing.Currency.decimals
+        )
 
     print(app.url_map)
 

@@ -44,62 +44,57 @@ $(document).ready(function(){
 
   $("#f-quantity").on('input', updateQuantity)
   $("#f-type").change(updateQuantity)
-  $("#f-type").change(function(){
-    $("#f-quan-all").attr('disabled', $(this).val() != "SELL")
-  })
+  $("#f-type").change(() => $("#f-quan-all").attr('disabled', $(this).val() != "SELL"))
 
   function updateCost() {
-    var provision = $("#f-provision")
-    var conversion = $("#f-conversion")
-    var type = $("#f-type").val()
+    const provision = $("#f-provision")
+    const conversion = $("#f-conversion")
+    const type = $("#f-type").val()
 
-    var price = $("#f-price")
+    let price = $("#f-price")
     if (!price.length) {
       price = $("#f-quantity")
     }
 
     if (price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
-      var cost = utils.float.parse(conversion, 1.0) * utils.float.parse(price)
-      if (type == "ADD")
-        cost += utils.float.parse(provision)
-      else
-        cost -= utils.float.parse(provision)
+      let cost = utils.float.parse(conversion, 1.0) * utils.float.parse(price)
+      cost += (type == "ADD" ? 1 : -1) * utils.float.parse(provision)
 
-      $("#f-cost").val(Number(cost.toFixed(2))).valid()
+      $("#f-cost").val(cost.toFixed({{ currencyMainDecimals }})).valid()
     }
   }
 
   $("#f-price").on('input', function(){
-    var quantity = $("#f-quantity");
-    var price = $(this);
+    const quantity = $("#f-quantity");
+    const price = $(this);
     if (quantity.valid() && price.valid()) {
-      $("#f-unit-price").val(Number((utils.float.parse(price) / utils.float.parse(quantity)).toFixed(2))).valid();
+      $("#f-unit-price").val((utils.float.parse(price) / utils.float.parse(quantity)).toFixed({{ currencyMainDecimals }})).valid();
     }
   });
 
   $("#f-unit-price").on('input', function(){
-    var quantity = $("#f-quantity");
-    var unitprice = $(this);
+    const quantity = $("#f-quantity");
+    const unitprice = $(this);
     if (quantity.valid() && unitprice.valid()) {
-      $("#f-price").val(utils.float.parse(unitprice) * utils.float.parse(quantity)).valid();
+      $("#f-price").val((utils.float.parse(unitprice) * utils.float.parse(quantity)).toFixed({{ currencyMainDecimals }})).valid();
     }
   });
 
   function updatePrices() {
-    var quantity = $("#f-quantity");
+    const quantity = $("#f-quantity");
     if (!quantity.valid())
       return;
 
-    var price = $("#f-price");
-    var unitprice = $("#f-unit-price");
+    const price = $("#f-price");
+    const unitprice = $("#f-unit-price");
     if (!price.length || !unitprice.length) {
       return;
     }
 
     if (price.valid()) {
-      unitprice.val(Number((utils.float.parse(price) / utils.float.parse(quantity)).toFixed(2))).valid();
+      unitprice.val((utils.float.parse(price) / utils.float.parse(quantity)).toFixed({{ currencyMainDecimals }})).valid();
     } else if (unitprice.valid()) {
-      price.val(Number((utils.float.parse(unitprice) * utils.float.parse(quantity)).toFixed(2))).valid();
+      price.val((utils.float.parse(unitprice) * utils.float.parse(quantity)).toFixed({{ currencyMainDecimals }})).valid();
     }
   }
 
@@ -119,40 +114,42 @@ $(document).ready(function(){
 })
 </script>
 <script type="text/javascript">
-$.validator.setDefaults({
-  submitHandler: function() {
-    $("#f-quantity-after").removeAttr('disabled');
-    $.post("{{ url_for('assets.receipt', id=asset._id) }}", $('form').serialize(), function(data) {
-      $(location).attr("href", "{{ url_for('assets.index', id=asset._id) }}");
-    });
-  }
-});
-$("form").validate({
-  rules: {
-    date: {
-      isDate: true
-    },
-    currencyConversion: {
-      greaterThan: 0
-    },
-    price: {
-      greaterThan: 0
-    },
-    quantity: {
-      greaterThan: 0
+$(document).ready(function(){
+  $.validator.setDefaults({
+    submitHandler: function() {
+      $("#f-quantity-after").removeAttr('disabled');
+      $.post("{{ url_for('assets.receipt', id=asset._id) }}", $('form').serialize(), function(data) {
+        $(location).attr("href", "{{ url_for('assets.index', id=asset._id) }}");
+      });
     }
-  },
-  errorElement: 'span',
-  errorPlacement: function (error, element) {
-          error.addClass('invalid-feedback');
-          element.closest('.form-group').append(error);
-  },
-  highlight: function (element, errorClass, validClass) {
-          $(element).addClass('is-invalid');
-  },
-  unhighlight: function (element, errorClass, validClass) {
-          $(element).removeClass('is-invalid');
-  },
+  });
+  $("form").validate({
+    rules: {
+      date: {
+        isDate: true
+      },
+      currencyConversion: {
+        greaterThan: 0
+      },
+      price: {
+        greaterThan: 0
+      },
+      quantity: {
+        greaterThan: 0
+      }
+    },
+    errorElement: 'span',
+    errorPlacement: function (error, element) {
+            error.addClass('invalid-feedback');
+            element.closest('.form-group').append(error);
+    },
+    highlight: function (element, errorClass, validClass) {
+            $(element).addClass('is-invalid');
+    },
+    unhighlight: function (element, errorClass, validClass) {
+            $(element).removeClass('is-invalid');
+    },
+  });
 });
 </script>
 {% endblock %}
