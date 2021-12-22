@@ -15,7 +15,8 @@ def create_app(test_config=None):
 
     app.config.from_mapping(
         SECRET_KEY = 'dev',
-        SESSION_COOKIE_SAMESITE = "Strict"
+        SESSION_COOKIE_SAMESITE = "Strict",
+        # EXPLAIN_TEMPLATE_LOADING = True
     )
 
     if test_config is None:

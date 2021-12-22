@@ -76,7 +76,7 @@ def index():
         categoryAnalyzer = Categories()
         categoryAllocation = categoryAnalyzer(assets)
 
-        return render_template("index.html",
+        return render_template("wallet/index.html",
                                assets=assets,
                                allocation=json.dumps(categoryAllocation),
                                header = header.data(showLabels = True))

@@ -79,7 +79,7 @@ def _response(shouldAllocate=False, label=None):
 def strategy():
     if request.method == 'GET':
         session = Session(['label'])
-        return render_template("strategy.html", header=header.data(showLabels = True))
+        return render_template("wallet/strategy.html", header=header.data(showLabels = True))
 
 
 def strategy_json():

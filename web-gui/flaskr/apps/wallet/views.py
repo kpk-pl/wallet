@@ -2,7 +2,7 @@ from flask import Blueprint
 from flask_accept import accept, accept_fallback
 
 
-wallet = Blueprint('wallet', __name__, template_folder='templates/wallet')
+wallet = Blueprint('wallet', __name__, template_folder='templates', static_folder='static')
 
 @wallet.route("/", methods=['GET'])
 def index():
