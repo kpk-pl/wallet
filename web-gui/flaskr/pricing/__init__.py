@@ -1,2 +1,2 @@
 from .context import Context
-from .pricing import Pricing, HistoryPricing
+from .pricing import Pricing, HistoryPricing, HistoryResult

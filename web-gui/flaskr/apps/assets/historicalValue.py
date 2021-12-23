@@ -97,7 +97,7 @@ def historicalValue():
         for asset in assets:
             dataAsset = ResultAsset(asset['_id'], asset['name'], asset['category'], asset['subcategory'])
 
-            priced = pricing.priceAsset(asset)
+            priced = pricing(asset)
             dataAsset.value = priced.value
             dataAsset.quantity = priced.quantity
             dataAsset.investedValue = priced.investedValue

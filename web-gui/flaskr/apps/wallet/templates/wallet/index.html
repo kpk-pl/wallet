@@ -23,6 +23,7 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery-sparkline/jquery.sparkline.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='strategyTable.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='categoryChart.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='wallet/sparklines.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
@@ -144,25 +145,10 @@
     });
   }
 
+  var historicalData;
   function historicalValueDone(data) {
-    const sparklineLineOptions = {
-      type: 'line',
-      width: '100',
-      spotColor: false,
-      minSpotColor: false,
-      maxSpotColor: false
-    };
-
-    const timeRange = moment().subtract(3, 'months');
-    const fromIdx = data.t.findIndex(t => new Date(t) >= timeRange)
-
-    for (let asset of data.assets) {
-      $('#sparkline-' + asset.id).sparkline(
-        asset.value.slice(fromIdx).map((v, i) => v > 0 ? +(v - asset.investedValue[i + fromIdx]).toFixed(2) : null),
-        sparklineLineOptions
-      );
-    }
-
+    historicalData = data;
+    assetChangeSparklines(data, 3, asset => $('#sparkline-' + asset.id));
     updateAllocationChart(data);
   }
 

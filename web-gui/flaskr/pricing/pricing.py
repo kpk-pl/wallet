@@ -146,53 +146,67 @@ class Pricing(object):
         return self.__call__(asset, debug)
 
 
+@dataclass
+class HistoryResult:
+    timescale : list[datetime]
+    value : list[float] = None
+    investedValue : list[float] = None
+    quantity : list[float] = None
+
+    def __init__(self, timescale):
+        self.timescale = timescale
+
+    @classmethod
+    def null(cls, timescale):
+        result = self(timescale)
+        result.value = [0.0] * len(result.timescale)
+        result.investedValue = [0.0] * len(result.timescale)
+        result.quantity = [0.0] * len(result.timescale)
+        return result
+
+
 class HistoryPricing(object):
     @dataclass
-    class Result:
-        timescale : list
-        value : list = None
-        investedValue : list = None
-        quantity : list = None
-
-        def __init__(self, timescale):
-            self.timescale = timescale
-
-        @staticmethod
-        def null(timescale):
-            result = HistoryPricing.Result(timescale)
-            result.value = [0.0] * len(result.timescale)
-            result.investedValue = [0.0] * len(result.timescale)
-            result.quantity = [0.0] * len(result.timescale)
-            return result
+    class CalcContext:
+        type: _PricingType
+        result: HistoryResult = None
 
 
     def __init__(self, ctx = None, features = {}):
         super(HistoryPricing, self).__init__()
         self._ctx = ctx if ctx is not None else Context()
         self._features = features
+        self._data = None  # Calculation context used for pricing that can also be copied to the debug dict
 
-    def priceAsset(self, asset):
+    def __call__(self, asset, debug=None):
+        self._data = HistoryPricing.CalcContext(
+            type = _PricingType.create(asset)
+        )
+
+        if self._prepare(asset):
+            if self._data.type is _PricingType.Quantity:
+                self._data.result.value = self._priceAssetByQuantity(asset, self._data.result)
+            elif self._data.type is _PricingType.Quote:
+                self._data.result.value = self._priceAssetByQuote(asset, self._data.result)
+            elif self._data.type is _PricingType.Interest:
+                self._data.result.value = self._priceAssetByInterest(asset, self._data.result)
+
+            if 'investedValue' in self._features and self._features['investedValue']:
+                self._data.result.investedValue = self._getInvestedValue(asset)
+
+        if isinstance(debug, dict):
+            debug.update(asdict(self._data))
+
+        return self._data.result
+
+    def _prepare(self, asset):
         if 'operations' not in asset or not asset['operations']:
-            return HistoryPricing.Result.null(self._ctx.timeScale)
+            self._data.result = HistoryResult.null(self._ctx.timeScale)
+            return False
 
-        self._data = {}
-
-        result = self.Result(self._ctx.timeScale)
-        result.quantity = self._getAssetQuantity(asset)
-
-        if 'pricing' not in asset.keys():
-            result.value = self._getAssetQuantity(asset)
-        elif 'quoteId' in asset['pricing']:
-            result.value = self._priceAssetByQuote(asset, result)
-        elif 'interest' in asset['pricing']:
-            result.value = self._priceAssetByInterest(asset, result)
-        else:
-            raise NotImplementedError("Not implemented pricing scheme")
-
-        if 'investedValue' in self._features and self._features['investedValue']:
-            result.investedValue = self._getInvestedValue(asset)
-
-        return result
+        self._data.result = HistoryResult(self._ctx.timeScale)
+        self._data.result.quantity = self._getAssetQuantity(asset)
+        return True
 
     def _getAssetQuantity(self, asset):
         ops = asset['operations']
@@ -227,6 +241,15 @@ class HistoryPricing(object):
             result.append(value)
 
         return result
+
+    def _priceAssetByQuantity(self, asset, result):
+        currencyId = asset['currency']['quoteId'] if 'quoteId' in asset['currency'] else None
+
+        value = [a for a in result.quantity]
+        if currencyId:
+            value = [a * b for a, b in zip(value, self._ctx.getHistoricalById(currencyId))]
+
+        return value
 
     def _priceAssetByQuote(self, asset, result):
         quoteId = asset['pricing']['quoteId']
