@@ -112,7 +112,8 @@ $("form").validate({
         <div class="card-body">
           <div class="tab-content">
             <div class="tab-pane active" id="tab-listed">
-              <form method="post" action="">
+              <!-- The onkeypress is to supress Enter from submitting the form because it's used to accept the tagsinput -->
+              <form method="post" action="" onkeypress="return event.keyCode != 13;">
                 <div class="form-group">
                   <label for="f-link">Link to <a href="https://stooq.pl" target="_blank" rel="noopener noreferrer">stooq.pl</a>, <a href="https://www.biznesradar.pl/" target="_blank" rel="noopener noreferrer">biznesradar.pl</a>, <a href="https://pl.investing.com/" target="_blank" rel="noopener noreferrer">pl.investing.com</a> or <a href="https://www.marketwatch.com" target="_blank" rel="noopener noreferrer">marketwatch.com</a></label>
                   <div class="input-group">

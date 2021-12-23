@@ -31,16 +31,13 @@ class HeaderLastQuoteUpdate:
 @dataclass
 class HeaderData:
     showLabels : bool
-    allLabels : list
+    allLabels : list[str]
     lastQuoteUpdate : HeaderLastQuoteUpdate
 
     def __init__(self, showLabels = False):
         self.showLabels = showLabels
 
-        if self.showLabels:
-            self.allLabels = next(db.get_db().assets.aggregate(_allLabelsPipeline()))['label']
-        else:
-            self.allLabels = []
+        self.allLabels = next(db.get_db().assets.aggregate(_allLabelsPipeline()))['label']
 
         self.lastQuoteUpdate = HeaderLastQuoteUpdate()
 
