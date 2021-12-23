@@ -69,7 +69,8 @@ def _receiptGet():
             'trashed': {'$ne': True},
             'type': 'Deposit',
             'category': 'Cash',
-            'currency.name': {'$in': ['PLN', asset['currency']['name']]}
+            '_id': {'$ne': asset['_id']},
+            'currency.name': asset['currency']['name']
         }}
     ]))
 
