@@ -266,9 +266,9 @@
               </tr>
             </thead>
             <tbody>
-              {% for operation in asset.operations -%}
+              {% for operation in asset.operations | sort(attribute='date', reverse=True) -%}
               <tr>
-                <td>{{ loop.index }}</td>
+                <td>{{ asset.operations|length - loop.index + 1 }}</td>
                 <td>{{ operation.date }}</td>
                 <td>
                   <span class="badge bg-{{ 'danger' if operation.type == 'SELL' or operation.type == 'SPEND' else 'success' }}">
