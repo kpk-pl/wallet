@@ -3,13 +3,6 @@ import os
 from flaskr import typing
 
 
-def _filter_toJson(data, indent=2):
-    from bson.json_util import dumps, JSONOptions
-    opts = JSONOptions(datetime_representation=2, json_mode=1)
-    content = dumps(data, indent=indent, json_options=opts)
-    return content
-
-
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
 
@@ -47,13 +40,25 @@ def create_app(test_config=None):
     from flaskr.apps.pricing.views import pricing
     app.register_blueprint(pricing, url_prefix="/pricing")
 
-    app.jinja_env.filters['withSign'] = lambda x: '+'+str(x) if x > 0 else x
-    app.jinja_env.filters['toJson'] = _filter_toJson
+    @app.template_filter()
+    def withSign(value):
+        return '+' + str(value) if value > 0 else str(value)
 
-    def url_for_self(**args):
-        return url_for(request.endpoint, **dict(request.args, **args))
+    @app.template_filter()
+    def toJson(data, indent=2):
+        from bson.json_util import dumps, JSONOptions
+        opts = JSONOptions(datetime_representation=2, json_mode=1)
+        return dumps(data, indent=indent, json_options=opts)
 
-    app.jinja_env.globals['url_for_self'] = url_for_self
+    @app.template_filter()
+    def roundFixed(value, precision=2):
+        return '{0:.{1}f}'.format(round(value, precision), precision)
+
+    @app.context_processor
+    def urlProcessor():
+        def url_for_self(**args):
+            return url_for(request.endpoint, **dict(request.args, **args))
+        return dict(url_for_self=url_for_self);
 
     @app.context_processor
     def constants():
@@ -62,6 +67,5 @@ def create_app(test_config=None):
             currencyMainDecimals = typing.Currency.decimals
         )
 
-    print(app.url_map)
-
+    # print(app.url_map)
     return app

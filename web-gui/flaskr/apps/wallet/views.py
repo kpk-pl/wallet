@@ -6,8 +6,8 @@ wallet = Blueprint('wallet', __name__, template_folder='templates', static_folde
 
 @wallet.route("/", methods=['GET'])
 def index():
-    from .index import index
-    return index()
+    from .wallet import wallet
+    return wallet()
 
 
 @wallet.route('/strategy', methods=['GET'])

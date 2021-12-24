@@ -53,7 +53,7 @@ def _getPipeline(label = None):
     return pipeline
 
 
-def index():
+def wallet():
     if request.method == 'GET':
         session = Session(['label', 'debug'])
 
@@ -76,7 +76,7 @@ def index():
         categoryAnalyzer = Categories()
         categoryAllocation = categoryAnalyzer(assets)
 
-        return render_template("wallet/index.html",
+        return render_template("wallet/wallet.html",
                                assets=assets,
                                allocation=json.dumps(categoryAllocation),
                                header = header.data(showLabels = True))

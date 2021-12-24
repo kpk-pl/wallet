@@ -1,4 +1,4 @@
-function assetChangeSparklines(historicalData, months, getter) {
+function updateSparklines(historicalData, months, getter) {
   const options = {
     type: 'line',
     width: '100',

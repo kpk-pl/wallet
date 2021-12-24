@@ -21,200 +21,23 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js-plugin-labels/chartjs-plugin-labels.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js-plugin-colorschemes/chartjs-plugin-colorschemes.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery-sparkline/jquery.sparkline.min.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='strategyTable.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='categoryChart.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('.static', filename='wallet/sparklines.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/styling.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='wallet/categoryChart.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='wallet/strategyTable.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='wallet/wallet.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='wallet/wallet_strategy.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='wallet/wallet_historical.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='wallet/wallet_sparklines.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
 <script>
-  function colorGain() {
-    if ($(this).text().startsWith('-')) {
-      $(this).addClass('color-gain-negative')
-    } else {
-      $(this).addClass('color-gain-positive')
-    }
-  }
-  $('.color-gain').each(colorGain);
-</script>
-<script>
-  $(function () {
-    $('#openAssets').DataTable({
-      "paging": false,
-      "lengthChange": false,
-      "searching": true,
-      "ordering": true,
-      "order": [[8, "desc"]],
-      "info": false,
-      "autoWidth": false,
-      "responsive": true,
-      "buttons": [ "colvis" ],
-      "columnDefs": [
-        { "type": "string", "targets": [0, 1, 2, 3] },
-        { "type": "num-fmt", "targets": [4, 5, 6, 7, 8, 9] },
-        { "orderable": false, "targets": [] },
-        { "visible": false, "targets": [3, 4] },
-      ],
-    }).buttons().container().appendTo("#openAssets_wrapper .col-md-6:eq(0)");
-  });
-</script>
-<script>
   const categoryAllocation = JSON.parse({{ allocation | tojson }});
-  let categoryChart = new CategoryChart(categoryAllocation).makeChart(document.getElementById('allocationChart'))
-</script>
-<script type="text/javascript">
-  let strategyTable = null
-  $(function () {
-    strategyTable = $('#strategyTable').DataTable({
-      "paging": false,
-      "lengthChange": false,
-      "searching": false,
-      "ordering": false,
-      "order": [[1, "desc"]],
-      "info": false,
-      "autoWidth": false,
-      "responsive": false,
-      "columnDefs": [
-        { "type": "string", "targets": [0] },
-        { "type": "num-fmt", "className": "text-right", "targets": [1, 2, 4] },
-        { "type": "num-fmt", "className": "text-right color-gain", "targets": [3] }
-      ]
-    });
-    strategyTable = new StrategyTable(strategyTable, {
-      name: 0, share: 1,
-      netValue: {
-        column: 2,
-        format: x => x.toFixed(0)
-      },
-      deviation: {
-        column: 3,
-        format: x => (x > 0 ? '+' + x.toFixed(1) : x.toFixed(1))
-      },
-      requiredChange: {
-        column: 4,
-        format: x => (x > 0 ? '+' + x.toFixed(0) : x.toFixed(0))
-      }
-    });
 
+  $(function(){
     $.getJSON("{{ url_for('wallet.strategy', allocation='true', label=session['label']) | safe }}", updateStrategyAllocation);
+    $.getJSON("{{ url_for('assets.historicalValue', daysBack=180, label=session['label'], investedValue=true) | safe }}", historicalValueDone);
   });
-
-  function updateStrategyAllocation(data) {
-    strategyData = data
-
-    strategyTable.fillStrategy(data, function(assetType){
-      return [assetType.name,
-              String(assetType.percentage) + '%',
-              null,
-              null,
-              null]
-    })
-
-    strategyTable.fillAllocation(data)
-    strategyTable.updateDeviation(data)
-    $('#strategyTable td.color-gain').each(colorGain)
-  }
-</script>
-<script>
-  let assetAllocationCharts = Object.create(null);
-  for (let type of ['netpl', 'value', 'investment', 'share']) {
-    assetAllocationCharts[type] = new Chart(document.getElementById('assetAllocation_chart_' + type).getContext('2d'), {
-      type: 'line',
-      data: { labels: [], datasets: [] },
-      options: {
-        maintainAspectRatio: false,
-        responsive: true,
-        plugins: {
-          colorschemes: { scheme: (type == 'netpl' ? 'tableau.ColorBlind10' : 'tableau.MillerStone11'), fillAlpha: 1 }
-        },
-        hover: { mode: 'nearest' },
-        tooltips: {
-          enabled: true,
-        },
-        scales: {
-          xAxes: [{
-            type: 'time',
-            time: { unit: 'day', displayFormats: { day: 'D MMM YY' } }
-          }],
-          yAxes: [{
-            stacked: true,
-            scaleLabel: { display: true, labelString: (['netpl', 'share'].includes(type) ? '%' : 'PLN') }
-          }]
-        }
-      }
-    });
-  }
-
-  var historicalData;
-  function historicalValueDone(data) {
-    historicalData = data;
-    assetChangeSparklines(data, 3, asset => $('#sparkline-' + asset.id));
-    updateAllocationChart(data);
-  }
-
-  function updateAllocationChart(data){
-    for (let [type, chart] of Object.entries(assetAllocationCharts)) {
-      chart.data.labels = data.t
-    }
-
-    function category(asset) {
-      if (asset.subcategory)
-        return asset.category + ' ' + asset.subcategory;
-      return asset.category;
-    }
-
-    let mapping = Object.create(null);
-    let totals = {'value': new Array(data.t.length).fill(0), 'investment': new Array(data.t.length).fill(0)}
-    for (let asset of data.assets) {
-      const cat = category(asset);
-      if (cat in mapping) {
-        mapping[cat].value = mapping[cat].value.map((v, i) => v + asset.value[i]);
-        mapping[cat].investment = mapping[cat].investment.map((v, i) => v + asset.investedValue[i]);
-      } else {
-        mapping[cat] = {'value': asset.value, 'investment': asset.investedValue};
-      }
-
-      totals.value = totals.value.map((v, i) => v + asset.value[i]);
-      totals.investment = totals.investment.map((v, i) => v + asset.investedValue[i]);
-    }
-
-    for (let category in mapping) {
-      assetAllocationCharts.value.data.datasets.push({
-        data: mapping[category].value,
-        label: category,
-        cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
-      });
-      assetAllocationCharts.investment.data.datasets.push({
-        data: mapping[category].investment,
-        label: category,
-        cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
-      });
-      assetAllocationCharts.share.data.datasets.push({
-        data: mapping[category].value.map((v, i) => v/totals.value[i]*100),
-        label: category,
-        cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
-      });
-    }
-
-    function safeRatio(nom, denom) {
-      if (denom == 0)
-        return 0;
-      return nom/denom;
-    }
-
-    const netplAdjust = safeRatio(totals.value[0] - totals.investment[0], totals.investment[0]);
-    assetAllocationCharts.netpl.data.datasets.push({
-      data: totals.value.map((v, i) => (safeRatio(v - totals.investment[i], totals.investment[i]) - netplAdjust) * 100),
-      label: 'Net P/L',
-      cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
-    });
-
-    for (let [type, chart] of Object.entries(assetAllocationCharts)) {
-      chart.update();
-    }
-  }
-
-  $.getJSON("{{ url_for('assets.historicalValue', daysBack=180, label=session['label'], investedValue=true) | safe }}", historicalValueDone);
 </script>
 {% endblock %}
 
@@ -261,7 +84,7 @@
                     <i class="fas fa-fw fa-bug fa-pull-right"></i>
                   </a>
                   {%- endif -%}
-                  <a href="{{ url_for('assets.receipt', id=asset._id) }}" class="imagelink" title="Register buy or sell">
+                  <a href="{{ url_for('assets.receipt', id=asset._id) }}" class="imagelink" title="New operation">
                     <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
                   </a>
                 </td>
@@ -284,14 +107,14 @@
                   {%- endif -%}
                   </span>
                 </td>
-                <td class="text-right">{{ asset._stillInvestedNetValue | round(2) }}</td>
-                <td class="text-right">{{ asset._netValue | round(2) }}</td>
-                <td class="text-right">{{ (asset._netValue / totalNetValue * 100) | round(1) }}%</td>
+                <td class="text-right">{{ asset._stillInvestedNetValue | roundFixed(currencyMainDecimals) }}</td>
+                <td class="text-right">{{ asset._netValue | roundFixed(currencyMainDecimals) }}</td>
+                <td class="text-right">{{ (asset._netValue / totalNetValue * 100) | roundFixed(1) }}%</td>
                 <td class="text-right color-gain">
                   {%- if asset._stillInvestedNetValue > 0 -%}
-                  {{ ((asset._netValue - asset._stillInvestedNetValue) / asset._stillInvestedNetValue * 100) | round(2) }}
+                  {{ ((asset._netValue - asset._stillInvestedNetValue) / asset._stillInvestedNetValue * 100) | roundFixed(currencyMainDecimals) }}
                   {%- else -%}
-                  0
+                  {{ 0 | roundFixed(currencyMainDecimals) }}
                   {%- endif -%}
                 %</td>
               </tr>
@@ -305,14 +128,14 @@
                 <th></th>
                 <th></th>
                 <th></th>
-                <th class="text-right">{{ totalStillInvestedNetValue | round(2) }}</th>
-                <th class="text-right">{{ totalNetValue | round(2) }}</th>
+                <th class="text-right">{{ totalStillInvestedNetValue | roundFixed(currencyMainDecimals) }}</th>
+                <th class="text-right">{{ totalNetValue | roundFixed(currencyMainDecimals) }}</th>
                 <th class="text-right">100%</th>
                 <th class="text-right color-gain">
                   {%- if totalStillInvestedNetValue > 0 -%}
-                  {{ ((totalNetValue - totalStillInvestedNetValue) / totalStillInvestedNetValue * 100) | round(2) }}
+                  {{ ((totalNetValue - totalStillInvestedNetValue) / totalStillInvestedNetValue * 100) | roundFixed(currencyMainDecimals) }}
                   {%- else -%}
-                  0
+                  {{ 0 | roundFixed(currencyMainDecimals) }}
                   {%- endif -%}
                   %</th>
               </tr>
