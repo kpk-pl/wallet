@@ -16,6 +16,7 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/dataTables.buttons.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/buttons.bootstrap4.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/buttons.colVis.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/styling.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('.static', filename='wallet/strategyTable.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('.static', filename='wallet/strategy.js') }}"></script>
 {% endblock %}
@@ -43,10 +44,11 @@
                 <th>Category</th>
                 <th>Target</th>
                 <th>Constituents</th>
-                <th>Net value <span class="smaller">[PLN]</span></th>
-                <th>Adjustment <span class="smaller">[PLN]</span></th>
+                <th>Net value <span class="smaller">[{{ currencyMain }}]</span></th>
+                <th>Adjustment <span class="smaller">[{{ currencyMain }}]</span></th>
                 <th>Deviation</th>
-                <th>Required change <span class="smaller">[PLN]</span></th>
+                <th>Required change <span class="smaller">[{{ currencyMain }}]</span></th>
+                <th>Rebalancing change <span class="smaller">[{{ currencyMain }}]</span></th>
               </tr>
             </thead>
             <!--      <ul class="list-unstyled m-0">

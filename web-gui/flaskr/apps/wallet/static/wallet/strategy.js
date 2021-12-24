@@ -1,5 +1,4 @@
 var strategyTable;
-var strategyData;
 
 $(function () {
   let strategyTableElement = $('#strategyTable').DataTable({
@@ -14,7 +13,8 @@ $(function () {
     "buttons": [ "colvis" ],
     "columnDefs": [
       { "type": "string", "targets": [0, 2] },
-      { "type": "num-fmt", "className": "text-right", "targets": [1, 3, 5, 6] },
+      { "type": "num-fmt", "className": "text-right", "targets": [1, 3] },
+      { "type": "num-fmt", "className": "text-right color-gain", "targets": [5, 6, 7] },
       { "orderable": false, "targets": [2, 4] },
       { "visible": false, "targets": [2] },
     ],
@@ -27,24 +27,23 @@ $(function () {
     netAdjust: 4,
     netValue: {column: 3, format: x => x.toFixed(2)},
     deviation: {column: 5, format: x => (x > 0 ? '+'+x.toFixed(1) : x.toFixed(1))},
-    requiredChange: {column: 6, format: x => x.toFixed(2)}
+    requiredChange: {column: 6, format: x => x.toFixed(2)},
+    rebalancingChange: {column: 7, format: x => x.toFixed(2)}
   });
 });
 
 function updateStrategyAllocation(data) {
-  strategyData = data
-
   function makeList(array, tag='ul', classes=[]) {
-    let result = `<${tag} class="${classes.join(' ')}">`
+    let result = `<${tag} class="${classes.join(' ')}">`;
     for (let element of array) {
-      result += `<li>${element}</li>`
+      result += `<li>${element}</li>`;
     }
-    result += `</${tag}>`
-    return result
+    result += `</${tag}>`;
+    return result;
   }
 
   function makeAdjustmentInput() {
-    return '<input type="number" class="strategyTableDeviationInput form-control form-control-sm"></input>'
+    return '<input type="number" class="strategyTableDeviationInput form-control form-control-sm"></input>';
   }
 
   strategyTable.fillStrategy(data, function(assetType){
@@ -58,11 +57,13 @@ function updateStrategyAllocation(data) {
             null,
             makeAdjustmentInput(),
             null,
+            null,
             null]
-  })
+  });
 
-  strategyTable.fillAllocation(data)
-  strategyTable.updateDeviation(data)
+  strategyTable.fillAllocation(data);
+  strategyTable.updateDeviation(data);
 
+  $('#strategyTable td.color-gain').each(styling.colorGain)
   $(".strategyTableDeviationInput").change(()=>strategyTable.updateDeviation(data));
 }

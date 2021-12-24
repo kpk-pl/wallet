@@ -76,35 +76,32 @@ class StrategyTable {
     if (data.strategy == undefined)
       return;
 
-    let self = this
+    let self = this;
+    const netValueSum = data.strategy.assetTypes.map(t=>t.netValue).reduce((a,b)=>a+b);
 
-    const netValueSum = data.strategy.assetTypes.map(t=>t.netValue).reduce((a,b)=>a+b)
-
-    const adjustValue = function(rowIdx){
-      if ('netAdjust' in self.colMap)
+    function adjustValue(rowIdx) {
+      if (self.colMap.netAdjust)
         return Number(self.datatable.cell(rowIdx, self.colMap.netAdjust.column).node().getElementsByTagName('input')[0].value)
       return 0
     }
 
-    let netAdjustSum = 0
-    this.datatable.rows().every(function(rowIdx){
-      netAdjustSum += adjustValue(rowIdx)
-    })
+    const netAdjustSum = this.datatable.rows().reduce((acc, rowId) => acc + adjustValue(rowId), 0);
 
     this.datatable.rows().every(function(rowIdx){
-      let category = self.datatable.cell(rowIdx, self.colMap.name.column).data()
-      let assetType = data.strategy.assetTypes.find(type => type.name == category);
-      let value = assetType.netValue + adjustValue(rowIdx)
-      let percent = value / (netValueSum + netAdjustSum) * 100
-      let deviation = percent - assetType.percentage
-      self.datatable.cell(rowIdx, self.colMap.deviation.column).data(self.colMap.deviation.format(deviation) + '%')
+      const category = self.datatable.cell(rowIdx, self.colMap.name.column).data();
+      const assetType = data.strategy.assetTypes.find(type => type.name == category);
+      const value = assetType.netValue + adjustValue(rowIdx);
+      const percent = value / (netValueSum + netAdjustSum) * 100;
+      const deviation = percent - assetType.percentage;
+      self.datatable.cell(rowIdx, self.colMap.deviation.column).data(self.colMap.deviation.format(deviation) + '%');
 
-      let targetValue = (netValueSum + netAdjustSum) * assetType.percentage / 100
-      //let requiredChange = targetValue - value
-      let requiredChange = (targetValue - value) / (1-assetType.percentage/100)
-      self.datatable.cell(rowIdx, self.colMap.requiredChange.column).data(self.colMap.requiredChange.format(requiredChange))
+      const targetValue = (netValueSum + netAdjustSum) * assetType.percentage / 100;
+      const requiredChange = (targetValue - value) / (1-assetType.percentage/100);
+      self.datatable.cell(rowIdx, self.colMap.requiredChange.column).data(self.colMap.requiredChange.format(requiredChange));
+      if (self.colMap.rebalancingChange)
+        self.datatable.cell(rowIdx, self.colMap.rebalancingChange.column).data(self.colMap.requiredChange.format(targetValue - value));
     })
 
-    this.datatable.draw()
+    this.datatable.draw();
   }
 }
