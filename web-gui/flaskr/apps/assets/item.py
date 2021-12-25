@@ -50,4 +50,4 @@ def item():
             if quoteHistory:
                 asset['quoteHistory'] = quoteHistory[0]['quoteHistory']
 
-        return render_template("item.html", asset=asset, header=header.data())
+        return render_template("assets/item.html", asset=asset, header=header.data())

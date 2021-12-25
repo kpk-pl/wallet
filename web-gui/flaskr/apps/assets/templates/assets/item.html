@@ -6,8 +6,11 @@
 {% endblock %}
 
 {% block plugins_scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js.3/chart.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js/Chart.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js.3-adapter-moment/chartjs-adapter-moment.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='chartjs.defaults.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/item.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
@@ -22,80 +25,8 @@
 <script type="text/javascript">
   const data = {{ asset.quoteHistory | tojson }};
   const operations = {{ asset.operations | tojson }};
-  const operationsBuy = operations.filter(function(e){ return e.type == 'BUY'; })
-  const operationsSell = operations.filter(function(e){ return e.type == 'SELL'; })
-  var chart = new Chart(document.getElementById('chart').getContext('2d'), {
-    type: 'line',
-    data: {
-      datasets: [{
-        label: '{{ asset.name | safe }}',
-        cubicInterpolationMode: 'monotone',
-        pointRadius: 0,
-        data: data.map(function(e){ return {t: e.timestamp, y: e.quote}; }),
-        backgroundColor: 'rgba(0, 123, 255, 0.65)',
-        borderColor: 'rgba(0, 123, 255, 1)',
-        borderWidth: 2,
-        order: 1
-      }, {
-        label: 'buy',
-        pointRadius: 5,
-        showLine: false,
-        data: operationsBuy.map(function(e){ return {t: e.date, y: e.price/e.quantity}; }),
-        pointBackgroundColor: 'rgb(40, 167, 69)',
-        pointBorderColor: 'rgb(40, 167, 69)'
-      }, {
-        label: 'sell',
-        pointRadius: 5,
-        showLine: false,
-        data: operationsSell.map(function(e){ return {t: e.date, y: e.price/e.quantity}; }),
-        pointBackgroundColor: 'rgb(220, 53, 69)',
-        pointBorderColor: 'rgb(220, 53, 69)'
-      }]
-    },
-    options: {
-      maintainAspectRatio: false,
-      responsive: true,
-      scales: {
-        xAxes: [{
-          type: 'time',
-          time: {
-            unit: 'day',
-            displayFormats: {
-              day: 'D MMM YY'
-            }
-          }
-        }],
-        yAxes: [{
-          scaleLabel: {
-            display: true,
-            labelString: '{{ asset.currency }}'
-          }
-        }],
-      },
-      hover: {
-        mode: 'nearest'
-      },
-      legend: {
-        display: true,
-        labels: {
-          filter: function(legendItem, data) {
-            return legendItem.text != 'buy' && legendItem.text != 'sell';
-          }
-        }
-      },
-      tooltips: {
-        callbacks: {
-          label: function(tooltipItem, data) {
-            if (tooltipItem.datasetIndex == 0)
-              return tooltipItem.yLabel + " {{ asset.currency }}";
 
-            const op = tooltipItem.datasetIndex == 1 ? operationsBuy[tooltipItem.index] : operationsSell[tooltipItem.index]
-            return op.type + ' ' + op.quantity + ' @ ' + Number((op.price/op.quantity).toFixed(2)) + ' {{ asset.currency }}';
-          }
-        }
-      }
-    }
-  });
+  setupChart('{{ asset.name | safe }}', '{{ asset.currency }}', data, operations);
 </script>
 {% endif %}
 {% endblock %}

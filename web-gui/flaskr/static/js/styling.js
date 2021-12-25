@@ -7,7 +7,12 @@ const styling = function(){
     }
   }
 
+  function asCurrency(value, currency) {
+    return new Intl.NumberFormat(typing.locales, { style: 'currency', currency: currency }).format(value);
+  }
+
   return {
-    colorGain: colorGain
+    colorGain: colorGain,
+    asCurrency: asCurrency
   };
 }();

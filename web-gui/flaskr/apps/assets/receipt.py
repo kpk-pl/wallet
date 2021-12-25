@@ -74,7 +74,7 @@ def _receiptGet():
         }}
     ]))
 
-    return render_template("receipt.html", asset=asset, depositAccounts=depositAccounts, header=header.data())
+    return render_template("assets/receipt.html", asset=asset, depositAccounts=depositAccounts, header=header.data())
 
 
 def _makeOperation(asset):

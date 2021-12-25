@@ -36,7 +36,7 @@ def listAll():
         session = Session(['label', 'debug'])
         assets = list(db.get_db().assets.aggregate(_getPipeline(session.label())))
 
-        return render_template("list.html", assets=assets, header=header.data(showLabels = True))
+        return render_template("assets/list.html", assets=assets, header=header.data(showLabels = True))
 
     elif request.method == 'POST':
         data = {}

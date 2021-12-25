@@ -1,7 +1,7 @@
 from flask import Blueprint, request
 
 
-assets = Blueprint('assets', __name__, template_folder='templates/assets')
+assets = Blueprint('assets', __name__, template_folder='templates', static_folder='static')
 
 @assets.route("/", methods=['GET', 'POST'])
 def index():
