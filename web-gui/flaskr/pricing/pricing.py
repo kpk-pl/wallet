@@ -137,8 +137,8 @@ class Pricing(object):
             if operation['type'] == 'BUY':
                 quoting = ParametrizedQuoting(asset['pricing'], operation['date'], self._ctx.finalDate)
                 self._data.value += operation['price'] * quoting.getKeyPoints()[-1].multiplier
-            elif operation['type'] == 'SELL':
-                raise NotImplementedError("Did not implement SELL operation")
+            else:
+                raise NotImplementedError("Did not implement {} operation" % (operation['type']))
 
         self._data.netValue = self._data.value
 
@@ -272,7 +272,7 @@ class HistoryPricing(object):
                 quoteHistory = list(map(lambda kp: {'timestamp': kp.timestamp, 'quote': operation['price'] * kp.multiplier}, quoting.getKeyPoints()))
                 quotes = interp(quoteHistory, self._ctx.timeScale, leftFill = 0.0)
                 value = [a + b['quote'] for a, b in zip(value, quotes)]
-            elif operation['type'] == 'SELL':
-                raise NotImplementedError("Did not implement SELL operation")
+            else:
+                raise NotImplementedError("Did not implement {} operation" % (operation['type']))
 
         return value

@@ -54,6 +54,10 @@ def create_app(test_config=None):
     def roundFixed(value, precision=2):
         return '{0:.{1}f}'.format(round(value, precision), precision)
 
+    @app.template_filter()
+    def operationDisplayString(operation, assetType):
+        return typing.Operation.displayString(operation, assetType)
+
     @app.context_processor
     def urlProcessor():
         def url_for_self(**args):

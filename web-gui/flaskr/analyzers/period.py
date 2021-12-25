@@ -69,6 +69,9 @@ class Period(object):
             stats['profits']['total'] -= _operationNetValue(operation)
         elif operation['type'] == 'SELL':
             stats['profits']['total'] += _operationNetValue(operation)
+        else:
+            raise NotImplementedError("Did not implement period for operation type {}" % (operation['type']))
+
 
         if 'profits' in operation['_stats']:
             stats['profits']['netValue'] += operation['_stats']['profits']['netValue']

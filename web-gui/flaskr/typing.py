@@ -2,6 +2,8 @@ class Operation:
     class Type:
         buy = 'BUY'
         sell = 'SELL'
+        receive = 'RECEIVE'
+        earning = 'EARNING'
 
         @staticmethod
         def reverse(op):
@@ -10,7 +12,7 @@ class Operation:
             if op == Operation.Type.sell:
                 return Operation.Type.buy
 
-            raise RuntimeError("Invalid operation code provided")
+            raise RuntimeError(f"Cannot reverse operation {op}")
 
     @staticmethod
     def adjustQuantity(op, initial, adjustment):
@@ -18,8 +20,25 @@ class Operation:
             return initial + adjustment
         if op == Operation.Type.sell:
             return initial - adjustment
+        if op == Operation.Type.receive:
+            return initial + adjustment
+        if op == Operation.Type.earning:
+            return initial
 
-        raise RuntimeError("Invalid operation code provided")
+        raise RuntimeError(f"Cannot adjust operation {op}")
+
+    @staticmethod
+    def displayString(op, assetType):
+        if assetType == 'Deposit':
+            if op == Operation.Type.buy:
+                return 'ADD'
+            if op == Operation.Type.sell:
+                return 'SPEND'
+        elif assetType == 'Equity':
+            if op == Operation.Type.earning:
+                return 'DIVIDEND'
+
+        return op
 
 
 class Currency:

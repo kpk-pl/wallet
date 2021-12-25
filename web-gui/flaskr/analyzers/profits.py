@@ -30,6 +30,8 @@ class Profits(object):
                     self._buy(operation)
                 elif operation['type'] == 'SELL':
                     self._sell(operation)
+                else:
+                    raise NotImplementedError("Did not implement profits for operation type {}" % (operation['type']))
 
                 stats = operation['_stats']
                 stats['averagePrice'] = self.averagePrice

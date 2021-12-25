@@ -187,7 +187,7 @@
         <div class="card-body">
           {%- if not asset.trashed %}
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('assets.receipt', id=asset._id) }}'">
-            <i class="fa fa-shopping-cart"></i> {{ 'Add or spend' if asset.type == 'Deposit' else 'Buy or sell' }}
+            <i class="fa fa-shopping-cart"></i> Record operation
           </button>
           {%- endif %}
 
@@ -272,11 +272,7 @@
                 <td>{{ operation.date }}</td>
                 <td>
                   <span class="badge bg-{{ 'danger' if operation.type == 'SELL' or operation.type == 'SPEND' else 'success' }}">
-                    {%- if asset.type == 'Deposit' %}
-                    {{ 'ADD' if operation.type == 'BUY' else 'SPEND' }}
-                    {%- else %}
-                    {{ operation.type }}
-                    {%- endif %}
+                    {{ operation.type | operationDisplayString(asset.type) }}
                   </span>
                 </td>
                 <td>{{ operation.quantity }}</td>
