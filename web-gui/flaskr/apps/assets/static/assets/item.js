@@ -1,10 +1,9 @@
 function setupChart(name, currency, data, operations) {
-  let types = Object.create(null);
-  types = {
-    'BUY': { color: 'rgb(40, 167, 69)', operations: [] },
-    'SELL': { color: 'rgb(220, 53, 69)', operations: [] },
-    'RECEIVE': { color: 'rgb(3, 198, 107)', operations: [] },
-    'EARNING': { color: 'rgb(3, 20, 198)', operations: [] }
+  let types = {
+    BUY: { color: 'rgb(40, 167, 69)', operations: [] },
+    SELL: { color: 'rgb(220, 53, 69)', operations: [] },
+    RECEIVE: { color: 'rgb(3, 198, 107)', operations: [] },
+    EARNING: { color: 'rgb(3, 20, 198)', operations: [] }
   };
 
   operations.forEach(op => types[op.type].operations.push(op));
