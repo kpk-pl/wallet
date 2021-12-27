@@ -78,8 +78,23 @@ $(function(){
   });
 
   $("#f-type").change(function(){
+    const type = $(this).val();
+
     updateQuantityAfter();
-    $("#f-quan-all").attr('disabled', $(this).val() != "SELL");
+
+    $("#f-quan-all").attr('disabled', type != "SELL");
+
+    $("#g-provision").attr('hidden', type == "RECEIVE");
+    $("#g-cost").attr('hidden', type == "RECEIVE");
+    $("#g-billing-asset").attr('hidden', type == "RECEIVE");
+
+    $("#g-quantity").attr('hidden', type == "EARNING");
+    $("#g-quantity-after").attr('hidden', type == "EARNING");
+    $("#g-conversion").attr('hidden', type == "EARNING");
+    $("#g-price").attr('hidden', type == "EARNING");
+    $("#g-unit-price").attr('hidden', type == "EARNING");
+
+    $("#g-earning").attr('hidden', type != "EARNING");
   });
 
   $("#f-price").on('input', function(){
@@ -108,24 +123,33 @@ $(function(){
   function updateCost() {
     const provision = $("#f-provision");
     const conversion = $("#f-conversion");
+    const earning = $("#f-earning");
     const type = $("#f-type");
     const price = formConst != 'Deposit' ? $("#f-price") : $("#f-quantity");
 
-    if (type.valid() && price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
-      const netPrice = utils.float.parse(conversion, 1.0) * utils.float.parse(price);
+    if (!type.valid())
+      return;
 
-      const cost = function(){
-        if (type.val() == "BUY")
-          return netPrice + utils.float.parse(provision);
-        if (type.val() == "SELL")
-          return netPrice - utils.float.parse(provision);
-        if (type.val() == "RECEIVE")
-          throw "Did not implement RECEIVE";
-        if (type.val() == "EARNING")
-          throw "Did not implement EARNING";
-      }();
-
-      $("#f-cost").val(styling.asCurrencyNumber(cost, formConst.currency)).valid();
+    if (type.val() == "BUY") {
+      if (price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
+        const cost = utils.float.parse(conversion, 1.0) * utils.float.parse(price) + utils.float.parse(provision);
+        $("#f-cost").val(styling.asCurrencyNumber(cost, formConst.currency)).valid();
+      }
+    }
+    else if (type.val() == "SELL") {
+      if (price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
+        const cost = utils.float.parse(conversion, 1.0) * utils.float.parse(price) - utils.float.parse(provision);
+        $("#f-cost").val(styling.asCurrencyNumber(cost, formConst.currency)).valid();
+      }
+    }
+    else if (type.val() == "RECEIVE") {
+      $("#f-cost").val(styling.asCurrencyNumber(0, formConst.currency)).valid();
+    }
+    else if (type.val() == "EARNING") {
+      if (earning.valid() && provision.valid()) {
+        const cost = utils.float.parse(earning) - utils.float.parse(provision);
+        $("#f-cost").val(styling.asCurrencyNumber(cost, formConst.currency)).valid();
+      }
     }
   }
 
@@ -134,4 +158,5 @@ $(function(){
   $("#f-quantity").on('input', updateCost);
   $("#f-price").on('input', updateCost);
   $("#f-unit-price").on('input', updateCost);
+  $("#f-earning").on('input', updateCost);
 });

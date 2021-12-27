@@ -117,7 +117,7 @@ $(function(){
             </div>
             <div class="row">
               <div class="col-6">
-                <div class="form-group">
+                <div class="form-group" id="g-quantity">
                   <label for="f-quantity">{{ 'Value' if asset.type == 'Deposit' else 'Volume' }}</label>
                   <div class="input-group">
                     {%- if asset.type == 'Deposit' %}
@@ -134,7 +134,7 @@ $(function(){
                 </div>
               </div>
               <div class="col-6">
-                <div class="form-group">
+                <div class="form-group" id="g-quantity-after">
                   <label for="f-quantity-after">{{ 'Value' if asset.type == 'Deposit' else 'Volume' }} after operation</label>
                   <div class="input-group">
                     {%- if asset.type == 'Deposit' %}
@@ -151,7 +151,7 @@ $(function(){
             {%- if asset.type != 'Deposit' %}
             <div class="row">
               <div class="col-6">
-                <div class="form-group">
+                <div class="form-group" id="g-unit-price">
                   <label for="f-unit-price">Unit price</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
@@ -162,7 +162,7 @@ $(function(){
                 </div>
               </div>
               <div class="col-6">
-                <div class="form-group">
+                <div class="form-group" id="g-price">
                   <label for="f-price">Assets value</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
@@ -175,41 +175,54 @@ $(function(){
             </div>
             {%- endif %}
 
-            {% if asset.currency.name != 'PLN' -%}
+            {% if asset.currency.name != currencyMain -%}
             <div class="row">
               <div class="col-12">
-                <div class="form-group">
-                  <label for="f-conversion">Currency rate {{ asset.currency.name }}/PLN</label>
-                  <input type="number" value="{{ asset.lastCurrencyRate if asset.lastCurrencyRate else 0 }}" step="any" id="f-conversion" class="form-control" name="currencyConversion" value="1" required/>
+                <div class="form-group" id="g-conversion">
+                  <label for="f-conversion">Currency rate {{ asset.currency.name }}/{{ currencyMain }}</label>
+                  <input type="number" value="{{ asset.lastCurrencyRate if asset.lastCurrencyRate else 0 }}" step="any" id="f-conversion" class="form-control" name="currencyConversion" required/>
                 </div>
               </div>
             </div>
             {%- endif %}
             <div class="row">
+              <div class="col-12">
+                <div class="form-group" id="g-earning" hidden>
+                  <label for="f-earning">Earning</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">{{ currencyMain }}</span>
+                    </div>
+                    <input type="number" min="0" step="0.01" data-number-to-fixed="2" data-number-stepfactor="100" id="f-earning" class="form-control" name="earning" required/>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
               <div class="col-6">
-                <div class="form-group">
+                <div class="form-group" id="g-provision">
                   <label for="f-provision">Provision and tax</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
-                      <span class="input-group-text">PLN</span>
+                      <span class="input-group-text">{{ currencyMain }}</span>
                     </div>
                     <input type="number" min="0" step="0.01" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-provision" name="provision" />
                   </div>
                 </div>
               </div>
               <div class="col-6">
-                <div class="form-group">
+                <div class="form-group" id="g-cost">
                   <label for="f-cost">{{ 'Deposit value' if asset.type == 'Deposit' else 'Payable amount' }}</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
-                      <span class="input-group-text">PLN</span>
+                      <span class="input-group-text">{{ currencyMain }}</span>
                     </div>
                     <input type="number" class="form-control" id="f-cost" name="cost" disabled="disabled" value="0" />
                   </div>
                 </div>
               </div>
               <div class="col-12">
-                <div class="form-group">
+                <div class="form-group" id="g-billing-asset">
                   <label for="f-billing-asset">Billing asset acount</label>
                   <select id="f-billing-asset" name="billingAsset" class="custom-select">
                     <option value="" hidden disabled selected value></option>
