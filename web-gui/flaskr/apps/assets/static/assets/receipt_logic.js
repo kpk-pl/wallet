@@ -9,11 +9,11 @@ var formState = {
   }
 };
 
-function setupForm(initQuantity, currency, currencyDecimals) {
+function setupForm(initQuantity, currency, type) {
   formConst = {
     initQuantity: initQuantity,
     currency: currency,
-    currencyDecimals: currencyDecimals
+    type: type,
   };
 
   $("#f-date").val(function(d){
@@ -22,7 +22,8 @@ function setupForm(initQuantity, currency, currencyDecimals) {
   }(new Date()));
 }
 
-  function updateQuantity() {
+$(function(){
+  function updateQuantityAfter() {
     const quantity = $("#f-quantity");
     if (quantity.valid()) {
       const type = $("#f-type").val();
@@ -33,73 +34,104 @@ function setupForm(initQuantity, currency, currencyDecimals) {
                             .valid();
     }
   }
+  function updateQuantity() {
+    const unitPrice = $("#f-unit-price");
+    const price = $("#f-price");
+    if (!unitPrice.valid() || !price.valid())
+      return;
 
-  $("#f-quantity").on('input', updateQuantity)
-  $("#f-type").change(updateQuantity)
-  $("#f-type").change(() => $("#f-quan-all").attr('disabled', $(this).val() != "SELL"))
+    $("#f-quantity").val(utils.float.normalize(utils.float.parse(price) / utils.float.parse(unitPrice))).valid();
+  }
+  function updatePrice() {
+    const unitPrice = $("#f-unit-price");
+    const quantity = $("#f-quantity");
+    if (!quantity.valid() || !unitPrice.valid())
+      return;
 
-  function updateCost() {
-    const provision = $("#f-provision")
-    const conversion = $("#f-conversion")
-    const type = $("#f-type").val()
+    $("#f-price").val(utils.float.normalize(utils.float.parse(unitPrice) * utils.float.parse(quantity))).valid();
 
-    let price = $("#f-price")
-    if (!price.length) {
-      price = $("#f-quantity")
-    }
+  }
+  function updateUnitPrice() {
+    const price = $("#f-price");
+    const quantity = $("#f-quantity");
+    if (!quantity.valid() || !price.valid())
+      return;
 
-    if (price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
-      let cost = utils.float.parse(conversion, 1.0) * utils.float.parse(price)
-      cost += (type == "ADD" ? 1 : -1) * utils.float.parse(provision)
+    $("#f-unit-price").val(utils.float.normalize(utils.float.parse(price) / utils.float.parse(quantity))).valid();
+  }
+  function quantityChanged() {
+    updateQuantityAfter();
 
-      $("#f-cost").val(cost.toFixed(formConst.currencyDecimals)).valid()
-    }
+    if (formState.updated.price)
+      updateUnitPrice();
+    else
+      updatePrice();
   }
 
+  $("#f-quantity").on('focus', function(){
+    if (!formState.updated.volume)
+      $(this).val('');
+  });
+  $("#f-quantity").on('input', function(){
+    formState.updated.volume = true;
+    quantityChanged();
+  });
+
+  $("#f-type").change(function(){
+    updateQuantityAfter();
+    $("#f-quan-all").attr('disabled', $(this).val() != "SELL");
+  });
+
   $("#f-price").on('input', function(){
-    const quantity = $("#f-quantity");
-    const price = $(this);
-    if (quantity.valid() && price.valid()) {
-      $("#f-unit-price").val((utils.float.parse(price) / utils.float.parse(quantity)).toFixed(formConst.currencyDecimals)).valid();
-    }
+    formState.updated.price = true;
+
+    if (!formState.updated.quantity)
+      updateQuantity();
+    else
+      updateUnitPrice();
   });
 
   $("#f-unit-price").on('input', function(){
-    const quantity = $("#f-quantity");
-    const unitprice = $(this);
-    if (quantity.valid() && unitprice.valid()) {
-      $("#f-price").val((utils.float.parse(unitprice) * utils.float.parse(quantity)).toFixed(formConst.currencyDecimals)).valid();
-    }
+    formState.updated.unitPrice = true;
+
+    if (formState.updated.price)
+      updateQuantity();
+    else
+      updatePrice();
   });
-
-  function updatePrices() {
-    const quantity = $("#f-quantity");
-    if (!quantity.valid())
-      return;
-
-    const price = $("#f-price");
-    const unitprice = $("#f-unit-price");
-    if (!price.length || !unitprice.length) {
-      return;
-    }
-
-    if (price.valid()) {
-      unitprice.val((utils.float.parse(price) / utils.float.parse(quantity)).toFixed(formConst.currencyDecimals)).valid();
-    } else if (unitprice.valid()) {
-      price.val((utils.float.parse(unitprice) * utils.float.parse(quantity)).toFixed(formConst.currencyDecimals)).valid();
-    }
-  }
-
-  $("#f-quantity").on('input', updatePrices);
 
   $("#f-quan-all").click(function(){
     $("#f-quantity").val(formConst.initQuantity)
-    updateQuantity();
-    updatePrices();
-  })
+    quantityChanged();
+  });
 
-  $("#f-provision").on('input', updateCost)
-  $("#f-conversion").on('input', updateCost)
-  $("#f-quantity").on('input', updateCost)
-  $("#f-price").on('input', updateCost)
-  $("#f-unit-price").on('input', updateCost)
+  function updateCost() {
+    const provision = $("#f-provision");
+    const conversion = $("#f-conversion");
+    const type = $("#f-type");
+    const price = formConst != 'Deposit' ? $("#f-price") : $("#f-quantity");
+
+    if (type.valid() && price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
+      const netPrice = utils.float.parse(conversion, 1.0) * utils.float.parse(price);
+
+      const cost = function(){
+        if (type.val() == "BUY")
+          return netPrice + utils.float.parse(provision);
+        if (type.val() == "SELL")
+          return netPrice - utils.float.parse(provision);
+        if (type.val() == "RECEIVE")
+          throw "Did not implement RECEIVE";
+        if (type.val() == "EARNING")
+          throw "Did not implement EARNING";
+      }();
+
+      $("#f-cost").val(styling.asCurrencyNumber(cost, formConst.currency)).valid();
+    }
+  }
+
+  $("#f-provision").on('input', updateCost);
+  $("#f-conversion").on('input', updateCost);
+  $("#f-quantity").on('input', updateCost);
+  $("#f-price").on('input', updateCost);
+  $("#f-unit-price").on('input', updateCost);
+});

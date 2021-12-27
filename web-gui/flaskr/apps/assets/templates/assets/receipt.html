@@ -18,7 +18,7 @@
 {% block user_scripts %}
 <script type="text/javascript">
 $(function(){
-  setupForm({{ asset.finalQuantity | default(0) }}, '{{ asset.currency.name }}', {{ currencyMainDecimals }});
+  setupForm({{ asset.finalQuantity | default(0) }}, '{{ asset.currency.name }}', '{{ asset.type }}');
 
   $.validator.setDefaults({
     submitHandler: function() {
@@ -136,7 +136,14 @@ $(function(){
               <div class="col-6">
                 <div class="form-group">
                   <label for="f-quantity-after">{{ 'Value' if asset.type == 'Deposit' else 'Volume' }} after operation</label>
-                  <input type="text" id="f-quantity-after" name="finalQuantity" class="form-control" disabled="disabled" value="{{ asset.finalQuantity }}" data-lpignore="true"/>
+                  <div class="input-group">
+                    {%- if asset.type == 'Deposit' %}
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">{{ asset.currency.name }}</span>
+                    </div>
+                    {%- endif %}
+                    <input type="text" id="f-quantity-after" name="finalQuantity" class="form-control" disabled="disabled" value="{{ asset.finalQuantity }}" data-lpignore="true"/>
+                  </div>
                 </div>
               </div>
             </div>
