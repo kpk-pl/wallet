@@ -38,6 +38,7 @@ def _receiptGet():
             'currency': 1,
             'labels': 1,
             'link': 1,
+            'codes': 1,
             'finalQuantity': { '$last': '$operations.finalQuantity' }
         }}
     ]

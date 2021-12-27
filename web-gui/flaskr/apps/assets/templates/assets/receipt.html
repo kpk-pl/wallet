@@ -11,110 +11,15 @@
 <script type="text/javascript" src="{{ url_for('static', filename='jquery.validate.methods.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/receipt.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/receipt_logic.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
 <script type="text/javascript">
-$(function () {
-  $('#f-date-group').datetimepicker({
-    locale: 'pl',
-    format: 'YYYY-MM-DD HH:mm:ss',
-  });
-})
-</script>
-<script type="text/javascript">
-$(document).ready(function(){
-  function formatDate(d) {
-    return d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2) + " " +
-      ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2) + ":" + ("0" + d.getSeconds()).slice(-2);
-  }
-  $("#f-date").val(formatDate(new Date()))
+$(function(){
+  setupForm({{ asset.finalQuantity | default(0) }}, '{{ asset.currency.name }}', {{ currencyMainDecimals }});
 
-  function updateQuantity() {
-    const quantity = $("#f-quantity");
-    if (quantity.valid()) {
-      const type = $("#f-type").val();
-      const multiplier = (type == "SELL" ? -1 : 1);
-      const quantityAfter = utils.float.parse(quantity) * multiplier + {{ asset.finalQuantity if asset.finalQuantity else 0 }};
-
-      $("#f-quantity-after").val(utils.float.normalize(quantityAfter))
-                            .valid();
-    }
-  }
-
-  $("#f-quantity").on('input', updateQuantity)
-  $("#f-type").change(updateQuantity)
-  $("#f-type").change(() => $("#f-quan-all").attr('disabled', $(this).val() != "SELL"))
-
-  function updateCost() {
-    const provision = $("#f-provision")
-    const conversion = $("#f-conversion")
-    const type = $("#f-type").val()
-
-    let price = $("#f-price")
-    if (!price.length) {
-      price = $("#f-quantity")
-    }
-
-    if (price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
-      let cost = utils.float.parse(conversion, 1.0) * utils.float.parse(price)
-      cost += (type == "ADD" ? 1 : -1) * utils.float.parse(provision)
-
-      $("#f-cost").val(cost.toFixed({{ currencyMainDecimals }})).valid()
-    }
-  }
-
-  $("#f-price").on('input', function(){
-    const quantity = $("#f-quantity");
-    const price = $(this);
-    if (quantity.valid() && price.valid()) {
-      $("#f-unit-price").val((utils.float.parse(price) / utils.float.parse(quantity)).toFixed({{ currencyMainDecimals }})).valid();
-    }
-  });
-
-  $("#f-unit-price").on('input', function(){
-    const quantity = $("#f-quantity");
-    const unitprice = $(this);
-    if (quantity.valid() && unitprice.valid()) {
-      $("#f-price").val((utils.float.parse(unitprice) * utils.float.parse(quantity)).toFixed({{ currencyMainDecimals }})).valid();
-    }
-  });
-
-  function updatePrices() {
-    const quantity = $("#f-quantity");
-    if (!quantity.valid())
-      return;
-
-    const price = $("#f-price");
-    const unitprice = $("#f-unit-price");
-    if (!price.length || !unitprice.length) {
-      return;
-    }
-
-    if (price.valid()) {
-      unitprice.val((utils.float.parse(price) / utils.float.parse(quantity)).toFixed({{ currencyMainDecimals }})).valid();
-    } else if (unitprice.valid()) {
-      price.val((utils.float.parse(unitprice) * utils.float.parse(quantity)).toFixed({{ currencyMainDecimals }})).valid();
-    }
-  }
-
-  $("#f-quantity").on('input', updatePrices);
-
-  $("#f-quan-all").click(function(){
-    $("#f-quantity").val({{ asset.finalQuantity }})
-    updateQuantity();
-    updatePrices();
-  })
-
-  $("#f-provision").on('input', updateCost)
-  $("#f-conversion").on('input', updateCost)
-  $("#f-quantity").on('input', updateCost)
-  $("#f-price").on('input', updateCost)
-  $("#f-unit-price").on('input', updateCost)
-})
-</script>
-<script type="text/javascript">
-$(document).ready(function(){
   $.validator.setDefaults({
     submitHandler: function() {
       $("#f-quantity-after").removeAttr('disabled');
@@ -122,33 +27,6 @@ $(document).ready(function(){
         $(location).attr("href", "{{ url_for('assets.index', id=asset._id) }}");
       });
     }
-  });
-  $("form").validate({
-    rules: {
-      date: {
-        isDate: true
-      },
-      currencyConversion: {
-        greaterThan: 0
-      },
-      price: {
-        greaterThan: 0
-      },
-      quantity: {
-        greaterThan: 0
-      }
-    },
-    errorElement: 'span',
-    errorPlacement: function (error, element) {
-            error.addClass('invalid-feedback');
-            element.closest('.form-group').append(error);
-    },
-    highlight: function (element, errorClass, validClass) {
-            $(element).addClass('is-invalid');
-    },
-    unhighlight: function (element, errorClass, validClass) {
-            $(element).removeClass('is-invalid');
-    },
   });
 });
 </script>
@@ -218,10 +96,12 @@ $(document).ready(function(){
                 </div>
               </div>
               <div class="col-4">
+                {%- if asset.codes %}
                 <div class="form-group">
                   <label for="f-code">Code</label>
-                  <input type="text" id="f-code" name="code" class="form-control" data-lpignore="true"/>
+                  <input type="text" id="f-code" name="code" required class="form-control" data-lpignore="true"/>
                 </div>
+                {% endif %}
               </div>
               <div class="col-4">
                 <div class="form-group">
