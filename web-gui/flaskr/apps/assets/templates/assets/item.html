@@ -202,7 +202,7 @@
                 <td>{{ asset.operations|length - loop.index + 1 }}</td>
                 <td>{{ operation.date }}</td>
                 <td>
-                  <span class="badge bg-{{ 'danger' if operation.type == 'SELL' or operation.type == 'SPEND' else 'success' }}">
+                  <span class="badge badge-info badge-op-{{ operation.type }}">
                     {{ operation.type | operationDisplayString(asset.type) }}
                   </span>
                 </td>

@@ -1,10 +1,13 @@
+$(function(){
+  for (let type of typing.operationTypes) {
+    $(`.badge-op-${type}`).css('background-color', styling.operationColor(type));
+  }
+});
+
 function setupChart(name, currency, data, operations) {
-  let types = {
-    BUY: { color: 'rgb(40, 167, 69)', operations: [] },
-    SELL: { color: 'rgb(220, 53, 69)', operations: [] },
-    RECEIVE: { color: 'rgb(3, 198, 107)', operations: [] },
-    EARNING: { color: 'rgb(3, 20, 198)', operations: [] }
-  };
+  let types = {};
+  for (let type of typing.operationTypes)
+    types[type] = { operations: [] };
 
   operations.forEach(op => types[op.type].operations.push(op));
 
@@ -64,8 +67,8 @@ function setupChart(name, currency, data, operations) {
       parsing: { xAxisKey: 't', yAxisKey: 'y' },
       pointRadius: 4,
       showLine: false,
-      pointBackgroundColor: types[type].color,
-      pointBorderColor: types[type].color
+      pointBackgroundColor: styling.operationColor(type),
+      pointBorderColor: styling.operationColor(type)
     });
   }
 

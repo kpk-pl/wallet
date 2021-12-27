@@ -1,6 +1,6 @@
 "use strict";
 
-var formConst;
+var formSettings;
 var formState = {
   updated: {
     price: false,
@@ -9,17 +9,39 @@ var formState = {
   }
 };
 
-function setupForm(initQuantity, currency, type) {
-  formConst = {
-    initQuantity: initQuantity,
-    currency: currency,
-    type: type,
-  };
+function setupForm(settings) {
+  formSettings = settings;
 
   $("#f-date").val(function(d){
     return d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2) + " " +
       ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2) + ":" + ("0" + d.getSeconds()).slice(-2);
   }(new Date()));
+
+  $("form").validate({
+    submitHandler: function(){
+      $.post(formSettings.submitUrl, $('form').serialize(), function(data) {
+        $(location).attr("href", formSettings.nextUrl);
+      });
+    },
+    rules: {
+      date: { isDate: true },
+      currencyConversion: { greaterThan: 0 },
+      price: { greaterThan: 0 },
+      quantity: { greaterThan: 0 },
+      finalQuantity: { greaterThan: 0 },
+    },
+    errorElement: 'span',
+    errorPlacement: function (error, element) {
+            error.addClass('invalid-feedback');
+            element.closest('.form-group').append(error);
+    },
+    highlight: function (element, errorClass, validClass) {
+            $(element).addClass('is-invalid');
+    },
+    unhighlight: function (element, errorClass, validClass) {
+            $(element).removeClass('is-invalid');
+    },
+  });
 }
 
 $(function(){
@@ -28,7 +50,7 @@ $(function(){
     if (quantity.valid()) {
       const type = $("#f-type").val();
       const multiplier = (type == "SELL" ? -1 : 1);
-      const quantityAfter = utils.float.parse(quantity) * multiplier + formConst.initQuantity;
+      const quantityAfter = utils.float.parse(quantity) * multiplier + formSettings.initQuantity;
 
       $("#f-quantity-after").val(utils.float.normalize(quantityAfter))
                             .valid();
@@ -85,7 +107,6 @@ $(function(){
     $("#f-quan-all").attr('disabled', type != "SELL");
 
     $("#g-provision").attr('hidden', type == "RECEIVE");
-    $("#g-cost").attr('hidden', type == "RECEIVE");
     $("#g-billing-asset").attr('hidden', type == "RECEIVE");
 
     $("#g-quantity").attr('hidden', type == "EARNING");
@@ -116,7 +137,7 @@ $(function(){
   });
 
   $("#f-quan-all").click(function(){
-    $("#f-quantity").val(formConst.initQuantity)
+    $("#f-quantity").val(formSettings.initQuantity)
     quantityChanged();
   });
 
@@ -125,7 +146,7 @@ $(function(){
     const conversion = $("#f-conversion");
     const earning = $("#f-earning");
     const type = $("#f-type");
-    const price = formConst != 'Deposit' ? $("#f-price") : $("#f-quantity");
+    const price = formSettings != 'Deposit' ? $("#f-price") : $("#f-quantity");
 
     if (!type.valid())
       return;
@@ -133,22 +154,25 @@ $(function(){
     if (type.val() == "BUY") {
       if (price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
         const cost = utils.float.parse(conversion, 1.0) * utils.float.parse(price) + utils.float.parse(provision);
-        $("#f-cost").val(styling.asCurrencyNumber(cost, formConst.currency)).valid();
+        $("#f-cost").val(styling.asCurrencyNumber(cost, formSettings.currency)).valid();
       }
     }
     else if (type.val() == "SELL") {
       if (price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
         const cost = utils.float.parse(conversion, 1.0) * utils.float.parse(price) - utils.float.parse(provision);
-        $("#f-cost").val(styling.asCurrencyNumber(cost, formConst.currency)).valid();
+        $("#f-cost").val(styling.asCurrencyNumber(cost, formSettings.currency)).valid();
       }
     }
     else if (type.val() == "RECEIVE") {
-      $("#f-cost").val(styling.asCurrencyNumber(0, formConst.currency)).valid();
+      if (price.valid() && (!conversion.length || conversion.valid())) {
+        const cost = utils.float.parse(conversion, 1.0) * utils.float.parse(price);
+        $("#f-cost").val(styling.asCurrencyNumber(cost, formSettings.currency)).valid();
+      }
     }
     else if (type.val() == "EARNING") {
       if (earning.valid() && provision.valid()) {
         const cost = utils.float.parse(earning) - utils.float.parse(provision);
-        $("#f-cost").val(styling.asCurrencyNumber(cost, formConst.currency)).valid();
+        $("#f-cost").val(styling.asCurrencyNumber(cost, formSettings.currency)).valid();
       }
     }
   }

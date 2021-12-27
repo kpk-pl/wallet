@@ -39,7 +39,7 @@ def _receiptGet():
             'labels': 1,
             'link': 1,
             'codes': 1,
-            'finalQuantity': { '$last': '$operations.finalQuantity' }
+            'finalQuantity': { '$ifNull': [{ '$last': '$operations.finalQuantity' }, 0] }
         }}
     ]
 
@@ -57,7 +57,7 @@ def _receiptGet():
         if quote and 'lastQuote' in quote[0]:
             asset['lastQuote'] = quote[0]['lastQuote']
 
-    if asset['currency']['name'] != 'PLN':
+    if asset['currency']['name'] != typing.Currency.main:
         quote = list(db.get_db().quotes.aggregate([
             {'$match': {'_id': ObjectId(asset['currency']['quoteId'])}},
             {'$project': {'lastQuote': {'$last': '$quoteHistory.quote'}}}
@@ -79,31 +79,36 @@ def _receiptGet():
 
 
 def _makeOperation(asset):
+    def required(param):
+        if param not in request.form:
+            raise Exception(f"Missing required field {param}")
+        return request.form[param]
+
     operation = {
-        'date': parser.parse(request.form['date']),
-        'type': request.form['type'],
-        'quantity': _parseNumeric(request.form['quantity'])
+        'date': parser.parse(required("date")),
+        'type': required("type"),
+        'quantity': _parseNumeric(required("quantity"))
     }
 
     operation['finalQuantity'] = typing.Operation.adjustQuantity(operation['type'],
                                                                  asset['finalQuantity'],
                                                                  operation['quantity'])
 
-    if 'price' in request.form:
-        operation['price'] = float(request.form['price'])
-    else:
+    if operation['type'] == 'Deposit':
         operation['price'] = operation['quantity']  # for Deposit type, default unit price is 1
+    else:
+        operation['price'] = float(required("price"))
 
     if 'provision' in request.form:
         provision = _parseNumeric(request.form['provision'])
         if provision:
             operation['provision'] = provision
 
-    if 'currencyConversion' in request.form:
-        operation['currencyConversion'] = float(request.form['currencyConversion'])
+    if asset['currency']['name'] != typing.Currency.main:
+        operation['currencyConversion'] = float(required('currencyConversion'))
 
-    if 'code' in request.form and request.form['code']:
-        operation['code'] = request.form['code']
+    if asset['coded']:
+        operation['code'] = required('code')
 
     return operation
 
@@ -154,16 +159,17 @@ def _makeBillingOperation(asset, operation):
     return query, billingOperation
 
 
-def _receiptPost():
+def _receiptPost(session):
     query = {'_id': ObjectId(request.form['_id'])}
 
     assets = list(db.get_db().assets.aggregate([
         {'$match': query},
         {'$project': {
             'currency': 1,
+            'coded': { '$ifNull': ['$coded', False]},
             'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
         }}
-    ]))
+    ], session=session))
 
     if not assets:
         return ({"error": "Unknown asset id"}, 400)
@@ -176,15 +182,16 @@ def _receiptPost():
     if billingQuery and not billingOperation:
         return ({"error": "Could not resolve billing operation"}, 400)
 
-    db.get_db().assets.update(query, {'$push': {'operations': operation }})
+    db.get_db().assets.update_one(query, {'$push': {'operations': operation }}, session=session)
     if billingQuery:
-        db.get_db().assets.update(billingQuery, {'$push': {'operations': billingOperation }})
+        db.get_db().assets.update_one(billingQuery, {'$push': {'operations': billingOperation }}, session=session)
 
-    return ('', 204)
+    return ({"ok": True}, 200)
 
 
 def receipt():
     if request.method == 'GET':
         return _receiptGet()
     elif request.method == 'POST':
-        return _receiptPost()
+        with db.get_db().client.start_session() as session:
+            return session.with_transaction(_receiptPost)

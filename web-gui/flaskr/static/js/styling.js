@@ -17,9 +17,22 @@ const styling = function(){
     return parts.filter(p => supportedParts.indexOf(p.type) != -1).map(p => p.value).join('');
   }
 
+  function operationColor(type) {
+    if (type == 'BUY')
+      return 'rgb(40, 167, 69)';
+    if (type == 'SELL')
+      return 'rgb(220, 53, 69)';
+    if (type == 'RECEIVE')
+      return 'rgb(146, 198, 3)';
+    if (type == 'EARNING')
+      return 'rgb(3, 20, 198)';
+    return 'rgb(255, 255, 255)';
+  }
+
   return {
     colorGain: colorGain,
     asCurrency: asCurrency,
     asCurrencyNumber: asCurrencyNumber,
+    operationColor: operationColor,
   };
 }();

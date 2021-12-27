@@ -30,6 +30,8 @@ class Profits(object):
                     self._buy(operation)
                 elif operation['type'] == 'SELL':
                     self._sell(operation)
+                elif operation['type'] == 'RECEIVE':
+                    self._buy(operation)
                 else:
                     raise NotImplementedError("Did not implement profits for operation type {}" % (operation['type']))
 
