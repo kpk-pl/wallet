@@ -65,6 +65,9 @@ $(function(){
     $("#f-quantity").val(utils.float.normalize(utils.float.parse(price) / utils.float.parse(unitPrice))).valid();
   }
   function updatePrice() {
+    if ($("#f-price").length == 0)
+      return;
+
     const unitPrice = $("#f-unit-price");
     const quantity = $("#f-quantity");
     if (!quantity.valid() || !unitPrice.valid())
@@ -74,6 +77,9 @@ $(function(){
 
   }
   function updateUnitPrice() {
+    if ($("#f-unit-price").length == 0)
+      return;
+
     const price = $("#f-price");
     const quantity = $("#f-quantity");
     if (!quantity.valid() || !price.valid())
@@ -146,7 +152,7 @@ $(function(){
     const conversion = $("#f-conversion");
     const earning = $("#f-earning");
     const type = $("#f-type");
-    const price = formSettings != 'Deposit' ? $("#f-price") : $("#f-quantity");
+    const price = formSettings.type != 'Deposit' ? $("#f-price") : $("#f-quantity");
 
     if (!type.valid())
       return;

@@ -13,7 +13,7 @@ const styling = function(){
 
   function asCurrencyNumber(value, currency) {
     const parts = Intl.NumberFormat(typing.locales, { style: 'currency', currency: currency }).formatToParts(value);
-    const supportedParts = ['decimal', 'fraction', 'group', 'integer', 'minusSign', 'plusSign'];
+    const supportedParts = ['decimal', 'fraction', 'integer', 'minusSign', 'plusSign'];
     return parts.filter(p => supportedParts.indexOf(p.type) != -1).map(p => p.value).join('');
   }
 

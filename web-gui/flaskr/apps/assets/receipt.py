@@ -94,7 +94,7 @@ def _makeOperation(asset):
                                                                  asset['finalQuantity'],
                                                                  operation['quantity'])
 
-    if operation['type'] == 'Deposit':
+    if asset['type'] == 'Deposit':
         operation['price'] = operation['quantity']  # for Deposit type, default unit price is 1
     else:
         operation['price'] = float(required("price"))
@@ -165,6 +165,7 @@ def _receiptPost(session):
     assets = list(db.get_db().assets.aggregate([
         {'$match': query},
         {'$project': {
+            'type': 1,
             'currency': 1,
             'coded': { '$ifNull': ['$coded', False]},
             'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
