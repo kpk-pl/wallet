@@ -28,7 +28,7 @@ function setupForm(settings) {
       currencyConversion: { greaterThan: 0 },
       price: { greaterThan: 0 },
       quantity: { greaterThan: 0 },
-      finalQuantity: { greaterThan: 0 },
+      finalQuantity: { greaterThanOrEqual: 0 },
     },
     errorElement: 'span',
     errorPlacement: function (error, element) {
