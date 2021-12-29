@@ -1,7 +1,7 @@
 var assetAllocationCharts = Object.create(null);
 
 $(function(){
-  for (let type of ['netpl', 'value', 'investment', 'share']) {
+  for (let type of ['netpl', 'plpercent', 'summary', 'value', 'investment', 'share']) {
     assetAllocationCharts[type] = new Chart(document.getElementById('assetAllocation_chart_' + type).getContext('2d'), {
       type: 'line',
       data: { labels: [], datasets: [] },
@@ -9,20 +9,21 @@ $(function(){
         maintainAspectRatio: false,
         responsive: true,
         plugins: {
-          colorschemes: { scheme: (type == 'netpl' ? 'tableau.ColorBlind10' : 'tableau.MillerStone11'), fillAlpha: 1 }
+          colorschemes: {
+            scheme: ((type == 'netpl' || type == 'plpercent' || type == 'summary') ? 'office.Frame6' : 'tableau.MillerStone11'),
+            fillAlpha: (type == 'summary' ? 0.8 : 1)
+          }
         },
         hover: { mode: 'nearest' },
-        tooltips: {
-          enabled: true,
-        },
+        tooltips: { enabled: true, },
         scales: {
           xAxes: [{
             type: 'time',
             time: { unit: 'day', displayFormats: { day: 'D MMM YY' } }
           }],
           yAxes: [{
-            stacked: true,
-            scaleLabel: { display: true, labelString: (['netpl', 'share'].includes(type) ? '%' : 'PLN') }
+            stacked: (type != 'summary'),
+            scaleLabel: { display: true, labelString: (['plpercent', 'share'].includes(type) ? '%' : 'PLN') }
           }]
         }
       }
@@ -80,10 +81,28 @@ function updateAllocationCharts(data){
     return nom/denom;
   }
 
-  const netplAdjust = safeRatio(totals.value[0] - totals.investment[0], totals.investment[0]);
+  assetAllocationCharts.summary.data.datasets.push({
+    data: totals.value,
+    label: 'Value',
+    cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+  });
+  assetAllocationCharts.summary.data.datasets.push({
+    data: totals.investment,
+    label: 'Investment',
+    cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+  });
+
+  const netPlAdjust = totals.value[0] - totals.investment[0];
   assetAllocationCharts.netpl.data.datasets.push({
-    data: totals.value.map((v, i) => (safeRatio(v - totals.investment[i], totals.investment[i]) - netplAdjust) * 100),
+    data: totals.value.map((v, i) => v - totals.investment[i] - netPlAdjust),
     label: 'Net P/L',
+    cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+  });
+
+  const plPercentAdjust = safeRatio(totals.value[0] - totals.investment[0], totals.investment[0]);
+  assetAllocationCharts.plpercent.data.datasets.push({
+    data: totals.value.map((v, i) => (safeRatio(v - totals.investment[i], totals.investment[i]) - plPercentAdjust) * 100),
+    label: '% P/L',
     cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
   });
 
