@@ -16,15 +16,17 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/dataTables.buttons.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/buttons.bootstrap4.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/datatables-buttons/js/buttons.colVis.min.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('.static', filename='wallet/strategyTable.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('.static', filename='wallet/strategy.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
+<script type="text/javascript" src="{{ url_for('.static', filename='wallet/strategyTable.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='wallet/strategy.js') }}"></script>
+
 <script>
-  $(function () {
-    $.getJSON("{{ url_for('.strategy', allocation='true', label=session['label']) | safe }}", updateStrategyAllocation);
-  });
+initialize({
+  currency: "{{ currencyMain }}",
+  strategyUri: "{{ url_for('.strategy', allocation='true', label=session['label']) | safe }}",
+});
 </script>
 {% endblock %}
 
@@ -50,8 +52,18 @@
                 <th>Rebalancing change <span class="smaller">[{{ currencyMain }}]</span></th>
               </tr>
             </thead>
-            <!--      <ul class="list-unstyled m-0">
-              <tr class="text-muted"-->
+            <tfoot>
+              <tr class="text-muted">
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
