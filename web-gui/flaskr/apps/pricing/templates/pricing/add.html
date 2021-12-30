@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}Add pricing source{% endblock %}
+
+{% block plugins_scripts %}
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery-validation/jquery.validate.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/typeahead/typeahead.bundle.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='plugins/bootstrap-tagsinput/bootstrap-tagsinput.min.js') }}"></script>
+{% endblock %}
+
+{% block user_scripts %}
+<script type="text/javascript" src="{{ url_for('.static', filename='pricing/add.js') }}"></script>
+<script type="text/javascript">
+(function() {
+  let settings = {
+    submitUrl: "{{ url_for('pricing.index') }}",
+    submitSuccessHandler: function(data) {
+      $(location).attr("href", "{{ url_for('pricing.index', label=header.label, quoteId='_id') | safe }}".replace('_id', data.id));
+    },
+    urlForQuotes: function(){
+      return "{{ url_for('quotes.index') }}?url=" + encodeURIComponent($("#f-url").val());
+    },
+  };
+
+  setupForm(settings);
+})();
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary card-tabs">
+        <div class="card-header">
+          <h3 class="card-title">Add new pricing source</h3>
+        </div>
+        <div class="card-body">
+          <div class="tab-content">
+            <form method="post" action="">
+              <div class="form-group">
+                <label for="f-url">Link to <a href="https://stooq.pl" target="_blank" rel="noopener noreferrer">stooq.pl</a>, <a href="https://www.biznesradar.pl/" target="_blank" rel="noopener noreferrer">biznesradar.pl</a>, <a href="https://pl.investing.com/" target="_blank" rel="noopener noreferrer">pl.investing.com</a> or <a href="https://www.marketwatch.com" target="_blank" rel="noopener noreferrer">marketwatch.com</a></label>
+                <div class="input-group">
+                  <input type="url" id="f-url" name="url" class="form-control" data-lpignore="true"/>
+                  <span class="input-group-append">
+                    <button type="button" class="btn btn-info" id="f-url-get">Get!</button>
+                  </span>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-9">
+                  <div class="form-group">
+                    <label for="f-name">Name</label>
+                    <input type="text" id="f-name" name="name" class="form-control" data-lpignore="true" required/>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="form-group">
+                    <label for="f-ticker">Ticker</label>
+                    <input type="text" id="f-ticker" name="ticker" class="form-control" data-lpignore="true"/>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-3">
+                  <div class="form-group">
+                    <label for="f-unit">Unit</label>
+                    <input type="text" id="f-unit" name="unit" class="form-control" data-lpignore="true"/>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="form-group">
+                    <label for="f-quote">Quote</label>
+                    <div class="input-group">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text" id="f-quote-unit-prepend">?</span>
+                      </div>
+                      <input type="text" id="f-quote" name="quote" class="form-control" disabled="disabled" data-lpignore="true"/>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="form-group">
+                    <label for="f-updateFreq">Update frequency</label>
+                    <select id="f-updateFreq" name="updateFrequency" class="custom-select" required>
+                      <option value="" hidden disabled selected value></option>
+                      <option value="daily">daily</option>
+                      <option value="daily">weekly</option>
+                      <option value="monthly">monthly</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-12">
+                  <button class="btn btn-primary" type="submit">Submit</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

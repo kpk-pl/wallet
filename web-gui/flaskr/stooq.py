@@ -1,10 +1,15 @@
 from flask import json
+from bs4 import BeautifulSoup
 import csv
 from io import StringIO
 import requests
 import dateutil.parser
 
 class Stooq(object):
+    @staticmethod
+    def isValidUrl(url):
+        return url.startswith("https://stooq.pl/")
+
     def __init__(self, ticker=None, url=None):
         super(Stooq, self).__init__()
 
@@ -17,21 +22,34 @@ class Stooq(object):
                 end = len(url)
             self.ticker = url[s+2 : end]
 
-    def name(self):
+    def data(self):
         url = f'https://stooq.pl/q/g/?s={self.ticker}'
+        result = {}
 
         html = requests.get(url)
         html.encoding = html.apparent_encoding
-        html = html.text
+        soup = BeautifulSoup(html.text, 'html.parser')
 
-        marker = '>Ogólnie: '
-        startPos = html.find(marker)
-        endPos = html.find('<', startPos)
+        currency = [element.text for element in soup.find('td', text="Kurs").next_sibling() if element.name == 'a']
+        if currency:
+            result['currency'] = currency[0]
+            if result['currency'] == 'zł':
+                result['currency'] = 'PLN'
+            elif result['currency'] == 'p.':
+                result['currency'] = 'GBX'
+            elif result['currency'] == '£':
+                result['currency'] = 'GBB'
+            elif result['currency'] == '$':
+                result['currency'] = 'USD'
+            elif result['currency'] == '€':
+                result['currency'] = 'EUR'
 
-        result = html[startPos + len(marker) : endPos]
-
-        if result.endswith(')'):
-            result = result[:result.rfind('(') - 1]
+        name = soup.find(text = lambda t: t.startswith('Ogólnie: '))
+        if name:
+            name = name[9:]
+            if name.endswith(')'):
+                name = name[:name.rfind('(') - 1]
+            result['name'] = name
 
         return result
 
@@ -70,13 +88,12 @@ class Stooq(object):
         return data
 
     def assetAddData(self):
-        q = self.quote()
-        if q is None:
-            return {}
+        data = self.data()
 
-        return {
-            'quote': q['close'],
-            'timestamp': q['timestamp'],
-            'name': self.name(),
-            'ticker': q['symbol']
-        }
+        q = self.quote()
+        if q is not None:
+            data['quote'] = q['close']
+            data['timestamp'] = q['timestamp']
+            data['ticker'] = q['symbol']
+
+        return data

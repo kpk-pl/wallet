@@ -28,4 +28,4 @@ def item():
         if not quotes:
             return ('', 404)
 
-        return render_template("pricing_item.html", item=quotes[0], header=header.data())
+        return render_template("pricing/item.html", item=quotes[0], header=header.data())

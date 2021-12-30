@@ -2,7 +2,6 @@ from flask import render_template, request, jsonify
 from flaskr.session import Session
 from bson.objectid import ObjectId
 from flaskr import db, header
-from flaskr.stooq import Stooq
 
 
 def _getPipeline(label = None):
@@ -48,9 +47,6 @@ def listAll():
 
         if 'labels' in request.form:
             data['labels'] = request.form['labels'].split(',')
-
-        if 'link' in data and data['link'].startswith("https://stooq.pl"):
-            data['stooqSymbol'] = Stooq(url=data['link']).ticker
 
         if 'priceQuoteId' in request.form:
             data['pricing'] = {

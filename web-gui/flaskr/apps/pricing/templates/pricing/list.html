@@ -36,7 +36,12 @@
     <div class="col-12">
       <div class="card card-primary d-flex p-0">
         <div class="card-header">
-          <h3 class="card-title">Assets</h3>
+          <h3 class="card-title">Pricing sources</h3>
+          <div class="card-tools">
+            <a href="{{ url_for('pricing.add') }}">
+              <button class="btn btn-tool" type="button" title="Add new pricing source"><i class="fas fa-plus-circle"></i></button>
+            </a>
+          </div>
         </div>
         <div class="card-body">
 					<table id="pricingTable" class="table table-bordered table-striped table-hover">

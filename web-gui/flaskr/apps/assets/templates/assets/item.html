@@ -10,10 +10,10 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js.3-adapter-moment/chartjs-adapter-moment.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='chartjs.defaults.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('.static', filename='assets/item.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/item.js') }}"></script>
 <script type="text/javascript">
   function onTrash() {
     $.post('{{ url_for('assets.trash', id=asset._id) }}', success=function(data){

@@ -180,7 +180,7 @@ def getQuote(desc):
         return _getInvesting(desc)
     elif desc.startswith("https://www.biznesradar.pl/"):
         return _getBiznesRadar(desc)
-    elif desc.startswith("https://stooq.pl/"):
+    elif Stooq.isValidUrl(desc):
         return Stooq(url = desc).assetAddData()
     elif desc.startswith("https://www.marketwatch.com/"):
         return _getMarketWatch(desc)

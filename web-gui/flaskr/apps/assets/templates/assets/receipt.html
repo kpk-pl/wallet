@@ -11,11 +11,11 @@
 <script type="text/javascript" src="{{ url_for('static', filename='jquery.validate.methods.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('.static', filename='assets/receipt.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('.static', filename='assets/receipt_logic.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/receipt.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/receipt_logic.js') }}"></script>
 <script type="text/javascript">
 $(function(){
   setupForm({
