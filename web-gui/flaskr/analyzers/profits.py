@@ -31,7 +31,7 @@ class Profits(object):
                 elif operation['type'] == 'SELL':
                     self._sell(operation)
                 elif operation['type'] == 'RECEIVE':
-                    self._buy(operation)
+                    self._receive(operation)
                 else:
                     raise NotImplementedError("Did not implement profits for operation type {}" % (operation['type']))
 
@@ -58,6 +58,18 @@ class Profits(object):
 
         self.averagePrice = (self.averagePrice * self.currentQuantity + operation['price']) / finalQuantity
         self.averageNetPrice = (self.averageNetPrice * self.currentQuantity + _operationNetValue(operation)) / finalQuantity
+        self.averageProvision = (self.averageProvision * self.currentQuantity + _valueOr(operation, 'provision', 0.0)) / finalQuantity
+
+        if self.investmentStart is None:
+            self.investmentStart = operation['date']
+
+    # a RECEIVE is essentially a BUY with a price 0
+    def _receive(self, operation):
+        quantity = operation['quantity']
+        finalQuantity = operation['finalQuantity']
+
+        self.averagePrice = (self.averagePrice * self.currentQuantity) / finalQuantity
+        self.averageNetPrice = (self.averageNetPrice * self.currentQuantity) / finalQuantity
         self.averageProvision = (self.averageProvision * self.currentQuantity + _valueOr(operation, 'provision', 0.0)) / finalQuantity
 
         if self.investmentStart is None:

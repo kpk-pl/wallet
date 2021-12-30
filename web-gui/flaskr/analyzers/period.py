@@ -53,7 +53,7 @@ class Period(object):
             stats['initialConditions'] = {}
             debug = stats['initialConditions']
 
-        stats['initialNetValue'], stats['initialQuantity'] = self.pricingStart.priceAsset(asset, debug=debug)
+        stats['initialNetValue'], stats['initialQuantity'] = self.pricingStart(asset, debug=debug)
 
     def _finalConditions(self, asset):
         stats = asset['_periodStats']
@@ -62,16 +62,17 @@ class Period(object):
             stats['finalConditions'] = {}
             debug = stats['finalConditions']
 
-        stats['finalNetValue'], stats['finalQuantity'] = self.pricingEnd.priceAsset(asset, debug=debug)
+        stats['finalNetValue'], stats['finalQuantity'] = self.pricingEnd(asset, debug=debug)
 
     def _operationToProfit(self, stats, operation):
         if operation['type'] == 'BUY':
             stats['profits']['total'] -= _operationNetValue(operation)
         elif operation['type'] == 'SELL':
             stats['profits']['total'] += _operationNetValue(operation)
+        elif operation['type'] == 'RECEIVE':
+            stats['profits']['total'] += _operationNetValue(operation)
         else:
             raise NotImplementedError("Did not implement period for operation type {}" % (operation['type']))
-
 
         if 'profits' in operation['_stats']:
             stats['profits']['netValue'] += operation['_stats']['profits']['netValue']
