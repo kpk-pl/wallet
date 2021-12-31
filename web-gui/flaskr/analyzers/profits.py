@@ -1,11 +1,22 @@
 from . import _operationNetValue, _valueOr
 from datetime import datetime
+from dataclasses import dataclass
+
+
+@dataclass
+class RunningTotals:
+    quantity: float = 0
+    price: float = 0
+    netPrice: float = 0
+    investment: float = 0
+    provision: float = 0
 
 
 class Profits(object):
     def __init__(self, assetData):
         super(Profits, self).__init__()
         self.data = assetData
+        self._running = RunningTotals()
 
         self.data['_totalProfits'] = {
             'value' : 0.0,
@@ -53,24 +64,29 @@ class Profits(object):
         return self.data
 
     def _buy(self, operation):
-        quantity = operation['quantity']
         finalQuantity = operation['finalQuantity']
+        self._running.quantity = operation['finalQuantity']
 
         self.averagePrice = (self.averagePrice * self.currentQuantity + operation['price']) / finalQuantity
+        self._running.price += operation['price']
         self.averageNetPrice = (self.averageNetPrice * self.currentQuantity + _operationNetValue(operation)) / finalQuantity
+        self._running.netPrice += _operationNetValue(operation)
+        self._running.investment += _operationNetValue(operation)
         self.averageProvision = (self.averageProvision * self.currentQuantity + _valueOr(operation, 'provision', 0.0)) / finalQuantity
+        self._running.provision += _valueOr(operation, 'provision', 0)
 
         if self.investmentStart is None:
             self.investmentStart = operation['date']
 
     # a RECEIVE is essentially a BUY with a price 0
     def _receive(self, operation):
-        quantity = operation['quantity']
         finalQuantity = operation['finalQuantity']
+        self._running.quantity = operation['finalQuantity']
 
         self.averagePrice = (self.averagePrice * self.currentQuantity) / finalQuantity
         self.averageNetPrice = (self.averageNetPrice * self.currentQuantity) / finalQuantity
         self.averageProvision = (self.averageProvision * self.currentQuantity + _valueOr(operation, 'provision', 0.0)) / finalQuantity
+        self._running.provision += _valueOr(operation, 'provision', 0)
 
         if self.investmentStart is None:
             self.investmentStart = operation['date']
@@ -78,13 +94,21 @@ class Profits(object):
     def _sell(self, operation):
         quantity = operation['quantity']
 
-        operation['_stats']['profits'] = {
+        operation['_stats']['profits'] = {}
+        profits = operation['_stats']['profits']
+
+        profits = {
             'value': operation['price'] - self.averagePrice * quantity,
             'netValue': _operationNetValue(operation) - self.averageNetPrice * quantity,
             'provisions': _valueOr(operation, 'provision', 0.0) + self.averageProvision * quantity
         }
 
-        profits = operation['_stats']['profits']
+        self._running.price = self._running.price * (self._running.quantity - quantity) / self._running.quantity
+        self._running.netPrice = self._running.netPrice * (self._running.quantity - quantity) / self._running.quantity
+        self._running.provision = self._running.provision * (self._running.quantity - quantity) / self._running.quantity
+        self._running.investment = self._running.investment * (self._running.quantity - quantity) / self._running.quantity
+        self._running.quantity = operation['finalQuantity']
+
         self.totalProfits['value'] += profits['value']
         self.totalProfits['netValue'] += profits['netValue']
         self.totalProfits['provisions'] += profits['provisions']
