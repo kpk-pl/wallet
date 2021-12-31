@@ -20,6 +20,8 @@
 {% endblock %}
 
 {% block user_scripts %}
+<script type="text/javascript" src="{{ url_for('.static', filename='results/index.js') }}"></script>
+
 <script type="text/javascript">
   $('.color-gain').each(function () {
     if ($(this).text().startsWith('-')) {
@@ -27,24 +29,6 @@
     } else {
       $(this).addClass('color-gain-positive')
     }
-  });
-</script>
-<script type="text/javascript">
-  $(function () {
-    $('#resultsTable').DataTable({
-      "paging": false,
-      "lengthChange": false,
-      "searching": true,
-      "ordering": true,
-      "order": [[5, "desc"]],
-      "info": false,
-      "autoWidth": false,
-      "responsive": true,
-      "buttons": [ "colvis" ],
-      "columnDefs": [
-        { "visible": false, "targets": [2, 3] }
-      ],
-    }).buttons().container().appendTo("#resultsTable_wrapper .col-md-6:eq(0)");
   });
 </script>
 <script type="text/javascript">
@@ -56,6 +40,14 @@
     $(location).attr("href", url.toString());
   }
 </script>
+{% endblock %}
+
+{% block styles %}
+<style>
+.dataTables_filter {
+  display: none;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -91,6 +83,10 @@
       <div class="card card-primary">
         <div class="card-header">
           <h3 class="card-title">Results</h3>
+          <div class="card-tools">
+            <span id="tableElements" class="px-2"></span>
+            <input id="list-filter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
+          </div>
         </div>
         <div class="card-body">
 					<table id="resultsTable" class="table table-bordered table-striped table-hover">

@@ -15,19 +15,15 @@
 {% endblock %}
 
 {% block user_scripts %}
-<script>
-  $(function () {
-    $('#pricingTable').DataTable({
-      "paging": false,
-      "lengthChange": false,
-      "searching": true,
-      "ordering": true,
-      "info": false,
-      "autoWidth": false,
-      "responsive": true,
-    });
-  });
-</script>
+<script type="text/javascript" src="{{ url_for('.static', filename='pricing/list.js') }}"></script>
+{% endblock %}
+
+{% block styles %}
+<style>
+.dataTables_filter {
+  display: none;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -38,6 +34,7 @@
         <div class="card-header">
           <h3 class="card-title">Pricing sources</h3>
           <div class="card-tools">
+            <input id="list-filter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
             <a href="{{ url_for('pricing.add') }}">
               <button class="btn btn-tool" type="button" title="Add new pricing source"><i class="fas fa-plus-circle"></i></button>
             </a>

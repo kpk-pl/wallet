@@ -19,24 +19,15 @@
 {% endblock %}
 
 {% block user_scripts %}
-<script>
-  $(function () {
-    $('#assetsTable').DataTable({
-      "paging": false,
-      "lengthChange": false,
-      "searching": true,
-      "ordering": true,
-      "info": false,
-      "autoWidth": false,
-      "responsive": true,
-      "buttons": [ "colvis" ],
-      "columnDefs": [
-        { "visible": false, "targets": [1, 6] },
-        { "orderable": false, "targets": [1] }
-      ]
-    }).buttons().container().appendTo("#assetsTable_wrapper .col-md-6:eq(0)");
-  });
-</script>
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/list.js') }}"></script>
+{% endblock %}
+
+{% block styles %}
+<style>
+.dataTables_filter {
+  display: none;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -47,6 +38,8 @@
         <div class="card-header">
           <h3 class="card-title">Assets</h3>
           <div class="card-tools">
+            <span id="tableElements" class="px-2"></span>
+            <input id="asset-filter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
             <a href="{{ url_for('assets.add') }}">
               <button class="btn btn-tool" type="button" title="Add new asset"><i class="fas fa-plus-circle"></i></button>
             </a>

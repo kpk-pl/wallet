@@ -76,4 +76,4 @@ def index():
         for asset in assets:
             periodAnalyzer(asset)
 
-        return render_template("indexx.html", assets=assets, timerange=timerange, header=header.data(showLabels = True))
+        return render_template("results/index.html", assets=assets, timerange=timerange, header=header.data(showLabels = True))
