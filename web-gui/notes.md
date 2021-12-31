@@ -29,3 +29,8 @@ buttons: {
 ```
 
 The options here override the defauts specified in `static/plugins/datatables-buttons/js/buttons.bootstrap4.js:38`.
+
+#### Search box for DataTable
+
+Use first answer to the
+[question](https://stackoverflow.com/questions/19274028/changing-dom-element-position-of-searchbox-in-datatables)

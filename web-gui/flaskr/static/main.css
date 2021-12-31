@@ -16,6 +16,12 @@ a.imagelink {
   color: #fff !important;
 }
 
+.datatables-filter-custom {
+  display: inline !important;
+  width: auto !important;
+  height: 1.45rem !important;
+}
+
 img.link {
   vertical-align: middle;
 }

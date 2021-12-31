@@ -21,15 +21,16 @@
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js-plugin-labels/chartjs-plugin-labels.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js-plugin-colorschemes/chartjs-plugin-colorschemes.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery-sparkline/jquery.sparkline.min.js') }}"></script>
+{% endblock %}
+
+{% block user_scripts %}
 <script type="text/javascript" src="{{ url_for('.static', filename='wallet/categoryChart.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('.static', filename='wallet/strategyTable.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('.static', filename='wallet/wallet.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('.static', filename='wallet/wallet_strategy.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('.static', filename='wallet/wallet_historical.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('.static', filename='wallet/wallet_sparklines.js') }}"></script>
-{% endblock %}
 
-{% block user_scripts %}
 <script>
   const categoryAllocation = JSON.parse({{ allocation | tojson }});
 
@@ -38,6 +39,14 @@
     $.getJSON("{{ url_for('assets.historicalValue', daysBack=180, label=session['label'], investedValue=true) | safe }}", historicalValueDone);
   });
 </script>
+{% endblock %}
+
+{% block styles %}
+<style>
+.dataTables_filter {
+  display: none;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -50,6 +59,8 @@
         <div class="card-header">
           <h3 class="card-title">Open assets</h3>
           <div class="card-tools">
+            <span id="tableElements" class="px-1"></span>
+            <input id="wallet-filter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
             <a href="{{ url_for('wallet.index', aggregation='institution') }}">
               <button class="btn btn-tool" type="button" title="Group assets in different institutions"><i class="fas fa-calendar-plus"></i></button>
             </a>

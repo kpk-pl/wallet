@@ -96,10 +96,6 @@ $(function(){
       updatePrice();
   }
 
-  $("#f-quantity").on('focus', function(){
-    if (!formState.updated.volume)
-      $(this).val('');
-  });
   $("#f-quantity").on('input', function(){
     formState.updated.volume = true;
     quantityChanged();

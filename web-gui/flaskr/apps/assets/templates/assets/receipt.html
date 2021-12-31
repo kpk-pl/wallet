@@ -126,7 +126,7 @@ $(function(){
                       <button class="btn btn-info" id="f-quan-all" type="button" disabled="disabled">All</button>
                     </div>
                     {%- endif %}
-                    <input type="number" id="f-quantity" name="quantity" class="form-control" value="0" step="any" data-lpignore="true" required/>
+                    <input type="number" id="f-quantity" name="quantity" class="form-control" placeholder="0" step="any" data-lpignore="true" required/>
                   </div>
                 </div>
               </div>
@@ -165,7 +165,7 @@ $(function(){
                     <div class="input-group-prepend">
                       <span class="input-group-text">{{ asset.currency.name }}</span>
                     </div>
-                    <input type="number" value="0" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-price" name="price" required/>
+                    <input type="number" placeholder="0" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-price" name="price" required/>
                   </div>
                 </div>
               </div>
