@@ -8,6 +8,14 @@ a.imagelink {
   height: 1em;
 }
 
+/* colvis fix for button in the card header */
+.dt-button-collection .dropdown-menu a {
+  color: #212529 !important;
+}
+.dt-button-collection .dropdown-menu a.active {
+  color: #fff !important;
+}
+
 img.link {
   vertical-align: middle;
 }

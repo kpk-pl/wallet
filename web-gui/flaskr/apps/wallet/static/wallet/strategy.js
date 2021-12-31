@@ -15,7 +15,9 @@ $(function () {
     info: false,
     autoWidth: false,
     responsive: true,
-    buttons: [ "colvis" ],
+    buttons: [{
+      extend: "colvis", align: "button-right", className: "btn-sm py-0"
+    }],
     columnDefs: [
       { type: "string", targets: [0, 2] },
       { type: "num-fmt", className: "text-right", targets: [1, 3] },
@@ -25,7 +27,7 @@ $(function () {
     ],
     footerCallback: footerCallback
   });
-  strategyTableElement.buttons().container().appendTo("#strategyTable_wrapper .col-md-6:eq(0)");
+  strategyTableElement.buttons().container().appendTo("#tableElements");
 
   let strategyTable = new StrategyTable(strategyTableElement, {
     name: 0,
