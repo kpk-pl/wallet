@@ -65,7 +65,7 @@
               <div class="col-sm-9">
                 <select id="f-timerange" name="timerange" class="custom-select" required>
                   {%- for name in ['2019', '2020', '2021', '2022'] %}
-                  <option value="{{ name }}" {{ 'selected' if timerange.name == name }}>{{ name }}</option>
+                  <option value="{{ name }}" {{ 'selected="selected"' if timerange.name == name }}>{{ name }}</option>
                   {%- endfor %}
                 </select>
               </div>
@@ -82,7 +82,7 @@
     <div class="col-12">
       <div class="card card-primary">
         <div class="card-header">
-          <h3 class="card-title">Results</h3>
+          <h3 class="card-title">{{ timerange.name }} results</h3>
           <div class="card-tools">
             <span id="tableElements" class="px-2"></span>
             <input id="list-filter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>

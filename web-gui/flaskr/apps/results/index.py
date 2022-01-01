@@ -60,7 +60,7 @@ def index():
         session = Session(['label', 'debug'])
         rangeName = request.args.get('timerange')
         if not rangeName:
-            rangeName = date.today().year
+            rangeName = str(date.today().year)
 
         timerange = {
             'name': rangeName,

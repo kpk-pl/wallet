@@ -1,4 +1,5 @@
 from flaskr.pricing import Pricing, Context
+from flaskr import typing
 from dateutil.relativedelta import relativedelta
 from . import _operationNetValue
 
@@ -65,11 +66,13 @@ class Period(object):
         stats['finalNetValue'], stats['finalQuantity'] = self.pricingEnd(asset, debug=debug)
 
     def _operationToProfit(self, stats, operation):
-        if operation['type'] == 'BUY':
+        if operation['type'] == typing.Operation.Type.buy:
             stats['profits']['total'] -= _operationNetValue(operation)
-        elif operation['type'] == 'SELL':
+        elif operation['type'] == typing.Operation.Type.sell:
             stats['profits']['total'] += _operationNetValue(operation)
-        elif operation['type'] == 'RECEIVE':
+        elif operation['type'] == typing.Operation.Type.receive:
+            stats['profits']['total'] += _operationNetValue(operation)
+        elif operation['type'] == typing.Operation.Type.earning:
             stats['profits']['total'] += _operationNetValue(operation)
         else:
             raise NotImplementedError("Did not implement period for operation type {}" % (operation['type']))

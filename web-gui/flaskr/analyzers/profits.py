@@ -63,6 +63,8 @@ class Profits(object):
                     self._sell(operation)
                 elif operation['type'] == 'RECEIVE':
                     self._receive(operation)
+                elif operation['type'] == 'EARNING':
+                    self._earning(operation)
                 else:
                     raise NotImplementedError("Did not implement profits for operation type {}" % (operation['type']))
 
@@ -104,14 +106,12 @@ class Profits(object):
     def _sell(self, operation):
         quantity = operation['quantity']
 
-        operation['_stats']['profits'] = {}
-        profits = operation['_stats']['profits']
-
         profits = {
             'value': operation['price'] - self._running.partPrice(quantity),
             'netValue': _operationNetValue(operation) - self._running.partNetPrice(quantity),
             'provisions': _valueOr(operation, 'provision', 0.0) + self._running.partProvision(quantity)
         }
+        operation['_stats']['profits'] = profits
 
         self._running.scaleTo(operation['finalQuantity'])
 
@@ -121,3 +121,15 @@ class Profits(object):
 
         if operation['finalQuantity'] == 0:
             self.investmentStart = None
+
+    def _earning(self, operation):
+        profits = {
+            'value': operation['price'],
+            'netValue': operation['price'] * _valueOr(operation, 'currencyConversion', 1.0),
+            'provisions': _valueOr(operation, 'provision', 0.0)
+        }
+        operation['_stats']['profits'] = profits
+
+        self.totalProfits['value'] += profits['value']
+        self.totalProfits['netValue'] += profits['netValue']
+        self.totalProfits['provisions'] += profits['provisions']

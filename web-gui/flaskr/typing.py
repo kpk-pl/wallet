@@ -31,9 +31,9 @@ class Operation:
     def displayString(op, assetType):
         if assetType == 'Deposit':
             if op == Operation.Type.buy:
-                return 'ADD'
+                return 'DEPOSIT'
             if op == Operation.Type.sell:
-                return 'SPEND'
+                return 'WITHDRAW'
         elif assetType == 'Equity':
             if op == Operation.Type.earning:
                 return 'DIVIDEND'

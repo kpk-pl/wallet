@@ -87,7 +87,9 @@ $(function(){
                     <option value="" hidden disabled selected value></option>
                     <option value="BUY">{{ 'BUY' | operationDisplayString(asset.type) }}</option>
                     <option value="SELL">{{ 'SELL' | operationDisplayString(asset.type) }}</option>
+                    {%- if asset.type != 'Deposit' %}
                     <option value="RECEIVE">{{ 'RECEIVE' | operationDisplayString(asset.type) }}</option>
+                    {%- endif %}
                     <option value="EARNING">{{ 'EARNING' | operationDisplayString(asset.type) }}</option>
                   </select>
                 </div>

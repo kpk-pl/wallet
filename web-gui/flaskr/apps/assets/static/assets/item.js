@@ -60,7 +60,7 @@ function setupChart(name, currency, data, operations) {
     }
   });
 
-  for (let type in types) {
+  for (let type of Object.keys(types).filter(t => t != 'EARNING')) {
     chart.data.datasets.push({
       label: type,
       data: types[type].operations.map(function(op){ return {t: op.date, y: op.price/op.quantity}; }),
