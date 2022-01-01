@@ -121,13 +121,13 @@
                 <td data-title="Cash profit" class="text-right color-gain">
                   {%- if not asset._periodStats.error -%}
                   {%- if (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) != 0 -%}
-                  {{ '%0.2f' % (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) | round(2) }}
+                  {{ (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) | roundFixed(currencyMainDecimals) }}
                   {%- endif -%}
                   {%- endif -%}
                 </td>
                 <td data-title="Total profit" class="text-right color-gain">
                   {%- if not asset._periodStats.error -%}
-                  {{ '%0.2f' % (asset._periodStats.profits.total - asset._periodStats.profits.provisions) | round(2) }}
+                  {{ (asset._periodStats.profits.total - asset._periodStats.profits.provisions) | roundFixed(currencyMainDecimals) }}
                   {%- endif -%}
                 </td>
               </tr>
@@ -139,8 +139,8 @@
                 <th data-title="Institution"></th>
                 <th data-title="Category"></th>
                 <th data-title="Volume change"></th>
-                <th data-title="Cash profit" class="text-right color-gain">{{ assets | sum(attribute='_periodStats.profits.netValue') | round(2) }}</th>
-                <th data-title="Total profit" class="text-right color-gain">{{ assets | sum(attribute='_periodStats.profits.total') | round(2) }}</th>
+                <th data-title="Cash profit" class="text-right color-gain">{{ assets | sum(attribute='_periodStats.profits.netValue') | roundFixed(currencyMainDecimals) }}</th>
+                <th data-title="Total profit" class="text-right color-gain">{{ assets | sum(attribute='_periodStats.profits.total') | roundFixed(currencyMainDecimals) }}</th>
               </tr>
             </tfoot>
 					</table>
