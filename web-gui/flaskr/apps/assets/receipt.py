@@ -122,7 +122,7 @@ def _makeOperation(asset):
     return operation
 
 
-def _makeBillingOperation(asset, operation):
+def _makeBillingOperation(asset, operation, session):
     if 'billingAsset' not in request.form or not request.form['billingAsset']:
         return None, None
 
@@ -141,7 +141,7 @@ def _makeBillingOperation(asset, operation):
             'currency': 1,
             'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
         }}
-    ]))
+    ], session=session))
 
     if not billingAssets:
         return query, None
@@ -166,6 +166,9 @@ def _makeBillingOperation(asset, operation):
 
         billingOperation['quantity'] = round(billingOperation['quantity'] * operation['currencyConversion'],
                                              typing.Currency.decimals)
+
+    if 'provision' in operation:
+        billingOperation['quantity'] -= operation['provision']
 
     billingOperation['price'] = billingOperation['quantity']
     billingOperation['finalQuantity'] = typing.Operation.adjustQuantity(billingOperation['type'],
@@ -198,7 +201,7 @@ def _receiptPost(session):
     except Exception as e:
         return ({"error": str(e)}, 400)
 
-    billingQuery, billingOperation = _makeBillingOperation(asset, operation)
+    billingQuery, billingOperation = _makeBillingOperation(asset, operation, session)
 
     if billingQuery and not billingOperation:
         return ({"error": "Could not resolve billing operation"}, 400)
