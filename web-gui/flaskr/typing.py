@@ -11,6 +11,8 @@ class Operation:
                 return Operation.Type.sell
             if op == Operation.Type.sell:
                 return Operation.Type.buy
+            if op == Operation.Type.earning:
+                return Operation.Type.buy  # cash earnings can be deposited
 
             raise RuntimeError(f"Cannot reverse operation {op}")
 

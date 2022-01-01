@@ -101,29 +101,30 @@ $(function(){
     quantityChanged();
   });
 
-  $("#f-type").change(function(){
-    const type = $(this).val();
+  function typeChanged(){
+    const type = $("#f-type").val();
+    if (type === null)
+      return;
 
     updateQuantityAfter();
 
     $("#f-quan-all").attr('disabled', type != "SELL");
 
     $("#g-provision").attr('hidden', type == "RECEIVE");
-    $("#g-billing-asset").attr('hidden', type == "RECEIVE");
+    $("#g-billing-asset").attr('hidden', (type == "RECEIVE") || (type == "EARNING" && formSettings.type == 'Deposit'));
 
-    $("#g-quantity").attr('hidden', type == "EARNING");
-    $("#g-quantity-after").attr('hidden', type == "EARNING");
-    $("#g-conversion").attr('hidden', type == "EARNING");
-    $("#g-price").attr('hidden', type == "EARNING");
-    $("#g-unit-price").attr('hidden', type == "EARNING");
+    $("#c-quantity").attr('hidden', (type == "EARNING" && formSettings.type != 'Deposit'));
+    $("#c-quantity-after").attr('hidden', (type == "EARNING" && formSettings.type != 'Deposit'));
+    $("#c-unit-price").attr('hidden', (type == "EARNING"));
+    $("#l-price").html(type != "EARNING" ? "Assets value" : "Value");
+  }
 
-    $("#g-earning").attr('hidden', type != "EARNING");
-  });
+  $("#f-type").change(typeChanged);
 
   $("#f-price").on('input', function(){
     formState.updated.price = true;
 
-    if (!formState.updated.quantity)
+    if (!formState.updated.volume)
       updateQuantity();
     else
       updateUnitPrice();
@@ -146,12 +147,12 @@ $(function(){
   function updateCost() {
     const provision = $("#f-provision");
     const conversion = $("#f-conversion");
-    const earning = $("#f-earning");
     const type = $("#f-type");
-    const price = formSettings.type != 'Deposit' ? $("#f-price") : $("#f-quantity");
 
     if (!type.valid())
       return;
+
+    const price = formSettings.type == 'Deposit' ? $("#f-quantity") : $("#f-price");
 
     if (type.val() == "BUY") {
       if (price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
@@ -172,8 +173,8 @@ $(function(){
       }
     }
     else if (type.val() == "EARNING") {
-      if (earning.valid() && provision.valid()) {
-        const cost = utils.float.parse(earning) - utils.float.parse(provision);
+      if (price.valid() && provision.valid() && (!conversion.length || conversion.valid())) {
+        const cost = utils.float.parse(price) * utils.float.parse(conversion, 1.0) - utils.float.parse(provision);
         $("#f-cost").val(styling.asCurrencyNumber(cost, formSettings.currency)).valid();
       }
     }
@@ -185,4 +186,6 @@ $(function(){
   $("#f-price").on('input', updateCost);
   $("#f-unit-price").on('input', updateCost);
   $("#f-earning").on('input', updateCost);
+
+  typeChanged();
 });

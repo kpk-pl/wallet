@@ -197,7 +197,7 @@
               </tr>
             </thead>
             <tbody>
-              {% for operation in asset.operations | sort(attribute='date', reverse=True) -%}
+              {% for operation in asset.operations | reverse -%}
               <tr>
                 <td>{{ asset.operations|length - loop.index + 1 }}</td>
                 <td>{{ operation.date }}</td>

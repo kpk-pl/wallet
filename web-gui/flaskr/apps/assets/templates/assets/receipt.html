@@ -17,14 +17,12 @@
 <script type="text/javascript" src="{{ url_for('.static', filename='assets/receipt.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('.static', filename='assets/receipt_logic.js') }}"></script>
 <script type="text/javascript">
-$(function(){
-  setupForm({
-    initQuantity: {{ asset.finalQuantity }},
-    currency: '{{ asset.currency.name }}',
-    type: '{{ asset.type }}',
-    submitUrl: "{{ url_for('assets.receipt', id=asset._id) }}",
-    nextUrl: "{{ url_for('assets.index', id=asset._id) }}"
-  });
+setupForm({
+  initQuantity: {{ asset.finalQuantity }},
+  currency: '{{ asset.currency.name }}',
+  type: '{{ asset.type }}',
+  submitUrl: "{{ url_for('assets.receipt', id=asset._id) }}",
+  nextUrl: "{{ url_for('assets.index', id=asset._id) }}"
 });
 </script>
 {% endblock %}
@@ -80,7 +78,7 @@ $(function(){
           <input type="hidden" name="_id" value="{{ asset._id }}"/>
           <div class="card-body">
             <div class="row">
-              <div class="col-4">
+              <div class="col">
                 <div class="form-group">
                   <label for="f-type">Type</label>
                   <select id="f-type" name="type" class="custom-select" required>
@@ -94,15 +92,15 @@ $(function(){
                   </select>
                 </div>
               </div>
-              <div class="col-4">
-                {%- if asset.codes %}
+              {%- if asset.codes %}
+              <div class="col">
                 <div class="form-group">
                   <label for="f-code">Code</label>
                   <input type="text" id="f-code" name="code" required class="form-control" data-lpignore="true"/>
                 </div>
-                {% endif %}
               </div>
-              <div class="col-4">
+              {% endif %}
+              <div class="col">
                 <div class="form-group">
                   <label for="f-date">Transaction time</label>
                   <div class="input-group date" id="f-date-group" data-target-input="nearest">
@@ -115,7 +113,7 @@ $(function(){
               </div>
             </div>
             <div class="row">
-              <div class="col-6">
+              <div class="col-6" id="c-quantity">
                 <div class="form-group" id="g-quantity">
                   <label for="f-quantity">{{ 'Value' if asset.type == 'Deposit' else 'Volume' }}</label>
                   <div class="input-group">
@@ -132,7 +130,7 @@ $(function(){
                   </div>
                 </div>
               </div>
-              <div class="col-6">
+              <div class="col-6" id="c-quantity-after">
                 <div class="form-group" id="g-quantity-after">
                   <label for="f-quantity-after">{{ 'Value' if asset.type == 'Deposit' else 'Volume' }} after operation</label>
                   <div class="input-group">
@@ -149,7 +147,7 @@ $(function(){
 
             {%- if asset.type != 'Deposit' %}
             <div class="row">
-              <div class="col-6">
+              <div class="col" id="c-unit-price">
                 <div class="form-group" id="g-unit-price">
                   <label for="f-unit-price">Unit price</label>
                   <div class="input-group">
@@ -160,9 +158,9 @@ $(function(){
                   </div>
                 </div>
               </div>
-              <div class="col-6">
+              <div class="col" id="c-price">
                 <div class="form-group" id="g-price">
-                  <label for="f-price">Assets value</label>
+                  <label for="f-price" id="l-price">Assets value</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
                       <span class="input-group-text">{{ asset.currency.name }}</span>
@@ -184,19 +182,6 @@ $(function(){
               </div>
             </div>
             {%- endif %}
-            <div class="row">
-              <div class="col-12">
-                <div class="form-group" id="g-earning" hidden>
-                  <label for="f-earning">Earning</label>
-                  <div class="input-group">
-                    <div class="input-group-prepend">
-                      <span class="input-group-text">{{ currencyMain }}</span>
-                    </div>
-                    <input type="number" min="0" step="0.01" data-number-to-fixed="2" data-number-stepfactor="100" id="f-earning" class="form-control" name="earning" required/>
-                  </div>
-                </div>
-              </div>
-            </div>
             <div class="row">
               <div class="col-6">
                 <div class="form-group" id="g-provision">

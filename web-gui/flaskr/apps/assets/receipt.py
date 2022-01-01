@@ -78,37 +78,46 @@ def _receiptGet():
     return render_template("assets/receipt.html", asset=asset, depositAccounts=depositAccounts, header=header.data())
 
 
-def _makeOperation(asset):
-    def required(param):
-        if param not in request.form:
-            raise Exception(f"Missing required field {param}")
-        return request.form[param]
+def _required(param):
+    if param not in request.form:
+        raise Exception(f"Missing required field {param}")
+    return request.form[param]
 
+
+def _makeOperation(asset):
     operation = {
-        'date': parser.parse(required("date")),
-        'type': required("type"),
-        'quantity': _parseNumeric(required("quantity"))
+        'date': parser.parse(_required("date")),
+        'type': _required("type"),
     }
+
+    if operation['type'] != typing.Operation.Type.earning or asset['type'] == 'Deposit':
+        operation['quantity'] = _parseNumeric(_required("quantity"))
+
+    if asset['type'] == 'Deposit':
+        if operation['type'] == typing.Operation.Type.receive:
+            raise Exception("Deposit asset does not support RECEIVE")
 
     operation['finalQuantity'] = typing.Operation.adjustQuantity(operation['type'],
                                                                  asset['finalQuantity'],
-                                                                 operation['quantity'])
+                                                                 operation['quantity'] if 'quantity' in operation else None)
 
     if asset['type'] == 'Deposit':
         operation['price'] = operation['quantity']  # for Deposit type, default unit price is 1
+        operation['finalQuantity'] += operation['quantity']
     else:
-        operation['price'] = float(required("price"))
+        operation['price'] = _parseNumeric(_required("price"))
 
-    if 'provision' in request.form:
+    provisionSupportTypes = [typing.Operation.Type.buy, typing.Operation.Type.sell, typing.Operation.Type.earning]
+    if 'provision' in request.form and operation['type'] in provisionSupportTypes:
         provision = _parseNumeric(request.form['provision'])
         if provision:
             operation['provision'] = provision
 
     if asset['currency']['name'] != typing.Currency.main:
-        operation['currencyConversion'] = float(required('currencyConversion'))
+        operation['currencyConversion'] = float(_required('currencyConversion'))
 
     if asset['coded']:
-        operation['code'] = required('code')
+        operation['code'] = _required('code')
 
     return operation
 
@@ -117,7 +126,14 @@ def _makeBillingOperation(asset, operation):
     if 'billingAsset' not in request.form or not request.form['billingAsset']:
         return None, None
 
-    query = {'_id': ObjectId(request.form['billingAsset'])}
+    billingSupportTypes = [typing.Operation.Type.buy, typing.Operation.Type.sell, typing.Operation.Type.earning]
+    if operation['type'] not in billingSupportTypes:
+        return None, None
+
+    if operation['type'] == typing.Operation.Type.earning and asset['type'] == 'Deposit':
+        return None, None
+
+    query = {'_id': ObjectId(_required('billingAsset'))}
 
     billingAssets = list(db.get_db().assets.aggregate([
         {'$match': query},
@@ -138,7 +154,7 @@ def _makeBillingOperation(asset, operation):
         'quantity': operation['price']
     }
 
-    if billingAsset['currency'] != typing.Currency.main:
+    if billingAsset['currency']['name'] != typing.Currency.main:
         assert 'currencyConversion' in operation
         billingOperation['currencyConversion'] = operation['currencyConversion']
 
@@ -177,7 +193,11 @@ def _receiptPost(session):
 
     asset = assets[0]
 
-    operation = _makeOperation(asset)
+    try:
+        operation = _makeOperation(asset)
+    except Exception as e:
+        return ({"error": str(e)}, 400)
+
     billingQuery, billingOperation = _makeBillingOperation(asset, operation)
 
     if billingQuery and not billingOperation:
