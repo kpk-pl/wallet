@@ -21,25 +21,6 @@
 
 {% block user_scripts %}
 <script type="text/javascript" src="{{ url_for('.static', filename='results/index.js') }}"></script>
-
-<script type="text/javascript">
-  $('.color-gain').each(function () {
-    if ($(this).text().startsWith('-')) {
-      $(this).addClass('color-gain-negative')
-    } else {
-      $(this).addClass('color-gain-positive')
-    }
-  });
-</script>
-<script type="text/javascript">
-  function submitTimerangeForm(e) {
-    e.preventDefault()
-
-    let url = URI(window.location.href);
-    url.removeSearch("timerange").addSearch("timerange", $('#f-timerange').val());
-    $(location).attr("href", url.toString());
-  }
-</script>
 {% endblock %}
 
 {% block styles %}
@@ -64,7 +45,7 @@
               <label for="f-timerange" class="col-sm-2 col-form-label">Time range</label>
               <div class="col-sm-9">
                 <select id="f-timerange" name="timerange" class="custom-select" required>
-                  {%- for name in ['2019', '2020', '2021', '2022'] %}
+                  {%- for name in resultsTimeranges() %}
                   <option value="{{ name }}" {{ 'selected="selected"' if timerange.name == name }}>{{ name }}</option>
                   {%- endfor %}
                 </select>

@@ -44,3 +44,12 @@ class Operation:
 class Currency:
     main = 'PLN'
     decimals = 2
+
+
+class Results:
+    firstYear = 2019
+
+    @staticmethod
+    def timeranges():
+        import datetime
+        return [str(y) for y in range(Results.firstYear, datetime.date.today().year +1)]

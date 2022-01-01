@@ -65,6 +65,10 @@ def create_app(test_config=None):
         return dict(url_for_self=url_for_self);
 
     @app.context_processor
+    def resultsTimeranges():
+        return dict(resultsTimeranges=typing.Results.timeranges)
+
+    @app.context_processor
     def constants():
         return dict(
             currencyMain = typing.Currency.main,

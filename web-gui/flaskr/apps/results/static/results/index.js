@@ -23,4 +23,14 @@ $(function () {
   $("#list-filter").on("keyup search input paste cut", function() {
     datatable.search(this.value).draw();
   });
+
+  $('.color-gain').each(styling.colorGain);
 });
+
+function submitTimerangeForm(e) {
+  e.preventDefault()
+
+  let url = URI(window.location.href);
+  url.removeSearch("timerange").addSearch("timerange", $('#f-timerange').val());
+  $(location).attr("href", url.toString());
+}
