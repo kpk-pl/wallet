@@ -72,7 +72,7 @@ def _receiptGet():
             'type': 'Deposit',
             'category': 'Cash',
             '_id': {'$ne': asset['_id']},
-            'currency.name': asset['currency']['name']
+            'currency.name': {'$in': [asset['currency']['name'], typing.Currency.main]},
         }}
     ]))
 
@@ -111,6 +111,8 @@ def _makeOperation(asset):
             operation['finalQuantity'] += operation['quantity']
     else:
         operation['price'] = _parseNumeric(_required("price"))
+
+    operation['finalQuantity'] = round(operation['finalQuantity'], typing.Currency.decimals)
 
     provisionSupportTypes = [typing.Operation.Type.buy, typing.Operation.Type.sell, typing.Operation.Type.earning]
     if 'provision' in request.form and operation['type'] in provisionSupportTypes:
