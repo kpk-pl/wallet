@@ -140,6 +140,7 @@ def test_receipt_failure_sell_more_than_have(client):
 @pytest.mark.parametrize('clientApp,type', [
     (pytest.lazy_fixture('client'), "BUY"),
     (pytest.lazy_fixture('client'), "SELL"),
+    (pytest.lazy_fixture('client'), "RECEIVE"),
 ])
 def test_receipt_supports_conversion_rate_for_foreign_currency(clientApp, type):
     pricingId = PricingSource.createSimple().unit("USD").commit()
@@ -163,6 +164,7 @@ def test_receipt_supports_conversion_rate_for_foreign_currency(clientApp, type):
 @pytest.mark.parametrize('clientApp,type', [
     (pytest.lazy_fixture('client'), "BUY"),
     (pytest.lazy_fixture('client'), "SELL"),
+    (pytest.lazy_fixture('client'), "RECEIVE"),
 ])
 def test_receipt_failure_no_conversion_rate_for_foreign_currency(clientApp, type):
     pricingId = PricingSource.createSimple().unit("USD").commit()
@@ -180,6 +182,7 @@ def test_receipt_failure_no_conversion_rate_for_foreign_currency(clientApp, type
 @pytest.mark.parametrize('clientApp,type', [
     (pytest.lazy_fixture('client'), "BUY"),
     (pytest.lazy_fixture('client'), "SELL"),
+    (pytest.lazy_fixture('client'), "RECEIVE"),
 ])
 def test_receipt_failure_no_code_for_coded(clientApp, type):
     assetId = Asset.createEquity().pricing().quantity(10).coded().commit()
@@ -196,6 +199,7 @@ def test_receipt_failure_no_code_for_coded(clientApp, type):
 @pytest.mark.parametrize('clientApp,type', [
     (pytest.lazy_fixture('client'), "BUY"),
     (pytest.lazy_fixture('client'), "SELL"),
+    (pytest.lazy_fixture('client'), "RECEIVE"),
 ])
 def test_receipt_successfull_for_coded(clientApp, type):
     assetId = Asset.createEquity().pricing().quantity(10).coded().commit()
@@ -257,3 +261,63 @@ def test_receipt_successfull_deposit_handling(client):
             price = 999,
             date = datetime.datetime(2020, 1, 4, 13, 0, 0),
         )
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_successfull_receive(client):
+    assetId = Asset.createEquity().pricing().quantity(10).commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'RECEIVE',
+        date = '2021-12-02T17:45:22',
+        quantity = 22,
+        price = 27.2
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 2
+        assert dbAsset['operations'][1] == dict(
+            type = "RECEIVE",
+            date = datetime.datetime(2021, 12, 2, 17, 45, 22),
+            quantity = 22,
+            finalQuantity = 32,
+            price = 27.2,
+        )
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_receive_does_not_support_provision(client):
+    assetId = Asset.createEquity().pricing().commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'RECEIVE',
+        date = '2021-12-02T17:45:22',
+        quantity = 22,
+        price = 27.2,
+        provision = 1000,
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 1
+        assert 'provision' not in dbAsset['operations'][0]
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_failure_receive_not_supported_for_deposit(client):
+    assetId = Asset.createDeposit().commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'RECEIVE',
+        date = '2021-12-02T17:45:22',
+        quantity = 22,
+        price = 27.2,
+    ), follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == 10
