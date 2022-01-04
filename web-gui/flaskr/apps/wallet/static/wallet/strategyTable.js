@@ -85,7 +85,8 @@ class StrategyTable {
       return 0
     }
 
-    const netAdjustSum = this.datatable.rows().reduce((acc, rowId) => acc + adjustValue(rowId), 0);
+    let netAdjustSum = 0;
+    this.datatable.rows().every(rowIdx => netAdjustSum += adjustValue(rowIdx));
 
     this.datatable.rows().every(function(rowIdx){
       const category = self.datatable.cell(rowIdx, self.colMap.name.column).data();

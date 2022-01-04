@@ -1,5 +1,8 @@
 const styling = function(){
   function colorGain() {
+    $(this).removeClass('color-gain-negative');
+    $(this).removeClass('color-gain-positive');
+
     if ($(this).text().startsWith('-')) {
       $(this).addClass('color-gain-negative')
     } else {

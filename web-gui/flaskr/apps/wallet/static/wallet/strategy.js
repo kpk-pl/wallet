@@ -93,11 +93,15 @@ $(function () {
               null]
     });
 
-    strategyTable.fillAllocation(data);
-    strategyTable.updateDeviation(data);
+    function updateTable(){
+      strategyTable.updateDeviation(data);
+      $('#strategyTable td.color-gain').each(styling.colorGain)
+    }
 
-    $('#strategyTable td.color-gain').each(styling.colorGain)
-    $(".strategyTableDeviationInput").change(()=>strategyTable.updateDeviation(data));
+    strategyTable.fillAllocation(data);
+    updateTable();
+
+    $(".strategyTableDeviationInput").change(updateTable);
   }
 });
 
