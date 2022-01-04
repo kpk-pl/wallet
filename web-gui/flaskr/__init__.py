@@ -1,5 +1,5 @@
-from flask import Flask, request, url_for
 import os
+from flask import Flask, request, url_for
 from flaskr import typing
 
 
@@ -9,7 +9,12 @@ def create_app(test_config=None):
     app.config.from_mapping(
         SECRET_KEY = 'dev',
         SESSION_COOKIE_SAMESITE = "Strict",
-        # EXPLAIN_TEMPLATE_LOADING = True
+        # EXPLAIN_TEMPLATE_LOADING = True,
+        MONGO_USER = os.environ.get("MONGO_USER", "investing"),
+        MONGO_PASS = os.environ.get("MONGO_PASS", "investing"),
+        MONGO_HOST = os.environ.get("MONGO_HOST", "127.0.0.1"),
+        MONGO_PORT = os.environ.get("MONGO_PORT", "27017"),
+        MONGO_SESSIONS = True,
     )
 
     if test_config is None:
@@ -75,5 +80,4 @@ def create_app(test_config=None):
             currencyMainDecimals = typing.Currency.decimals
         )
 
-    # print(app.url_map)
     return app

@@ -23,9 +23,13 @@ class HeaderLastQuoteUpdate:
     timestamp: datetime
     daysPast: int
 
-    def __init__(self):
-        self.timestamp = db.last_quote_update_time()
-        self.daysPast = (datetime.now() - self.timestamp).days
+    @classmethod
+    def create(cls):
+        lastUpdateTime = db.last_quote_update_time()
+        if not lastUpdateTime:
+            return None
+
+        return cls(timestamp=lastUpdateTime, daysPast=(datetime.now() - lastUpdateTime).days)
 
 
 @dataclass
@@ -39,7 +43,7 @@ class HeaderData:
 
         self.allLabels = next(db.get_db().assets.aggregate(_allLabelsPipeline()))['label']
 
-        self.lastQuoteUpdate = HeaderLastQuoteUpdate()
+        self.lastQuoteUpdate = HeaderLastQuoteUpdate.create()
 
     def asDict(self):
         return asdict(self)

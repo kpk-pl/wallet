@@ -1,7 +1,8 @@
-from flask import render_template, request, jsonify
+from flask import render_template, request, jsonify, current_app
 from flaskr import db, header, typing
 from flaskr.session import Session
 from bson.objectid import ObjectId
+import bson.errors
 from dateutil import parser
 
 
@@ -101,9 +102,13 @@ def _makeOperation(asset):
                                                                  asset['finalQuantity'],
                                                                  operation['quantity'] if 'quantity' in operation else None)
 
+    if operation['finalQuantity'] < 0:
+        raise Exception("Final quantity after operation cannot be less than zero")
+
     if asset['type'] == 'Deposit':
         operation['price'] = operation['quantity']  # for Deposit type, default unit price is 1
-        operation['finalQuantity'] += operation['quantity']
+        if operation['type'] == typing.Operation.Type.earning:
+            operation['finalQuantity'] += operation['quantity']
     else:
         operation['price'] = _parseNumeric(_required("price"))
 
@@ -179,7 +184,13 @@ def _makeBillingOperation(asset, operation, session):
 
 
 def _receiptPost(session):
-    query = {'_id': ObjectId(request.form['_id'])}
+    if 'id' not in request.args.keys():
+        return ({"error": "No asset id provided"}, 400)
+
+    try:
+        query = {'_id': ObjectId(request.args.get('id'))}
+    except bson.errors.InvalidId:
+        return ({"error": "Invalid asset id"}, 400)
 
     assets = list(db.get_db().assets.aggregate([
         {'$match': query},
@@ -187,7 +198,9 @@ def _receiptPost(session):
             'type': 1,
             'currency': 1,
             'coded': { '$ifNull': ['$coded', False]},
-            'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
+            # use $last when it's supported in mongomock
+            # 'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
+            'finalQuantity': {'$ifNull': [{'$arrayElemAt': ['$operations.finalQuantity', -1]}, 0]}
         }}
     ], session=session))
 
@@ -217,5 +230,8 @@ def receipt():
     if request.method == 'GET':
         return _receiptGet()
     elif request.method == 'POST':
-        with db.get_db().client.start_session() as session:
-            return session.with_transaction(_receiptPost)
+        if current_app.config['MONGO_SESSIONS']:
+            with db.get_db().client.start_session() as session:
+                return session.with_transaction(_receiptPost)
+        else:
+            return _receiptPost(None)

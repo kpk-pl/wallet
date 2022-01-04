@@ -1,14 +1,14 @@
-from pymongo import MongoClient
+import pymongo
 from flask import current_app, g
-import os
 
 
 def get_db():
     if 'db' not in g:
-        mongo = MongoClient('mongodb://{}:{}@{}:{}'.format(os.environ.get("MONGO_USER", "investing"),
-                                                           os.environ.get("MONGO_PASS", "investing"),
-                                                           os.environ.get("MONGO_HOST", "127.0.0.1"),
-                                                           os.environ.get("MONGO_PORT", "27017")))
+        url = 'mongodb://{}:{}@{}:{}'.format(current_app.config["MONGO_USER"],
+                                             current_app.config["MONGO_PASS"],
+                                             current_app.config["MONGO_HOST"],
+                                             current_app.config["MONGO_PORT"])
+        mongo = pymongo.MongoClient(url)
         g.db = mongo.wallet
 
     return g.db
