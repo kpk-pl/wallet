@@ -6,3 +6,4 @@ beautifulsoup4==4.9.3
 python-dateutil==2.8.1
 pytest==6.2.5
 mongomock==3.23.0
+pytest-lazy-fixture==0.6.3

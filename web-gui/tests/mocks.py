@@ -25,6 +25,10 @@ class PricingSource(_DictLike):
         if isinstance(id, ObjectId):
             self._data['_id'] = id
 
+    def unit(self, value):
+        self._data['unit'] = value
+        return self
+
     def commit(self):
         with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
             return db.wallet.quotes.insert_one(self.asdict()).inserted_id
@@ -71,6 +75,19 @@ class Asset(_DictLike):
             finalQuantity = quantity,
             price = 1
         )]
+        return self
+
+    def currency(self, currency, quoteId = None):
+        if not quoteId:
+            quoteId = PricingSource.createCurrencyPair(currency).commit()
+        self._data['currency'] = dict(
+            name = currency,
+            quoteId = quoteId,
+        )
+        return self
+
+    def coded(self):
+        self._data['coded'] = True
         return self
 
     def commit(self):
