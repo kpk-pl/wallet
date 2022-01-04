@@ -149,25 +149,33 @@ def _makeBillingOperation(asset, operation, session):
 
     billingSupportTypes = [typing.Operation.Type.buy, typing.Operation.Type.sell, typing.Operation.Type.earning]
     if operation['type'] not in billingSupportTypes:
-        return None, None
+        raise ReceiptError(200, "Unsupported operation type for billing asset")
 
     if operation['type'] == typing.Operation.Type.earning and asset['type'] == 'Deposit':
-        return None, None
+        raise ReceiptError(201, "EARNING on Deposit does not support billing")
 
-    query = {'_id': ObjectId(_required('billingAsset'))}
+    try:
+        query = {'_id': ObjectId(_required('billingAsset', 203))}
+    except bson.errors.InvalidId:
+        raise ReceiptError(202, "Invalid billingAsset id")
 
     billingAssets = list(db.get_db().assets.aggregate([
         {'$match': query},
         {'$project': {
+            'type': 1,
             'currency': 1,
-            'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
+            # restore after a PR to mongomock is merged and new version released
+            # 'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
+            'finalQuantity': {'$ifNull': [{'$arrayElemAt': ['$operations.finalQuantity', -1]}, 0]}
         }}
     ], session=session))
 
     if not billingAssets:
-        return query, None
+        raise ReceiptError(203, "Unknown billing asset id")
 
     billingAsset = billingAssets[0]
+    if billingAsset['type'] != 'Deposit':
+        raise ReceiptError(204, "Billing asset must be a Deposit")
 
     billingOperation = {
         'date': operation['date'],
@@ -176,25 +184,31 @@ def _makeBillingOperation(asset, operation, session):
     }
 
     if billingAsset['currency']['name'] != typing.Currency.main:
-        assert 'currencyConversion' in operation
+        assert 'currencyConversion' in operation  # checked already at code(104)
         billingOperation['currencyConversion'] = operation['currencyConversion']
 
     if asset['currency'] != billingAsset['currency']:
-        assert 'currencyConversion' in operation
-        assert billingAsset['currency']['name'] == typing.Currency.main
+        assert 'currencyConversion' in operation  # checked already at code(104)
+        if billingAsset['currency']['name'] != typing.Currency.main:
+            raise ReceiptError(205, "Invalid billind asset currency")
         # if operation was in foreign currency then billing asset currency can only be the same or main
         # and here we know that the operation currency and billing asset currency are different
 
-        billingOperation['quantity'] = round(billingOperation['quantity'] * operation['currencyConversion'],
-                                             typing.Currency.decimals)
+        billingOperation['quantity'] = billingOperation['quantity'] * operation['currencyConversion']
 
     if 'provision' in operation:
-        billingOperation['quantity'] -= operation['provision']
+        billingOperation['quantity'] = typing.Operation.adjustQuantity(operation['type'],
+                                                                       billingOperation['quantity'],
+                                                                       operation['provision'])
+
+    billingOperation['quantity'] = round(billingOperation['quantity'], typing.Currency.decimals)
 
     billingOperation['price'] = billingOperation['quantity']
     billingOperation['finalQuantity'] = typing.Operation.adjustQuantity(billingOperation['type'],
                                                                         billingAsset['finalQuantity'],
                                                                         billingOperation['quantity'])
+
+    billingOperation['finalQuantity'] = round(billingOperation['finalQuantity'], typing.Currency.decimals)
 
     return query, billingOperation
 
@@ -230,7 +244,10 @@ def _receiptPost(session):
     except ReceiptError as e:
         return (e.response(), 400)
 
-    billingQuery, billingOperation = _makeBillingOperation(asset, operation, session)
+    try:
+        billingQuery, billingOperation = _makeBillingOperation(asset, operation, session)
+    except ReceiptError as e:
+        return (e.response(), 400)
 
     if billingQuery and not billingOperation:
         return ({"error": True, "message": "Could not resolve billing operation", "code": 4}, 400)

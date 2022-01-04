@@ -3,6 +3,7 @@ import mongomock
 import pymongo
 import tests
 import datetime
+from bson.objectid import ObjectId
 from tests.fixtures import client
 from tests.mocks import PricingSource, Asset
 
@@ -141,6 +142,7 @@ def test_receipt_failure_sell_more_than_have(client):
     (pytest.lazy_fixture('client'), "BUY"),
     (pytest.lazy_fixture('client'), "SELL"),
     (pytest.lazy_fixture('client'), "RECEIVE"),
+    (pytest.lazy_fixture('client'), "EARNING"),
 ])
 def test_receipt_supports_conversion_rate_for_foreign_currency(clientApp, type):
     pricingId = PricingSource.createSimple().unit("USD").commit()
@@ -165,6 +167,7 @@ def test_receipt_supports_conversion_rate_for_foreign_currency(clientApp, type):
     (pytest.lazy_fixture('client'), "BUY"),
     (pytest.lazy_fixture('client'), "SELL"),
     (pytest.lazy_fixture('client'), "RECEIVE"),
+    (pytest.lazy_fixture('client'), "EARNING"),
 ])
 def test_receipt_failure_no_conversion_rate_for_foreign_currency(clientApp, type):
     pricingId = PricingSource.createSimple().unit("USD").commit()
@@ -183,6 +186,7 @@ def test_receipt_failure_no_conversion_rate_for_foreign_currency(clientApp, type
     (pytest.lazy_fixture('client'), "BUY"),
     (pytest.lazy_fixture('client'), "SELL"),
     (pytest.lazy_fixture('client'), "RECEIVE"),
+    (pytest.lazy_fixture('client'), "EARNING"),
 ])
 def test_receipt_failure_no_code_for_coded(clientApp, type):
     assetId = Asset.createEquity().pricing().quantity(10).coded().commit()
@@ -200,6 +204,7 @@ def test_receipt_failure_no_code_for_coded(clientApp, type):
     (pytest.lazy_fixture('client'), "BUY"),
     (pytest.lazy_fixture('client'), "SELL"),
     (pytest.lazy_fixture('client'), "RECEIVE"),
+    (pytest.lazy_fixture('client'), "EARNING"),
 ])
 def test_receipt_successfull_for_coded(clientApp, type):
     assetId = Asset.createEquity().pricing().quantity(10).coded().commit()
@@ -321,3 +326,304 @@ def test_receipt_failure_receive_not_supported_for_deposit(client):
 
     assert rv.status_code == 400
     assert rv.json['code'] == 10
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_successfull_earning(client):
+    assetId = Asset.createEquity().pricing().quantity(10).commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'EARNING',
+        date = '2021-12-02T17:45:22',
+        price = 12.5,
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 2
+        assert dbAsset['operations'][1] == dict(
+            type = "EARNING",
+            date = datetime.datetime(2021, 12, 2, 17, 45, 22),
+            finalQuantity = 10,
+            price = 12.5,
+        )
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_earning_does_not_contain_quantity(client):
+    assetId = Asset.createEquity().pricing().commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'EARNING',
+        date = '2021-12-02T17:45:22',
+        price = 12.5,
+        quantity = 13,
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 1
+        assert 'quantity' not in dbAsset['operations'][0]
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_earning_for_deposit_needs_quantity(client):
+    assetId = Asset.createDeposit().quantity(12).commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'EARNING',
+        date = '2021-12-02T17:45:22',
+        quantity = 13,
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 2
+        assert dbAsset['operations'][1] == dict(
+            type = "EARNING",
+            date = datetime.datetime(2021, 12, 2, 17, 45, 22),
+            quantity = 13,
+            price = 13,
+            finalQuantity = 25,
+        )
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_for_buy(client):
+    assetId = Asset.createEquity().commit()
+    billingId = Asset.createDeposit().quantity(1000).commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'BUY',
+        date = '2021-12-03T12:00:00',
+        quantity = 2,
+        price = 560,
+        billingAsset = str(billingId),
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 1
+
+        billingAsset = db.wallet.assets.find_one({'_id': billingId})
+        assert len(billingAsset['operations']) == 2
+        assert billingAsset['operations'][1] == dict(
+            type = 'SELL',
+            date = datetime.datetime(2021, 12, 3, 12),
+            quantity = 560,
+            finalQuantity = 440,
+            price = 560,
+        )
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_for_sell_currency_conversion(client):
+    assetId = Asset.createEquity().currency("USD").quantity(20).commit()
+    billingId = Asset.createDeposit().quantity(100).commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'SELL',
+        date = '2021-12-03T12:00:00',
+        quantity = 5,
+        price = 100,
+        currencyConversion = 3.5,
+        billingAsset = str(billingId),
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 2
+
+        billingAsset = db.wallet.assets.find_one({'_id': billingId})
+        assert len(billingAsset['operations']) == 2
+        assert billingAsset['operations'][1] == dict(
+            type = 'BUY',
+            date = datetime.datetime(2021, 12, 3, 12),
+            quantity = 350,
+            finalQuantity = 450,
+            price = 350,
+        )
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_for_earning(client):
+    assetId = Asset.createEquity().commit()
+    billingId = Asset.createDeposit().commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'EARNING',
+        date = '2021-12-03T12:00:00',
+        price = 100,
+        billingAsset = str(billingId),
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 1
+
+        billingAsset = db.wallet.assets.find_one({'_id': billingId})
+        assert len(billingAsset['operations']) == 1
+        assert billingAsset['operations'][0] == dict(
+            type = 'BUY',
+            date = datetime.datetime(2021, 12, 3, 12),
+            quantity = 100,
+            finalQuantity = 100,
+            price = 100,
+        )
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_does_not_work_for_receive(client):
+    assetId = Asset.createEquity().commit()
+
+    data = {k:v for (k,v) in MINIMAL_WORKING_RECEIPT_DATA.items()}
+    data['type'] = 'RECEIVE'
+    data['billingAsset'] = str(ObjectId())
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=data, follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == 200
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_does_not_work_for_earning_on_deposit(client):
+    assetId = Asset.createDeposit().commit()
+
+    data = {k:v for (k,v) in MINIMAL_WORKING_RECEIPT_DATA.items()}
+    data['type'] = 'EARNING'
+    data['billingAsset'] = str(ObjectId())
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=data, follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == 201
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_failure_when_invalid_id(client):
+    assetId = Asset.createEquity().commit()
+
+    data = {k:v for (k,v) in MINIMAL_WORKING_RECEIPT_DATA.items()}
+    data['billingAsset'] = 13
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=data, follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == 202
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_failure_when_unknown_id(client):
+    assetId = Asset.createEquity().commit()
+
+    data = {k:v for (k,v) in MINIMAL_WORKING_RECEIPT_DATA.items()}
+    data['billingAsset'] = str(ObjectId())
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=data, follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == 203
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_failure_not_deposit(client):
+    assetId = Asset.createEquity().commit()
+    billingId = Asset.createEquity().commit()
+
+    data = {k:v for (k,v) in MINIMAL_WORKING_RECEIPT_DATA.items()}
+    data['billingAsset'] = str(billingId)
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=data, follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == 204
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_failure_two_different_currencies(client):
+    assetId = Asset.createEquity().currency("USD").commit()
+    billingId = Asset.createDeposit().currency("EUR").commit()
+
+    data = {k:v for (k,v) in MINIMAL_WORKING_RECEIPT_DATA.items()}
+    data['currencyConversion'] = 4.5
+    data['billingAsset'] = str(billingId)
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=data, follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == 205
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_buy_with_provision(client):
+    assetId = Asset.createEquity().commit()
+    billingId = Asset.createDeposit().quantity(1000).commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'BUY',
+        date = '2021-12-03T12:00:00',
+        quantity = 2,
+        price = 560,
+        billingAsset = str(billingId),
+        provision = 25,
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 1
+
+        billingAsset = db.wallet.assets.find_one({'_id': billingId})
+        assert len(billingAsset['operations']) == 2
+        assert billingAsset['operations'][1] == dict(
+            type = 'SELL',
+            date = datetime.datetime(2021, 12, 3, 12),
+            quantity = 585,
+            finalQuantity = 415,
+            price = 585,
+        )
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_sell_with_provision(client):
+    assetId = Asset.createEquity().quantity(10).commit()
+    billingId = Asset.createDeposit().quantity(1000).commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'SELL',
+        date = '2021-12-03T12:00:00',
+        quantity = 2,
+        price = 560,
+        billingAsset = str(billingId),
+        provision = 25,
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 2
+
+        billingAsset = db.wallet.assets.find_one({'_id': billingId})
+        assert len(billingAsset['operations']) == 2
+        assert billingAsset['operations'][1] == dict(
+            type = 'BUY',
+            date = datetime.datetime(2021, 12, 3, 12),
+            quantity = 535,
+            finalQuantity = 1535,
+            price = 535,
+        )
