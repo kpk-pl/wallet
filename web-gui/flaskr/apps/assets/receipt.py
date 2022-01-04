@@ -79,38 +79,52 @@ def _receiptGet():
     return render_template("assets/receipt.html", asset=asset, depositAccounts=depositAccounts, header=header.data())
 
 
-def _required(param):
+class ReceiptError(RuntimeError):
+    def __init__(self, code, msg):
+        super(RuntimeError, self).__init__(msg)
+        self.code = code
+        self.message = msg
+
+    def response(self):
+        return dict(
+            error = True,
+            message = self.message,
+            code = self.code
+        )
+
+
+def _required(param, errorCode):
     if param not in request.form:
-        raise Exception(f"Missing required field {param}")
+        raise ReceiptError(errorCode, f"Missing required field {param}")
     return request.form[param]
 
 
 def _makeOperation(asset):
     operation = {
-        'date': parser.parse(_required("date")),
-        'type': _required("type"),
+        'date': parser.parse(_required("date", 100)),
+        'type': _required("type", 101),
     }
 
     if operation['type'] != typing.Operation.Type.earning or asset['type'] == 'Deposit':
-        operation['quantity'] = _parseNumeric(_required("quantity"))
+        operation['quantity'] = _parseNumeric(_required("quantity", 102))
 
     if asset['type'] == 'Deposit':
         if operation['type'] == typing.Operation.Type.receive:
-            raise Exception("Deposit asset does not support RECEIVE")
+            raise ReceiptError(10, "Deposit asset does not support RECEIVE")
 
     operation['finalQuantity'] = typing.Operation.adjustQuantity(operation['type'],
                                                                  asset['finalQuantity'],
                                                                  operation['quantity'] if 'quantity' in operation else None)
 
     if operation['finalQuantity'] < 0:
-        raise Exception("Final quantity after operation cannot be less than zero")
+        raise ReceiptError(11, "Final quantity after operation cannot be less than zero")
 
     if asset['type'] == 'Deposit':
         operation['price'] = operation['quantity']  # for Deposit type, default unit price is 1
         if operation['type'] == typing.Operation.Type.earning:
             operation['finalQuantity'] += operation['quantity']
     else:
-        operation['price'] = _parseNumeric(_required("price"))
+        operation['price'] = _parseNumeric(_required("price", 103))
 
     operation['finalQuantity'] = round(operation['finalQuantity'], typing.Currency.decimals)
 
@@ -121,10 +135,10 @@ def _makeOperation(asset):
             operation['provision'] = provision
 
     if asset['currency']['name'] != typing.Currency.main:
-        operation['currencyConversion'] = float(_required('currencyConversion'))
+        operation['currencyConversion'] = float(_required('currencyConversion', 104))
 
     if asset['coded']:
-        operation['code'] = _required('code')
+        operation['code'] = _required('code', 105)
 
     return operation
 
@@ -187,12 +201,12 @@ def _makeBillingOperation(asset, operation, session):
 
 def _receiptPost(session):
     if 'id' not in request.args.keys():
-        return ({"error": "No asset id provided"}, 400)
+        return ({"error": True, "message": "No asset id provided", "code": 1}, 400)
 
     try:
         query = {'_id': ObjectId(request.args.get('id'))}
     except bson.errors.InvalidId:
-        return ({"error": "Invalid asset id"}, 400)
+        return ({"error": True, "message": "Invalid asset id", "code": 2}, 400)
 
     assets = list(db.get_db().assets.aggregate([
         {'$match': query},
@@ -207,19 +221,19 @@ def _receiptPost(session):
     ], session=session))
 
     if not assets:
-        return ({"error": "Unknown asset id"}, 400)
+        return ({"error": True, "message": "Unknown asset id", "code": 3}, 400)
 
     asset = assets[0]
 
     try:
         operation = _makeOperation(asset)
-    except Exception as e:
-        return ({"error": str(e)}, 400)
+    except ReceiptError as e:
+        return (e.response(), 400)
 
     billingQuery, billingOperation = _makeBillingOperation(asset, operation, session)
 
     if billingQuery and not billingOperation:
-        return ({"error": "Could not resolve billing operation"}, 400)
+        return ({"error": True, "message": "Could not resolve billing operation", "code": 4}, 400)
 
     db.get_db().assets.update_one(query, {'$push': {'operations': operation }}, session=session)
     if billingQuery:

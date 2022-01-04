@@ -107,3 +107,15 @@ class Asset(_DictLike):
         result['currency'] = {"name": "PLN"}
 
         return result
+
+    @classmethod
+    def createDeposit(cls, id=None):
+        result = cls(id)
+
+        result['name'] = "Cash"
+        result['type'] = "Deposit"
+        result['category'] = "Cash"
+        result['institution'] = "Bank of Mocks"
+        result['currency'] = {"name": "PLN"}
+
+        return result
