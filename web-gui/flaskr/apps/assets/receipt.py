@@ -190,7 +190,7 @@ def _makeBillingOperation(asset, operation, session):
     if asset['currency'] != billingAsset['currency']:
         assert 'currencyConversion' in operation  # checked already at code(104)
         if billingAsset['currency']['name'] != typing.Currency.main:
-            raise ReceiptError(205, "Invalid billind asset currency")
+            raise ReceiptError(205, "Invalid billing asset currency")
         # if operation was in foreign currency then billing asset currency can only be the same or main
         # and here we know that the operation currency and billing asset currency are different
 

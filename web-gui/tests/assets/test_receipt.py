@@ -627,3 +627,44 @@ def test_receipt_billing_asset_sell_with_provision(client):
             finalQuantity = 1535,
             price = 535,
         )
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_foreign_currencies(client):
+    assetId = Asset.createEquity().currency("USD").commit()
+    billingId = Asset.createDeposit().quantity(1000).commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'BUY',
+        date = '2021-12-03T12:00:00',
+        quantity = 2,
+        price = 100,
+        billingAsset = str(billingId),
+        provision = 25,
+        currencyConversion = 4.5
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 1
+        assert dbAsset['operations'][0] == dict(
+            type = "BUY",
+            date = datetime.datetime(2021, 12, 3, 12),
+            quantity = 2,
+            finalQuantity = 2,
+            price = 100,
+            currencyConversion = 4.5,
+            provision = 25,
+        )
+
+        billingAsset = db.wallet.assets.find_one({'_id': billingId})
+        assert len(billingAsset['operations']) == 2
+        assert billingAsset['operations'][1] == dict(
+            type = 'SELL',
+            date = datetime.datetime(2021, 12, 3, 12),
+            quantity = 475,
+            finalQuantity = 525,
+            price = 475,
+        )
