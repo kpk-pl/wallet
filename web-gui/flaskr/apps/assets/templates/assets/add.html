@@ -23,72 +23,16 @@
 {% endblock %}
 
 {% block user_scripts %}
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/add.js') }}"></script>
+
 <script type="text/javascript">
-$(document).ready(function(){
-  function linkChange() {
-    function setDefault(selector, value) {
-      var element = $(selector)
-      if ((element.val() === null || element.val() === "") && value !== null)
-        element.val(value).change()
-    }
-
-    if ($(this).valid()) {
-      $.getJSON("{{ url_for('quotes.index') }}?url=" + encodeURIComponent($(this).val()), function(quote){
-        console.log(quote)
-        setDefault('#f-name', quote['name'])
-        setDefault('#f-type', quote['type'])
-        setDefault('#f-currency', quote['currency'])
-        setDefault('#f-ticker', quote['ticker'])
-        setDefault('#f-quote', quote['quote'])
-      })
-    }
-  }
-
-  $("#f-link").change(linkChange);
-  $("#f-link-get").click(linkChange);
-
-  $("#f-currency").change(function() {
-    $('#f-quote-currency-prepend').text($(this).val());
-  });
-
-  $("#f-currency").change(function() {
-    var currency = $(this).val()
-    $("#f-price-source > option").each(function() {
-      $(this).prop('disabled', $(this).attr('data-price-source-unit') != currency)
-    })
-  })
-});
-</script>
-<script type="text/javascript">
-$.validator.setDefaults({
-  submitHandler: function() {
-    $.post("{{ url_for('assets.index') }}", $('.tab-pane.active > form').serialize(), function(data) {
-      $(location).attr("href", "{{ url_for('assets.index', label=header.label, id='_id') | safe }}".replace('_id', data.id));
-    })
-  }
-});
-$("form").validate({
-  errorElement: 'span',
-  errorPlacement: function (error, element) {
-          error.addClass('invalid-feedback');
-          element.closest('.form-group').append(error);
-        },
-  highlight: function (element, errorClass, validClass) {
-          $(element).addClass('is-invalid');
-        },
-  unhighlight: function (element, errorClass, validClass) {
-          $(element).removeClass('is-invalid');
-        }
-});
-</script>
-<script type="text/javascript">
-['#f-labels', '#c-labels'].forEach(function(selector){
-  $(selector).tagsinput({
-    tagClass: 'badge badge-success',
-    typeaheadjs: {
-      source: function(query, sync){ sync({{ header.allLabels | safe }}); }
-    }
-  });
+initialize({
+  headerLabels: {{ header.allLabels | safe }},
+  getQuoteUrl: function(){
+      return "{{ url_for('quotes.index') }}?url=" + encodeURIComponent($("#f-link").val());
+  },
+  submitUrl: "{{ url_for('assets.index') }}",
+  nextUrl: "{{ url_for('assets.index', label=header.label, id='_id') | safe }}".replace('_id', data.id),
 });
 </script>
 {% endblock %}
@@ -147,6 +91,7 @@ $("form").validate({
                         <option value="EUR">EUR</option>
                         <option value="USD">USD</option>
                         <option value="GBP">GBP</option>
+                        <option value="GBX">GBX</option>
                       </select>
                     </div>
                   </div>
