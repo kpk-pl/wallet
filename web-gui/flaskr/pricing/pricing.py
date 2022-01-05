@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from dataclasses import dataclass, asdict
-from typing import Optional
 from bson.objectid import ObjectId
+from flaskr import model
 
 from .interp import interp
 from .context import Context
@@ -72,6 +72,8 @@ class Pricing(object):
         return (self._data.netValue, self._data.quantity)
 
     def _prepare(self, asset):
+        self._data.quotes = {}
+
         self._data.quantity = 0
         self._data.netValue = 0.0
 
@@ -82,23 +84,30 @@ class Pricing(object):
         if not self._data.operationsInScope:
             return False
 
+        self._data.pricingIds = []
+
+        if 'pricing' in asset and 'quoteId' in asset['pricing']:
+            self._data.pricingIds.append(asset['pricing']['quoteId'])
+        if 'quoteId' in asset['currency']:
+            self._data.pricingIds.append(asset['currency']['quoteId'])
+
+        self._ctx.loadQuotes(self._data.pricingIds)
+
         return True
+
+    def _netValueForCurrency(self, asset):
+        currency = model.AssetCurrency(**asset['currency'])
+        if not currency.quoteId:
+            return self._data.value
+
+        currencyQuote = self._ctx.getFinalById(currency.quoteId, currency.name)
+        self._data.quotes[str(currency.quoteId)] = currencyQuote
+        return self._data.value * currencyQuote
 
     def _byQuantity(self, asset):
         self._data.quantity = self._data.operationsInScope[-1]['finalQuantity']
         self._data.value = self._data.quantity
-
-        if 'quoteId' in asset['currency']:
-            currencyId = asset['currency']['quoteId']
-
-            self._data.pricingIds = [currencyId]
-            self._ctx.loadQuotes(self._data.pricingIds)
-            currencyQuote = self._ctx.getFinalById(currencyId)
-
-            self._data.quotes = { str(currencyId) : currencyQuote }
-            self._data.netValue = self._data.value * currencyQuote
-        else:
-            self._data.netValue = self._data.value
+        self._data.netValue = self._netValueForCurrency(asset)
 
     def _byQuote(self, asset):
         self._data.quantity = self._data.operationsInScope[-1]['finalQuantity']
@@ -108,26 +117,14 @@ class Pricing(object):
         self._data.netValue = None
 
         quoteId = asset['pricing']['quoteId']
-        self._data.pricingIds = [quoteId]
-
-        currencyId = None
-        if 'quoteId' in asset['currency']:
-            currencyId = asset['currency']['quoteId']
-            self._data.pricingIds.append(currencyId)
-
-        self._ctx.loadQuotes(self._data.pricingIds)
-        self._data.quotes = {}
-
+        # it might be possible in the future to pass currency name to getFinalById and in this way provide
+        # pricing for assets with pricing in different currency as quoted
+        # for now the currencies must match
         quote = self._ctx.getFinalById(quoteId)
         if quote is not None:
             self._data.quotes[str(quoteId)] = quote
             self._data.value = quote * self._data.quantity
-            self._data.netValue = self._data.value
-
-            if currencyId:
-                currencyQuote = self._ctx.getFinalById(currencyId)
-                self._data.quotes[str(currencyId)] = currencyQuote
-                self._data.netValue = self._data.value * currencyQuote
+            self._data.netValue = self._netValueForCurrency(asset)
 
     def _byInterest(self, asset):
         self._data.quantity = self._data.operationsInScope[-1]['finalQuantity']
@@ -243,23 +240,23 @@ class HistoryPricing(object):
         return result
 
     def _priceAssetByQuantity(self, asset, result):
-        currencyId = asset['currency']['quoteId'] if 'quoteId' in asset['currency'] else None
+        currency = model.AssetCurrency(**asset['currency'])
 
         value = [a for a in result.quantity]
-        if currencyId:
-            value = [a * b for a, b in zip(value, self._ctx.getHistoricalById(currencyId))]
+        if currency.quoteId:
+            value = [a * b for a, b in zip(value, self._ctx.getHistoricalById(currency.quoteId, currency.name))]
 
         return value
 
     def _priceAssetByQuote(self, asset, result):
         quoteId = asset['pricing']['quoteId']
-        currencyId = asset['currency']['quoteId'] if 'quoteId' in asset['currency'] else None
+        currency = model.AssetCurrency(**asset['currency'])
 
-        self._ctx.loadQuotes(filter(None, [quoteId, currencyId]))
+        self._ctx.loadQuotes(filter(None, [quoteId, currency.quoteId if currency else None]))
 
         value = [a * b for a, b in zip(result.quantity, self._ctx.getHistoricalById(quoteId))]
-        if currencyId:
-            value = [a * b for a, b in zip(value, self._ctx.getHistoricalById(currencyId))]
+        if currency.quoteId:
+            value = [a * b for a, b in zip(value, self._ctx.getHistoricalById(currency.quoteId, currency.name))]
 
         return value
 

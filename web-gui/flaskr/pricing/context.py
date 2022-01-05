@@ -1,6 +1,7 @@
 from datetime import datetime, time, timedelta
-from dataclasses import dataclass, field
-from flaskr import db
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from flaskr import db, model
 from bson.objectid import ObjectId
 from .interp import interp
 
@@ -18,14 +19,10 @@ def _dayByDay(start, finish):
 
 
 class Context(object):
-    @dataclass
-    class StorageType:
-        _id: ObjectId
-        quotes: list[tuple[datetime, float]] = field(default_factory=list)
-
-        def __init__(self, desc):
-            self._id = desc['_id']
-            self.quotes = list(map(lambda q: (q['timestamp'], q['quote']), desc['quotes']))
+    class StorageType(BaseModel):
+        id: model.PyObjectId = Field(alias='_id')
+        currencyPair: Optional[model.QuoteCurrencyPair]
+        quotes: List[model.QuoteHistoryItem] = Field(default_factory=list)
 
 
     def __init__(self, finalDate = None, startDate = None):
@@ -36,7 +33,7 @@ class Context(object):
         self.quotes = []
 
     def storedIds(self):
-        return set(q._id for q in self.quotes)
+        return set(q.id for q in self.quotes)
 
     def loadQuotes(self, ids):
         condition = {'$lte': ['$$item.timestamp', self.finalDate]}
@@ -57,22 +54,47 @@ class Context(object):
                         'cond': condition
                 }}
             }},
-            {'$project': {'_id': 1, 'quotes': projection}}
+            {'$project': {
+                '_id': 1,
+                'currencyPair': 1,
+                'quotes': projection
+            }}
         ]
 
         for item in db.get_db().quotes.aggregate(pipeline):
             if self.startDate:
                 item['quotes'] = interp(item['quotes'], self.timeScale)
 
-            self.quotes.append(Context.StorageType(item))
+            self.quotes.append(self.StorageType(**item))
 
-    def getFinalById(self, quoteId):
-        quotesForId = next(x.quotes for x in self.quotes if x._id == quoteId)
-        if not quotesForId:
+    def getFinalById(self, quoteId, currency=None):
+        entry = next(x for x in self.quotes if x.id == quoteId)
+        if not entry:
             return None
 
-        return quotesForId[-1][1]
+        result = entry.quotes[-1].quote
+        if not entry.currencyPair:
+            return result
 
-    def getHistoricalById(self, quoteId):
-        quotes = next(x.quotes for x in self.quotes if x._id == quoteId)
-        return [x[1] for x in quotes]
+        if currency == "GBP" and entry.currencyPair.destination == "GBX":
+            result *= 100.0
+        elif currency == "GBX" and entry.currencyPair.destination == "GBP":
+            result /= 100.0
+
+        return result
+
+    def getHistoricalById(self, quoteId, currency=None):
+        entry = next(x for x in self.quotes if x.id == quoteId)
+        if not entry:
+            return None
+
+        result = [x.quote for x in entry.quotes]
+        if not entry.currencyPair:
+            return result
+
+        if currency == "GBP" and entry.currencyPair.destination == "GBX":
+            result = [q*100.0 for q in result]
+        elif currency == "GBX" and entry.currencyPair.destination == "GBP":
+            result = [q/100.0 for q in result]
+
+        return result
