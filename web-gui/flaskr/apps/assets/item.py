@@ -8,6 +8,20 @@ from datetime import datetime
 def _getPipelineForAssetDetails(assetId):
     pipeline = []
     pipeline.append({ "$match" : { "_id" : ObjectId(assetId) } })
+    pipeline.append({ "$lookup" : {
+        "from": "quotes",
+        "let": { "pricingId" : "$pricing.quoteId" },
+        "pipeline": [
+            { "$match" : {
+                "$expr": { "$eq": ["$_id", "$$pricingId"] }
+            }},
+            { "$project" : {
+                "_id": 0,
+                "data": "$quoteHistory",
+            }}
+        ],
+        "as": "quoteHistory",
+    }})
     pipeline.append({ "$project" : {
         "name": 1,
         "ticker": 1,
@@ -21,15 +35,9 @@ def _getPipelineForAssetDetails(assetId):
         "labels": 1,
         "trashed": 1,
         "operations": { "$ifNull": [ '$operations', [] ] },
-        "finalQuantity": { "$last": "$operations.finalQuantity" }
+        "finalQuantity": { "$last": "$operations.finalQuantity" },
+        "quoteHistory": { "$last": "$quoteHistory.data" },
     }})
-    return pipeline
-
-
-def _getPipelineForAssetQuotes(quoteId):
-    pipeline = []
-    pipeline.append({'$match' : { '_id' : quoteId }})
-    pipeline.append({'$project' : { 'quoteHistory' : 1 }})
     return pipeline
 
 
@@ -44,10 +52,4 @@ def item():
             return ('', 404)
 
         asset = Profits(assets[0])()
-
-        if 'pricing' in asset and 'quoteId' in asset['pricing']:
-            quoteHistory = list(db.get_db().quotes.aggregate(_getPipelineForAssetQuotes(asset['pricing']['quoteId'])))
-            if quoteHistory:
-                asset['quoteHistory'] = quoteHistory[0]['quoteHistory']
-
         return render_template("assets/item.html", asset=asset, header=header.data())
