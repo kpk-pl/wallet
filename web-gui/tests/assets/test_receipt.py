@@ -456,6 +456,23 @@ def test_receipt_billing_asset_for_sell_currency_conversion(client):
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_failure_not_enough(client):
+    assetId = Asset.createEquity().quantity(20).commit()
+    billingId = Asset.createDeposit().quantity(100).commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'BUY',
+        date = '2021-12-03T12:00:00',
+        quantity = 5,
+        price = 101,
+        billingAsset = str(billingId),
+    ), follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == 206
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_receipt_billing_asset_for_earning(client):
     assetId = Asset.createEquity().commit()
     billingId = Asset.createDeposit().commit()

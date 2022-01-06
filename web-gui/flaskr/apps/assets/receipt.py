@@ -208,6 +208,9 @@ def _makeBillingOperation(asset, operation, session):
                                                                         billingAsset['finalQuantity'],
                                                                         billingOperation['quantity'])
 
+    if billingOperation['finalQuantity'] < 0:
+        raise ReceiptError(206, "Not enough asset quantity for billing operation")
+
     billingOperation['finalQuantity'] = round(billingOperation['finalQuantity'], typing.Currency.decimals)
 
     return query, billingOperation
@@ -248,9 +251,6 @@ def _receiptPost(session):
         billingQuery, billingOperation = _makeBillingOperation(asset, operation, session)
     except ReceiptError as e:
         return (e.response(), 400)
-
-    if billingQuery and not billingOperation:
-        return ({"error": True, "message": "Could not resolve billing operation", "code": 4}, 400)
 
     db.get_db().assets.update_one(query, {'$push': {'operations': operation }}, session=session)
     if billingQuery:
