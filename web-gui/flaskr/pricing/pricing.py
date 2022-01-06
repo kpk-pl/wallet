@@ -261,7 +261,10 @@ class HistoryPricing(_PricingBase):
         quoteId = asset['pricing']['quoteId']
         currency = model.AssetCurrency(**asset['currency'])
 
-        self._ctx.loadQuotes(filter(None, [quoteId, currency.quoteId if currency else None]))
+        ids = [quoteId]
+        if currency.quoteId:
+            ids.append(currency.quoteId)
+        self._ctx.loadQuotes(ids)
 
         value = [a * b for a, b in zip(result.quantity, self._ctx.getHistoricalById(quoteId))]
         if currency.quoteId:
