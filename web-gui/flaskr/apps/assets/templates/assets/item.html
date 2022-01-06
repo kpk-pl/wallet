@@ -80,8 +80,8 @@
         </div>
         <div class="card-body">
           <dl class="row">
-            <dt class="col-sm-6">Status</dt>
-            <dd class="col-sm-6">
+            <dt class="col-sm-8">Status</dt>
+            <dd class="col-sm-4">
               {%- if asset.trashed -%}
               <span class="text-muted">Trashed</span>
               {%- elif asset.finalQuantity and asset.finalQuantity > 0 -%}
@@ -90,20 +90,25 @@
               <span class="text-muted">Inactive</span>
               {%- endif -%}
             </dd>
-            <dt class="col-sm-6">Holding period</dt>
-            <dd class="col-sm-6">
+            <dt class="col-sm-8">Holding period</dt>
+            <dd class="col-sm-4">
               {%- if asset.finalQuantity and asset.finalQuantity > 0 -%}
               {{ asset._holdingDays }} days
               {%- endif -%}
             </dd>
-            <dt class="col-sm-6">Volume</dt>
-            <dd class="col-sm-6">{{ asset.finalQuantity if asset.finalQuantity else 0 }}</dd>
+            <dt class="col-sm-8">Volume</dt>
+            <dd class="col-sm-4">{{ asset.finalQuantity if asset.finalQuantity else 0 }}</dd>
             {%- if asset.type != 'Deposit' %}
-            <dt class="col-sm-6">Average open price</dt>
-            <dd class="col-sm-6">
+            <dt class="col-sm-8">Average open price</dt>
+            <dd class="col-sm-4">
               {%- if asset.finalQuantity and asset.finalQuantity > 0 -%}
               {{ asset._averagePrice | round(2) }} {{ asset.currency }}
               {%- endif -%}
+            </dd>
+            {%- elif asset.currency != currencyMain %}
+            <dt class="col-sm-8">Average conversion rate</dt>
+            <dd class="col-sm-4">
+              {{ asset._averageNetPrice | round(8) }}
             </dd>
             {%- endif %}
           </dl>
@@ -187,7 +192,7 @@
                 <th>Unit price <span class="smaller">[{{ asset.currency }}]</span></th>
                 {%- endif %}
                 {% if asset.currency != 'PLN' -%}
-                <th>Currency conversion</th>
+                <th>Conversion rate</th>
                 {%- endif %}
                 <th>Provision &amp; tax <span class="smaller">[PLN]</span></th>
                 <th>Final {{ 'value' if asset.type == 'Deposit' else 'volume' }}</th>
