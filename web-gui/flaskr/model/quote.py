@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 from typing import List, Optional
 from datetime import datetime
 from .types import PyObjectId
@@ -15,10 +15,10 @@ class QuoteCurrencyPair(BaseModel):
 
 
 class Quote(BaseModel):
-    _id: PyObjectId
+    id: PyObjectId = Field(alias='_id')
     name: str
     unit: str
-    url: str
+    url: HttpUrl
     updateFrequency: str
     stooqSymbol: Optional[str]
     currencyPair: Optional[QuoteCurrencyPair]

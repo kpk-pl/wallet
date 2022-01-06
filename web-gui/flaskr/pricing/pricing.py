@@ -127,12 +127,13 @@ class Pricing(object):
             self._data.netValue = self._netValueForCurrency(asset)
 
     def _byInterest(self, asset):
+        paramPricing = model.AssetPricingParametrized(**asset['pricing'])
         self._data.quantity = self._data.operationsInScope[-1]['finalQuantity']
 
         self._data.value = 0
         for operation in self._data.operationsInScope:
             if operation['type'] == 'BUY':
-                quoting = ParametrizedQuoting(asset['pricing'], operation['date'], self._ctx.finalDate)
+                quoting = ParametrizedQuoting(paramPricing, operation['date'], self._ctx.finalDate)
                 self._data.value += operation['price'] * quoting.getKeyPoints()[-1].multiplier
             else:
                 raise NotImplementedError("Did not implement {} operation" % (operation['type']))
@@ -261,11 +262,12 @@ class HistoryPricing(object):
         return value
 
     def _priceAssetByInterest(self, asset, result):
+        paramPricing = model.AssetPricingParametrized(**asset['pricing'])
         value = [0.0] * len(result.timescale)
 
         for operation in asset['operations']:
             if operation['type'] == 'BUY':
-                quoting = ParametrizedQuoting(asset['pricing'], operation['date'], self._ctx.finalDate)
+                quoting = ParametrizedQuoting(paramPricing, operation['date'], self._ctx.finalDate)
                 quoteHistory = list(map(lambda kp: {'timestamp': kp.timestamp, 'quote': operation['price'] * kp.multiplier}, quoting.getKeyPoints()))
                 quotes = interp(quoteHistory, self._ctx.timeScale, leftFill = 0.0)
                 value = [a + b['quote'] for a, b in zip(value, quotes)]
