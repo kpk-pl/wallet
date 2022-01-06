@@ -40,20 +40,48 @@ class ParametrizedQuoting:
             if not self.isPartial():
                 return percentage
 
-            return percentage * ((self._quoting.finalDate - self.timePoint).days / (self.nextTimePoint - self.timePoint).days)
+            passedDays = (self._quoting.finalDate - self.timePoint).days
+            periodDays = (self.nextTimePoint - self.timePoint).days
+            return percentage * (float(passedDays) / float(periodDays))
 
         def derivedGrowth(self):
-            pass
+            thisInterest = self.interest().derived
+            quoteTimestamp = datetime(self.nextTimePoint.year, self.nextTimePoint.month, self.nextTimePoint.day)
+
+            if thisInterest.sample.interval == model.assetPricing.AssetPricingParametrizedLengthName.year:
+                intervalDelta = relativedelta(years=1)
+                quoteTimestamp = quoteTimestamp.replace(day=1, month=1) + relativedelta(years=thisInterest.sample.intervalOffset)
+            elif thisInterest.sample.interval == model.assetPricing.AssetPricingParametrizedLengthName.month:
+                intervalDelta = relativedelta(months=1)
+                quoteTimestamp = quoteTimestamp.replace(day=1) + relativedelta(months=thisInterest.sample.intervalOffset)
+            elif thisInterest.sample.interval == model.assetPricing.AssetPricingParametrizedLengthName.day:
+                intervalDelta = relativedelta(days=1)
+                quoteTimestamp += relativedelta(days=thisInterest.sample.intervalOffset)
+
+            self._quoting._pricingCtx.loadQuotes(thisInterest.quoteId)
+
+            if thisInterest.sample.choose == model.assetPricing.AsserPricingParametrizedInterestItemDerivedSampleChoose.last:
+                result = self._quoting._pricingCtx.getPreviousById(thisInterest.quoteId, quoteTimestamp)
+            elif thisInterest.sample.choose == model.AssetPricing.AsserPricingParametrizedInterestItemDerivedSampleChoose.first:
+                result = self._quoting._pricingCtx.getNextById(thisInterest.quoteId, quoteTimestamp - intervalDelta)
+
+            if result is None:
+                return result
+
+            result *= float(thisInterest.sample.multiplier)
+            if result < float(thisInterest.sample.clampBelow):
+                result = float(thisInterest.sample.clampBelow)
+
+            return result
 
 
-    def __init__(self, pricingParameters, startDate, finalDate = None):
-        self.startDate = startDate
-        self.finalDate = finalDate if finalDate != None else datetime.now();
+    def __init__(self, pricingParameters, startDate, pricingCtx):
         self._params = pricingParameters
+        self._pricingCtx = pricingCtx
 
-        self._initPeriods()
+        self.startDate = startDate
+        self.finalDate = pricingCtx.finalDate
 
-    def _initPeriods(self):
         if self._params.length.name == model.assetPricing.AssetPricingParametrizedLengthName.day:
             self.interestPeriod = relativedelta(days=self._params.length.multiplier)
         elif self._params.length.name == model.assetPricing.AssetPricingParametrizedLengthName.month:
@@ -72,8 +100,11 @@ class ParametrizedQuoting:
             if interest.fixed:
                 growth += ctx.fixedGrowth()
             if interest.derived:
-                growth += ctx.derivedGrowth()
-                raise NotImplementedError("Did not implement calculating passed periods with derived pricing")
+                derivedGrowth = ctx.derivedGrowth()
+                if derivedGrowth is None:
+                    return []
+
+                growth += derivedGrowth
 
             keyPoints.append(self.KeyPoint(ctx.nextTimePoint, keyPoints[-1].multiplier * (1.0 + growth)));
             ctx.advance()

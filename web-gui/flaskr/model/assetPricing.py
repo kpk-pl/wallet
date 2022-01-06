@@ -40,6 +40,7 @@ class AssetPricingParametrizedInterestItemDerivedSample(BaseModel):
     interval: AssetPricingParametrizedLengthName
     intervalOffset: int = 0
     choose: AsserPricingParametrizedInterestItemDerivedSampleChoose
+    multiplier: Decimal = "1"
     clampBelow: Optional[Decimal]
 
     class Config:

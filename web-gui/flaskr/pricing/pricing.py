@@ -35,7 +35,15 @@ class _PricingType:
             raise NotImplementedError("Not implemented pricing type")
 
 
-class Pricing(object):
+class _PricingBase(object):
+    def __init__(self, ctx = None):
+        super(_PricingBase, self).__init__()
+        self._ctx = ctx if ctx is not None else Context()
+        self._parameterCtx = Context(finalDate=self._ctx.finalDate, interpolate=False, keepOnlyFinalQuote=False)  # Context for parametrized quoting, without startDate bound
+        self._data = None  # Calculation context used for pricing that can also be copied to the debug dict
+
+
+class Pricing(_PricingBase):
     @dataclass
     class CalcContext:
         type: _PricingType
@@ -48,9 +56,7 @@ class Pricing(object):
         quotes: dict[str, float] = None
 
     def __init__(self, ctx = None):
-        super(Pricing, self).__init__()
-        self._ctx = ctx if ctx is not None else Context()
-        self._data = None  # Calculation context used for pricing that can also be copied to the debug dict
+        super(Pricing, self).__init__(ctx)
 
     def __call__(self, asset, debug=None):
         self._data = Pricing.CalcContext(
@@ -129,12 +135,16 @@ class Pricing(object):
     def _byInterest(self, asset):
         paramPricing = model.AssetPricingParametrized(**asset['pricing'])
         self._data.quantity = self._data.operationsInScope[-1]['finalQuantity']
+        self._data.netValue = None
 
         self._data.value = 0
         for operation in self._data.operationsInScope:
             if operation['type'] == 'BUY':
-                quoting = ParametrizedQuoting(paramPricing, operation['date'], self._ctx.finalDate)
-                self._data.value += operation['price'] * quoting.getKeyPoints()[-1].multiplier
+                quoting = ParametrizedQuoting(paramPricing, operation['date'], self._parameterCtx)
+                keyPoints = quoting.getKeyPoints()
+                if not keyPoints:
+                    return
+                self._data.value += operation['price'] * keyPoints[-1].multiplier
             else:
                 raise NotImplementedError("Did not implement {} operation" % (operation['type']))
 
@@ -163,7 +173,7 @@ class HistoryResult:
         return result
 
 
-class HistoryPricing(object):
+class HistoryPricing(_PricingBase):
     @dataclass
     class CalcContext:
         type: _PricingType
@@ -171,10 +181,8 @@ class HistoryPricing(object):
 
 
     def __init__(self, ctx = None, features = {}):
-        super(HistoryPricing, self).__init__()
-        self._ctx = ctx if ctx is not None else Context()
+        super(HistoryPricing, self).__init__(ctx)
         self._features = features
-        self._data = None  # Calculation context used for pricing that can also be copied to the debug dict
 
     def __call__(self, asset, debug=None):
         self._data = HistoryPricing.CalcContext(
@@ -267,7 +275,11 @@ class HistoryPricing(object):
 
         for operation in asset['operations']:
             if operation['type'] == 'BUY':
-                quoting = ParametrizedQuoting(paramPricing, operation['date'], self._ctx.finalDate)
+                quoting = ParametrizedQuoting(paramPricing, operation['date'], self._parameterCtx)
+                keyPoints = quoting.getKeyPoints()
+                if not keyPoints:
+                    continue
+
                 quoteHistory = list(map(lambda kp: {'timestamp': kp.timestamp, 'quote': operation['price'] * kp.multiplier}, quoting.getKeyPoints()))
                 quotes = interp(quoteHistory, self._ctx.timeScale, leftFill = 0.0)
                 value = [a + b['quote'] for a, b in zip(value, quotes)]

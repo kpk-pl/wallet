@@ -25,23 +25,30 @@ class Context(object):
         quotes: List[model.QuoteHistoryItem] = Field(default_factory=list)
 
 
-    def __init__(self, finalDate = None, startDate = None):
+    def __init__(self, finalDate=None, startDate=None, interpolate=True, keepOnlyFinalQuote=True):
         super(Context, self).__init__()
         self.finalDate = finalDate if finalDate is not None else datetime.now()
         self.startDate = startDate
-        self.timeScale = _dayByDay(startDate, finalDate) if startDate is not None else []
+        self.interpolate = interpolate
+        self.keepOnlyFinalQuote = keepOnlyFinalQuote
+        self.timeScale = _dayByDay(startDate, finalDate) if startDate is not None and self.interpolate else []
         self.quotes = []
 
     def storedIds(self):
         return set(q.id for q in self.quotes)
 
     def loadQuotes(self, ids):
+        if not isinstance(ids, list):
+            ids = [ids]
+
         condition = {'$lte': ['$$item.timestamp', self.finalDate]}
         if self.startDate:
             condition = {'$and': [condition, {'$gte': ['$$item.timestamp', self.startDate]}]}
             projection = '$relevantQuotes'
-        else:
+        elif self.keepOnlyFinalQuote:
             projection = {'$slice': ['$relevantQuotes', -1]}
+        else:
+            projection = '$relevantQuotes'
 
         pipeline = [
             {'$match':
@@ -62,39 +69,74 @@ class Context(object):
         ]
 
         for item in db.get_db().quotes.aggregate(pipeline):
-            if self.startDate:
+            if self.timeScale:
                 item['quotes'] = interp(item['quotes'], self.timeScale)
 
             self.quotes.append(self.StorageType(**item))
 
-    def getFinalById(self, quoteId, currency=None):
-        entry = next(x for x in self.quotes if x.id == quoteId)
-        if not entry:
+    def _getById(self, quoteId):
+        return next(x for x in self.quotes if x.id == quoteId)
+
+    @staticmethod
+    def _getCurrencyConversion(quoteEntry, required):
+        if not quoteEntry.currencyPair or not required:
             return None
 
-        result = entry.quotes[-1].quote
-        if not entry.currencyPair:
-            return result
+        if required == "GBP" and quoteEntry.currencyPair.destination == "GBX":
+            return 100.0
+        if required == "GBX" and quoteEntry.currencyPair.destination == "GBP":
+            return 0.01
 
-        if currency == "GBP" and entry.currencyPair.destination == "GBX":
-            result *= 100.0
-        elif currency == "GBX" and entry.currencyPair.destination == "GBP":
-            result /= 100.0
+        return None
+
+    @staticmethod
+    def _returnSingle(quote, entry, currency):
+        result = quote.quote
+
+        multiplier = Context._getCurrencyConversion(entry, currency)
+        if multiplier:
+            result *= multiplier
 
         return result
 
+    def getFinalById(self, quoteId, currency=None):
+        entry = self._getById(quoteId)
+        if not entry:
+            return None
+
+        return self._returnSingle(entry.quotes[-1], entry, currency)
+
     def getHistoricalById(self, quoteId, currency=None):
-        entry = next(x for x in self.quotes if x.id == quoteId)
+        entry = self._getById(quoteId)
         if not entry:
             return None
 
         result = [x.quote for x in entry.quotes]
-        if not entry.currencyPair:
-            return result
 
-        if currency == "GBP" and entry.currencyPair.destination == "GBX":
-            result = [q*100.0 for q in result]
-        elif currency == "GBX" and entry.currencyPair.destination == "GBP":
-            result = [q/100.0 for q in result]
+        multiplier = self._getCurrencyConversion(entry, currency)
+        if multiplier:
+            result = [v*multiplier for v in result]
 
         return result
+
+    def getPreviousById(self, quoteId, timestamp, currency=None):
+        entry = self._getById(quoteId)
+        if not entry:
+            return None
+
+        filtered = [q for q in entry.quotes if q.timestamp < timestamp]
+        if not filtered:
+            return None
+
+        return self._returnSingle(filtered[-1], entry, currency)
+
+    def getNextById(self, quoteId, timestamp, currency=None):
+        entry = self._getById(quoteId)
+        if not entry:
+            return None
+
+        filtered = [q for q in entry.quotes if q.timestamp > timestamp]
+        if not filtered:
+            return None
+
+        return self._returnSingle(filtered[-1], entry, currency)
