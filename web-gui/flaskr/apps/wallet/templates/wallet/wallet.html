@@ -61,7 +61,7 @@
           <div class="card-tools">
             <span id="tableElements" class="px-2"></span>
             <input id="wallet-filter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
-            <a href="{{ url_for('wallet.index', aggregation='institution') }}">
+            <a href="{{ url_for_self(aggregation='pn') }}">
               <button class="btn btn-tool" type="button" title="Group assets in different institutions"><i class="fas fa-calendar-plus"></i></button>
             </a>
           </div>
@@ -86,19 +86,33 @@
               {% for asset in assets %}
               <tr>
                 <td data-order="{{ asset.name }}">
+                  {%- if asset._id is not list %}
                   <a href="{{ url_for('assets.index', id=asset._id) }}">
+                  {%- endif %}
                     {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
+                  {%- if asset._id is not list %}
                   </a>
+                  {%- endif %}
                   {%- if session.debug -%}
                   <a href="#modalDebug_{{ asset._id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ asset._id }}">
                     <i class="fas fa-fw fa-bug fa-pull-right"></i>
                   </a>
                   {%- endif -%}
+                  {%- if asset._id is not list %}
                   <a href="{{ url_for('assets.receipt', id=asset._id) }}" class="imagelink" title="Record operation">
                     <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
                   </a>
+                  {%- endif -%}
                 </td>
-                <td>{{ asset.institution }}</td>
+                <td>
+                  {%- if asset.institution is not list %}
+                    {{ asset.institution }}
+                  {%- else %}
+                  {%- for institution in asset.institution %}
+                    {{ institution }}<br/>
+                  {%- endfor %}
+                  {%- endif %}
+                </td>
                 <td data-order="{{ asset.category }}{{ (" " + asset.subcategory) if asset.subcategory else ""}}">
                   {{- asset.category -}}
                   {%- if asset.subcategory -%}

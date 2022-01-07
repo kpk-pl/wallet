@@ -69,9 +69,9 @@ def create_app(test_config=None):
             return url_for(request.endpoint, **dict(request.args, **args))
         return dict(url_for_self=url_for_self);
 
-    @app.context_processor
-    def resultsTimeranges():
-        return dict(resultsTimeranges=typing.Results.timeranges)
+    @app.template_test(name='list')
+    def isList(o):
+        return isinstance(o, list)
 
     @app.context_processor
     def constants():
@@ -79,6 +79,7 @@ def create_app(test_config=None):
             currencyMain = typing.Currency.main,
             currencyMainDecimals = typing.Currency.decimals,
             currencySupportedList = typing.Currency.supported,
+            resultsTimeranges = typing.Results.timeranges,
         )
 
     return app
