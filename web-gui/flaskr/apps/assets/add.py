@@ -21,5 +21,4 @@ def _quotesListPipeline():
 def add():
     if request.method == 'GET':
         quotesList = list(db.get_db().quotes.aggregate(_quotesListPipeline()))
-
         return render_template("assets/add.html", quotesList=quotesList, header=header.data())

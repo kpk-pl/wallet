@@ -3,7 +3,8 @@ from flask import Blueprint, request
 
 assets = Blueprint('assets', __name__, template_folder='templates', static_folder='static')
 
-@assets.route("/", methods=['GET', 'POST'])
+
+@assets.route("/", methods=['GET'])
 def index():
     if request.args.get('id'):
         from .item import item
@@ -11,6 +12,12 @@ def index():
     else:
         from .list import listAll
         return listAll()
+
+
+@assets.route("/", methods=["POST"])
+def index_post():
+    from .list import post
+    return post()
 
 
 @assets.route("/add", methods=['GET'])

@@ -77,7 +77,8 @@ def create_app(test_config=None):
     def constants():
         return dict(
             currencyMain = typing.Currency.main,
-            currencyMainDecimals = typing.Currency.decimals
+            currencyMainDecimals = typing.Currency.decimals,
+            currencySupportedList = typing.Currency.supported,
         )
 
     return app

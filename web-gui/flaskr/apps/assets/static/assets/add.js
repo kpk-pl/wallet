@@ -16,51 +16,39 @@ function initialize(settings) {
 }
 
 $(function(){
-  function linkChange() {
-    function setDefault(selector, value) {
-      let element = $(selector)
-      if ((element.val() === null || element.val() === "") && value !== null)
-        element.val(value).change()
-    }
-
+  function priceSourceChanged() {
     if ($(this).valid()) {
-      $.getJSON(addSettings.getQuoteUrl(), function(quote){
-        setDefault('#f-name', quote['name'])
-        setDefault('#f-type', quote['type'])
-        setDefault('#f-currency', quote['currency'])
-        setDefault('#f-ticker', quote['ticker'])
-        setDefault('#f-quote', quote['quote'])
-      })
+      $.getJSON(addSettings.getPricingItem($(this).val()), function(data){
+        $("#f-name").val(data.name);
+        $("#f-link").val(data.url);
+        $('#f-currency').val(data.unit);
+        $('#f-quote-currency-prepend').text(data.unit);
+        if (data.lastQuote)
+          $('#f-quote').val(data.lastQuote);
+
+        $.getJSON(addSettings.getQuoteData(data.url), function(quoteData){
+          $('#f-quote').val(quoteData.quote);
+          if (quoteData.ticker)
+            $('#f-ticker').val(quoteData.ticker);
+          if (quoteData.type)
+            $('#f-type').val(quoteData.type);
+        });
+      });
     }
   }
 
-  $("#f-link").change(linkChange);
-  $("#f-link-get").click(linkChange);
+  $("#f-price-source").change(priceSourceChanged);
 
-  $("#f-currency").change(function() {
-    $('#f-quote-currency-prepend').text($(this).val());
+  $("#f-link-open").click(function(){
+    window.open($('#f-link').val(), '_blank', 'noopener,noreferrer');
   });
-
-  function priceUnitMatch(lhs, rhs) {
-    if (lhs == rhs) return true;
-    if (lhs == "GBP" && rhs == "GBX") return true;
-    if (lhs == "GBX" && rhs == "GBP") return true;
-    return false;
-  }
-
-  $("#f-currency").change(function() {
-    let currency = $(this).val()
-    $("#f-price-source > option").each(function() {
-      $(this).prop('disabled', !priceUnitMatch($(this).attr('data-price-source-unit'), currency))
-    })
-  })
 });
 
 $(function(){
   $("form").validate({
     submitHandler: function(){
       $.post(addSettings.submitUrl, $('.tab-pane.active > form').serialize(), function(data) {
-        $(location).attr("href", addSettings.nextUrl);
+        $(location).attr("href", addSettings.getNextUrl(data));
       });
     },
     errorElement: 'span',

@@ -46,6 +46,7 @@ class Operation:
 class Currency:
     main = 'PLN'
     decimals = 2
+    supported = ['PLN', 'EUR', 'USD', 'GBP', 'GBX']
 
 
 class Results:

@@ -28,11 +28,16 @@
 <script type="text/javascript">
 initialize({
   headerLabels: {{ header.allLabels | safe }},
-  getQuoteUrl: function(){
-      return "{{ url_for('quotes.index') }}?url=" + encodeURIComponent($("#f-link").val());
+  getPricingItem: function(pricingId){
+      return "{{ url_for('pricing.index', quoteId='_id') | safe }}".replace('_id', pricingId);
   },
-  submitUrl: "{{ url_for('assets.index') }}",
-  nextUrl: "{{ url_for('assets.index', label=header.label, id='_id') | safe }}".replace('_id', data.id),
+  getQuoteData: function(url){
+      return "{{ url_for('quotes.index', url='_url') | safe }}".replace('_url', url);
+  },
+  submitUrl: "{{ url_for('assets.index_post') }}",
+  getNextUrl: function(data){
+    return "{{ url_for('assets.index', label=header.label, id='_id') | safe }}".replace('_id', data.id);
+  },
 });
 </script>
 {% endblock %}
@@ -58,13 +63,36 @@ initialize({
             <div class="tab-pane active" id="tab-listed">
               <!-- The onkeypress is to supress Enter from submitting the form because it's used to accept the tagsinput -->
               <form method="post" action="" onkeypress="return event.keyCode != 13;">
-                <div class="form-group">
-                  <label for="f-link">Link to <a href="https://stooq.pl" target="_blank" rel="noopener noreferrer">stooq.pl</a>, <a href="https://www.biznesradar.pl/" target="_blank" rel="noopener noreferrer">biznesradar.pl</a>, <a href="https://pl.investing.com/" target="_blank" rel="noopener noreferrer">pl.investing.com</a> or <a href="https://www.marketwatch.com" target="_blank" rel="noopener noreferrer">marketwatch.com</a></label>
-                  <div class="input-group">
-                    <input type="url" id="f-link" name="link" class="form-control" data-lpignore="true"/>
-                    <span class="input-group-append">
-                      <button type="button" class="btn btn-info" id="f-link-get">Get!</button>
-                    </span>
+                <div class="row">
+                  <div class="col-6">
+                    <div class="form-group">
+                      <label for="f-price-source">Price source</label>
+                      <select id="f-price-source" name="priceQuoteId" class="custom-select" required>
+                        <option value="" hidden disabled selected></option>
+                        {%- for priceSource in quotesList %}
+                        {%- if priceSource.unit in currencySupportedList %}
+                        <option value="{{ priceSource._id }}" data-price-source-unit="{{ priceSource.unit }}">{{ priceSource.name }}</option>
+                        {%- endif %}
+                        {%- endfor %}
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-2">
+                    <div class="form-group">
+                      <label for="f-currency">Currency</label>
+                      <input type="text" value="{{ currencyMain }}" id="f-currency" class="form-control" disabled="disabled" data-lpignore="true"/>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label for="f-quote">Quote</label>
+                      <div class="input-group">
+                        <div class="input-group-prepend">
+                          <span class="input-group-text" id="f-quote-currency-prepend">{{ currencyMain }}</span>
+                        </div>
+                        <input type="text" id="f-quote" class="form-control" disabled="disabled" data-lpignore="true"/>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="row">
@@ -78,43 +106,6 @@ initialize({
                     <div class="form-group">
                       <label for="f-ticker">Ticker</label>
                       <input type="text" id="f-ticker" name="ticker" class="form-control" data-lpignore="true"/>
-                    </div>
-                  </div>
-                </div>
-                <div class="row">
-                  <div class="col-3">
-                    <div class="form-group">
-                      <label for="f-currency">Currency</label>
-                      <select id="f-currency" name="currency" class="custom-select" required>
-                        <option value="" hidden disabled selected value></option>
-                        <option value="PLN">PLN</option>
-                        <option value="EUR">EUR</option>
-                        <option value="USD">USD</option>
-                        <option value="GBP">GBP</option>
-                        <option value="GBX">GBX</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="col-3">
-                    <div class="form-group">
-                      <label for="f-quote">Quote</label>
-                      <div class="input-group">
-                        <div class="input-group-prepend">
-                          <span class="input-group-text" id="f-quote-currency-prepend">PLN</span>
-                        </div>
-                        <input type="text" id="f-quote" name="quote" class="form-control" disabled="disabled" data-lpignore="true"/>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="form-group">
-                      <label for="f-price-source">Price source</label>
-                      <select id="f-price-source" name="priceQuoteId" class="custom-select" required>
-                        <option value="" hidden disabled selected value></option>
-                        {%- for priceSource in quotesList %}
-                        <option value="{{ priceSource._id }}" {{ 'disabled' if priceSource.unit != 'PLN' }}  data-price-source-unit="{{ priceSource.unit }}">{{ priceSource.name }}</option>
-                        {%- endfor %}
-                      </select>
                     </div>
                   </div>
                 </div>
@@ -139,7 +130,7 @@ initialize({
                   <div class="col-4">
                     <div class="form-group">
                       <label for="f-labels">Tags</label>
-                      <input type="text" id="f-labels" name="labels" class="form-control" data-lpignore="true" required/>
+                      <input type="text" id="f-labels" name="labels" class="form-control" data-lpignore="true"/>
                     </div>
                   </div>
                 </div>
@@ -165,6 +156,19 @@ initialize({
                     <div class="form-group">
                       <label for="f-region">Region</label>
                       <input type="text" id="f-region" name="region" class="form-control" data-lpignore="true" required/>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-12">
+                    <div class="form-group">
+                      <label for="f-link">Reference link</label>
+                      <div class="input-group">
+                        <input type="url" id="f-link" name="link" class="form-control" data-lpignore="true"/>
+                        <span class="input-group-append">
+                          <button type="button" class="btn btn-info" id="f-link-open">Open</button>
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
