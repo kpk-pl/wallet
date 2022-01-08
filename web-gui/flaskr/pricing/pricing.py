@@ -166,7 +166,7 @@ class HistoryResult:
 
     @classmethod
     def null(cls, timescale):
-        result = self(timescale)
+        result = cls(timescale)
         result.value = [0.0] * len(result.timescale)
         result.investedValue = [0.0] * len(result.timescale)
         result.quantity = [0.0] * len(result.timescale)

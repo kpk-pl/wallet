@@ -1,4 +1,9 @@
-# Investment tracking app
+[![Actions Status](https://github.com/kpk-pl/wallet/workflows/Test%20web-gui/badge.svg?branch=master)](https://github.com/kpk-pl/wallet/actions/workflows/gui-tests.yml)
+[![License](https://img.shields.io/badge/license-MIT-purple)](https://github.com/kpk-pl/wallet/blob/master/LICENSE)
+
+# wallet
+
+*wallet* is an investment tracking app.
 
 ## Deployment
 ### docker-compose
