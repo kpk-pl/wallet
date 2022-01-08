@@ -1,16 +1,16 @@
 "use strict";
 
 $(function () {
+  $.fn.dataTable.Buttons.defaults.dom.collection.className += " dropdown-menu-right";
   let datatable = $('#assetsTable').DataTable({
     paging: false,
-    lengthChange: false,
     searching: true,
     ordering: true,
     info: false,
     autoWidth: false,
     responsive: true,
     buttons: [{
-      extend: "colvis", align: "button-right", className: "btn-sm py-0"
+      extend: "colvis", className: "btn-sm py-0"
     }],
     columnDefs: [
       { visible: false, targets: [1, 6] },

@@ -6,19 +6,20 @@ function initialize(s) {
 }
 
 $(function () {
+  $.fn.dataTable.Buttons.defaults.dom.collection.className += " dropdown-menu-right";
   let strategyTableElement = $('#strategyTable').DataTable({
     paging: false,
-    lengthChange: false,
     searching: false,
     ordering: true,
     order: [[1, "desc"]],
     info: false,
     autoWidth: false,
     responsive: true,
-    buttons: [{
-      extend: "colvis", align: "button-right", className: "btn-sm py-0"
-    }],
+    buttons: [
+			{ extend: "colvis", className: "btn-sm py-0" },
+    ],
     columnDefs: [
+      { type: "readonly", targets: [3, 4, 5, 6, 7] },
       { type: "string", targets: [0, 2] },
       { type: "num-fmt", className: "text-right", targets: [1, 3] },
       { type: "num-fmt", className: "text-right color-gain", targets: [5, 6, 7] },

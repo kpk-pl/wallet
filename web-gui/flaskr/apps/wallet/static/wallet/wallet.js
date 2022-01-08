@@ -3,9 +3,9 @@ var strategyTable;
 $(function(){
   $('.color-gain').each(styling.colorGain);
 
+  $.fn.dataTable.Buttons.defaults.dom.collection.className += " dropdown-menu-right";
   let datatable = $('#openAssets').DataTable({
     paging: false,
-    lengthChange: false,
     searching: true,
     ordering: true,
     order: [[8, "desc"]],
@@ -13,7 +13,7 @@ $(function(){
     autoWidth: false,
     responsive: true,
     buttons: [{
-      extend: "colvis", align: "button-right", className: "btn-sm py-0"
+      extend: "colvis", className: "btn-sm py-0"
     }],
     columnDefs: [
       { type: "string", targets: [0, 1, 2, 3] },

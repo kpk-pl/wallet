@@ -75,12 +75,11 @@
     </div>
   </div>
 
-  <!--script src="https://kit.fontawesome.com/2106e6faed.js" crossorigin="anonymous"></script-->
-  <script type="text/javascript" src="{{ url_for('static', filename='plugins/fontawesome/fa.min.js') }}"></script>
-  <script type="text/javascript" src="{{ url_for('static', filename='plugins/jquery/jquery.min.js') }}"></script>
-  <script type="text/javascript" src="{{ url_for('static', filename='plugins/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-  {% block plugins_scripts %}{% endblock %}
+  <script src="https://kit.fontawesome.com/2106e6faed.js" crossorigin="anonymous"></script>
+  <script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-fQybjgWLrvvRgtW6bFlB7jaZrFsaBXjsOMm/tB9LTS58ONXgqbR9W8oWht/amnpF" crossorigin="anonymous"></script>
   <script type="text/javascript" src="{{ url_for('static', filename='plugins/adminlte/js/adminlte.min.js') }}"></script>
+  {% block plugins_scripts %}{% endblock %}
   <script type="text/javascript" src="{{ url_for('static', filename='js/typing.js') }}"></script>
   <script type="text/javascript" src="{{ url_for('static', filename='js/utils.js') }}"></script>
   <script type="text/javascript" src="{{ url_for('static', filename='js/styling.js') }}"></script>
