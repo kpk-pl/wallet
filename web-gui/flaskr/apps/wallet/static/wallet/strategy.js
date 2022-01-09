@@ -105,4 +105,3 @@ $(function () {
     $(".strategyTableDeviationInput").change(updateTable);
   }
 });
-

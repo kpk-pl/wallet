@@ -10,7 +10,7 @@ def index():
     return wallet()
 
 
-@wallet.route('/strategy', methods=['GET'])
+@wallet.route('/strategy', methods=['GET', 'POST'])
 @accept_fallback
 def strategy():
     from .strategy import strategy
@@ -21,3 +21,9 @@ def strategy():
 def strategy_json():
     from .strategy import strategy_json
     return strategy_json()
+
+
+@wallet.route('/strategy/edit', methods=['GET'])
+def strategy_edit():
+    from .strategy_edit import strategy_edit
+    return strategy_edit()

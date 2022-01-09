@@ -26,6 +26,7 @@ to start the application.
 - [Chart.js](https://www.chartjs.org/) @ 3.6.2
 - [chartjs-adapter-moment](https://github.com/chartjs/chartjs-adapter-moment) @ 1.0.0 
 - [Datatables](https://www.datatables.net/) @ 1.10.23
+- [Fancytree](https://github.com/mar10/fancytree) @ 2.38.0
 - [Font Awesome](https://fontawesome.com/) 5.15.4
 - [jQuery](https://jquery.com/) @ 3.5.1
 - [jQuery Sparkline](https://plugins.jquery.com/sparkline/) @ 2.1.2

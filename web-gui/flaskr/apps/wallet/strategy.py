@@ -1,5 +1,6 @@
 from flask import render_template, request, json, Response
 
+from datetime import datetime
 from flaskr import db, header
 from flaskr.session import Session
 from flaskr.pricing import Pricing
@@ -80,6 +81,19 @@ def strategy():
     if request.method == 'GET':
         session = Session(['label'])
         return render_template("wallet/strategy.html", header=header.data(showLabels = True))
+    elif request.method == 'POST':
+        label = request.args.get('label')
+        data = json.loads(request.data.decode('utf-8'))
+        for entry in data:
+            entry['categories'] = [v['name'] if v['percentage'] == 100 else v for v in entry['categories']]
+
+        db.get_db().strategy.insert(dict(
+            creationDate = datetime.now(),
+            assetTypes = data,
+            label = label,
+        ))
+
+        return '', 201
 
 
 def strategy_json():

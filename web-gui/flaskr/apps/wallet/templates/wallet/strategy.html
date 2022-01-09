@@ -30,7 +30,10 @@ initialize({
         <div class="card-header">
           <h3 class="card-title">Strategy</h3>
           <div class="card-tools">
-            <div id="tableElements" class="px-2"></div>
+            <span id="tableElements"></span>
+            <a href="{{ url_for('wallet.strategy_edit', label=session['label']) }}">
+              <button class="btn btn-tool" type="button" title="Group assets in different institutions"><i class="fas fa-edit"></i></button>
+            </a>
           </div>
         </div>
         <div class="card-body">

@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Strategy edit{% endblock %}
+
+{% block links %}
+{% endblock %}
+
+{% block plugins_scripts %}
+<script src="https://code.jquery.com/ui/1.12.0/jquery-ui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery.fancytree@2.38.0/dist/jquery.fancytree-all.min.js" integrity="sha256-9SUD1PPcCYV8mxLqyS022tq+GVieY8CaflY1jBKoR3g=" crossorigin="anonymous"></script>
+{% endblock %}
+
+{% block user_scripts %}
+<script type="text/javascript" src="{{ url_for('.static', filename='wallet/strategy_edit.js') }}"></script>
+
+<script>
+initialize({
+  data: JSON.parse({{ strategy | tojson }}),
+  submitUrl: "{{ url_for('wallet.strategy', label=session['label']) | safe }}"
+});
+</script>
+{% endblock %}
+
+{% block styles %}
+<style type="text/css">
+.table td,
+.table th {
+  padding: .4rem;
+  vertical-align: center;
+}
+.table td input {
+  height: 1.6rem;
+}
+.treeNodeButtons i {
+  margin-left: 5px;
+  cursor: pointer;
+}
+.fancytree-active {
+  background-color: rgba(0,0,0,.05);
+}
+.tree-aux-input {
+  width: 100px;
+  float: right;
+  clear: both;
+  text-align: right;
+}
+.fancytree-edit-input {
+  width: 300px !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Strategy for <span class="badge badge-success">{{ session['label'] }}</span></h3>
+        </div>
+        <div class="card-body">
+          <table class="table table-hover fancytree-fade-expander" id="treeTable">
+            <thead>
+              <th>Name</th>
+              <th class="text-right" style="width: 150px">Share</th>
+              <th class="text-right" style="width: 150px">Percentage</th>
+            </thead>
+            <tbody>
+              <tr>
+                <td></td>
+                <td class="text-right"></td>
+                <td class="text-right"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-footer">
+          <button id="submit" class="btn btn-primary">Submit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
