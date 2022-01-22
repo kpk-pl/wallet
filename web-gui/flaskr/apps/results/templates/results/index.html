@@ -66,6 +66,7 @@
             <thead role="row">
               <tr>
                 <th>Name</th>
+                <th>Labels</th>
                 <th>Institution</th>
                 <th>Category</th>
                 <th>Volume change</th>
@@ -102,6 +103,11 @@
                   </a>
                   {%- endif -%}
                 </td>
+                <td data-title="Labels">
+                  {%- for label in asset.labels | sort %}
+                  <span class="badge badge-{{ 'success' if label == header.label else 'secondary'}} mr-1">{{ label }}</span>
+                  {%- endfor -%}
+                </td>
                 <td data-title="Institution">{{ asset.institution }}</td>
                 <td data-title="Category" data-order="{{ asset.category }}{{ (" " + asset.subcategory) if asset.subcategory else ""}}">
                   {{- asset.category -}}
@@ -128,6 +134,7 @@
             <tfoot>
               <tr>
                 <th data-title="Name"></th>
+                <th data-title="Labels"></th>
                 <th data-title="Institution"></th>
                 <th data-title="Category"></th>
                 <th data-title="Volume change"></th>

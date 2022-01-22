@@ -41,6 +41,7 @@ def _getPipeline(startDate, finalDate, label = None):
         'institution': 1,
         'currency': 1,
         'link': 1,
+        'labels': 1,
         'category': 1,
         'subcategory': 1,
         'pricing': 1,

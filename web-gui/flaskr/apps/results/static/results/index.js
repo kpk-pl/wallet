@@ -6,7 +6,7 @@ $(function () {
     paging: false,
     searching: true,
     ordering: true,
-    order: [[5, "desc"]],
+    order: [[6, "desc"]],
     info: false,
     autoWidth: false,
     responsive: true,
@@ -14,7 +14,7 @@ $(function () {
       extend: "colvis", className: "btn-sm py-0"
     }],
     columnDefs: [
-      { visible: false, targets: [2, 3] }
+      { visible: false, targets: [3, 4] }
     ],
   });
 
