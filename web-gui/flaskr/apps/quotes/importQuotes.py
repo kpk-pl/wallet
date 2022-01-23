@@ -29,7 +29,7 @@ def importQuotes():
         if not quoteItems:
             return ('', 404)
 
-        return render_template("import.html", quote=quoteItems[0], header=header.data())
+        return render_template("quotes/import.html", quote=quoteItems[0], header=header.data())
 
     elif request.method == 'POST':
         quoteId = request.form.get('id')

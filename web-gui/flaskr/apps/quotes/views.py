@@ -1,7 +1,7 @@
 from flask import request, Blueprint
 
 
-quotes = Blueprint('quotes', __name__, template_folder='templates/quotes')
+quotes = Blueprint('quotes', __name__, template_folder='templates', static_folder='static')
 
 @quotes.route("/", methods=['GET', 'PUT'])
 def index():

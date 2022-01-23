@@ -15,135 +15,20 @@
 {% endblock %}
 
 {% block user_scripts %}
+<script type="text/javascript" src="{{ url_for('.static', filename='quotes/import.js') }}"></script>
 <script type="text/javascript">
-  $(function () {
-    bsCustomFileInput.init();
-  });
-</script>
-<script type="text/javascript">
-$(function () {
-  $('.f-date-group').datetimepicker({
-    locale: 'pl',
-    format: 'YYYY-MM-DD',
-  });
-})
-</script>
-<script type="text/javascript">
-  const existingQuotes = {{ quote.quoteHistory | tojson }}
-    .map(function(e){ return {timestamp: Date.parse(e.timestamp), quote: e.quote}; });
-
-  var chart = new Chart($('#chart'), {
-    type: 'line',
-    data: {
-      datasets: [{
-        label: '{{ quote.name | safe }}',
-        cubicInterpolationMode: 'monotone',
-        pointRadius: 2,
-        data: existingQuotes,
-        parsing: { xAxisKey: 'timestamp', yAxisKey: 'quote' },
-        backgroundColor: 'rgba(0, 123, 255, 0.65)',
-        borderColor: 'rgba(0, 123, 255, 1)',
-        borderWidth: 2,
-        fill: true,
-        order: 2
-      }, {
-        label: 'Imported data',
-        cubicInterpolationMode: 'monotone',
-        pointRadius: 2,
-        data: [],
-        parsing: { xAxisKey: 'timestamp', yAxisKey: 'quote' },
-        fill: false,
-        borderColor: 'rgba(255, 123, 0, 1)',
-        borderWidth: 2,
-        order: 1
-      }]
+  init({
+    chart: {
+      existingQuotes: {{ quote.quoteHistory | tojson }}
+        .map(function(e){ return {timestamp: Date.parse(e.timestamp), quote: e.quote}; }),
+      name: '{{ quote.name | safe }}',
+      unit: '{{ quote.unit }}'
     },
-    options: {
-      animation: { duration: 0 },
-      scales: {
-        x: {
-          type: 'time',
-          time: { unit: 'day', displayFormats: { day: 'D MMM YY' } }
-        },
-        y: {
-          title: { display: true, text: '{{ quote.unit }}' }
-        },
-      }
-    }
+    id: '{{ quote._id }}',
+    csvUploadUrl: "{{ url_for('quotes.csvUpload') }}",
+    submitUrl: "{{ url_for('quotes.importQuotes') }}",
+    nextUrl: "{{ url_for('pricing.index', id='{{ quote._id }}') }}"
   });
-</script>
-<script type="text/javascript">
-let importedQuotes = [];
-
-function updateUI() {
-  let method = $('#f-method').val();
-  let filteredQuotes = existingQuotes;
-  if (method == 'replace' && importedQuotes.length > 0) {
-    filteredQuotes = filteredQuotes.filter(function(q) {
-      return q.timestamp < importedQuotes.at(0).timestamp || q.timestamp > importedQuotes.at(-1).timestamp;
-    });
-  }
-
-  let combinedData = filteredQuotes.concat(importedQuotes).sort((lhs, rhs) => { return lhs.timestamp - rhs.timestamp; });
-
-  chart.data.datasets[0].data = combinedData;
-  chart.data.datasets[1].data = importedQuotes;
-  chart.update();
-
-  $("#f-submit").attr('disabled', importedQuotes.length == 0);
-}
-
-function resetUI() {
-  importedQuotes = [];
-  updateUI();
-}
-
-function loadCsvQuotes(event) {
-  const file = $("#f-source-file")[0].files[0];
-
-  async function fetchCsv(file) {
-    let formData = new FormData();
-    formData.append("file", file);
-
-    const ctrl = new AbortController()
-    setTimeout(() => ctrl.abort(), 5000);
-
-    try {
-      let response = await fetch("{{ url_for('quotes.csvUpload') }}", {method: "POST", body: formData, signal: ctrl.signal});
-      if (!response.ok) {
-        throw new Error("Invalid response " + r.status());
-      }
-      return response.json();
-    } catch(e) {
-      // TODO: maybe display a popup with the error
-    }
-  }
-
-  fetchCsv(file).then(function(quotes){
-    importedQuotes = quotes.map(function(e){ return {timestamp: Date.parse(e.timestamp), quote: e.quote}; });
-    updateUI();
-  });
-}
-</script>
-<script type="text/javascript">
-$('#f-method').change(updateUI);
-$('#f-source-file').change(resetUI);
-$('#f-source').change(resetUI);
-</script>
-<script type="text/javascript">
-function submitImport(event) {
-    event.preventDefault();
-
-    let payload = {
-      id: '{{ quote._id }}',
-      method: $('#f-method').val(),
-      data: JSON.stringify(importedQuotes)
-    };
-
-    $.post("{{ url_for('quotes.importQuotes') }}", payload, function(data) {
-      $(location).attr("href", "{{ url_for('pricing.index', id='{{ quote._id }}') }}");
-    })
-}
 </script>
 {% endblock %}
 
@@ -209,7 +94,7 @@ function submitImport(event) {
                     <label for="f-source-file" class="custom-file-label"></label>
                   </div>
                   <div class="input-group-append">
-                    <button class="btn btn-primary" type="button" id="f-load-button" onclick="loadCsvQuotes(event);">Load</button>
+                    <button class="btn btn-primary" type="button" id="f-load-button" onclick="loadCsvQuotes();">Load</button>
                   </div>
                 </div>
               </div>
