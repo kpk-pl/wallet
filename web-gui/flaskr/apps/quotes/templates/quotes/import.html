@@ -3,13 +3,14 @@
 {% block title %}Import '{{ quote.name }}'{% endblock %}
 
 {% block links %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.39.0/js/tempusdominus-bootstrap-4.min.js" crossorigin="anonymous"></script>
 {% endblock %}
 
 {% block plugins_scripts %}
-<script type="text/javascript" src="{{ url_for('static', filename='plugins/moment/moment.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.6.2/dist/chart.min.js" integrity="sha256-D2tkh/3EROq+XuDEmgxOLW1oNxf0rLNlOwsPIUX+co4=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js" integrity="sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js" integrity="sha256-sFB24K2xU2EOgWAtb3ySAGjhMqcUvUJGmwjDcTQa04k=" crossorigin="anonymous"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='chartjs.defaults.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.39.0/js/tempusdominus-bootstrap-4.min.js" crossorigin="anonymous"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='plugins/chart.js/Chart.min.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bs-custom-file-input/1.3.4/bs-custom-file-input.min.js" integrity="sha512-91BoXI7UENvgjyH31ug0ga7o1Ov41tOzbMM3+RPqFVohn1UbVcjL/f5sl6YSOFfaJp+rF+/IEbOOEwtBONMz+w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 {% endblock %}
 
@@ -31,23 +32,26 @@ $(function () {
   const existingQuotes = {{ quote.quoteHistory | tojson }}
     .map(function(e){ return {timestamp: Date.parse(e.timestamp), quote: e.quote}; });
 
-  var chart = new Chart(document.getElementById('chart').getContext('2d'), {
+  var chart = new Chart($('#chart'), {
     type: 'line',
     data: {
       datasets: [{
-        label: '{{ quote.name }}',
+        label: '{{ quote.name | safe }}',
         cubicInterpolationMode: 'monotone',
         pointRadius: 2,
-        data: existingQuotes.map(function(e){ return {t: e.timestamp, y: e.quote}; }),
+        data: existingQuotes,
+        parsing: { xAxisKey: 'timestamp', yAxisKey: 'quote' },
         backgroundColor: 'rgba(0, 123, 255, 0.65)',
         borderColor: 'rgba(0, 123, 255, 1)',
         borderWidth: 2,
+        fill: true,
         order: 2
       }, {
         label: 'Imported data',
         cubicInterpolationMode: 'monotone',
         pointRadius: 2,
         data: [],
+        parsing: { xAxisKey: 'timestamp', yAxisKey: 'quote' },
         fill: false,
         borderColor: 'rgba(255, 123, 0, 1)',
         borderWidth: 2,
@@ -55,25 +59,15 @@ $(function () {
       }]
     },
     options: {
-      maintainAspectRatio: false,
-      responsive: true,
       animation: { duration: 0 },
       scales: {
-        xAxes: [{
+        x: {
           type: 'time',
-          time: {
-            unit: 'day',
-            displayFormats: {
-              day: 'D MMM YY'
-            }
-          }
-        }],
-        yAxes: [{
-          scaleLabel: {
-            display: true,
-            labelString: '{{ quote.unit }}'
-          }
-        }],
+          time: { unit: 'day', displayFormats: { day: 'D MMM YY' } }
+        },
+        y: {
+          title: { display: true, text: '{{ quote.unit }}' }
+        },
       }
     }
   });
@@ -92,8 +86,8 @@ function updateUI() {
 
   let combinedData = filteredQuotes.concat(importedQuotes).sort((lhs, rhs) => { return lhs.timestamp - rhs.timestamp; });
 
-  chart.data.datasets[0].data = combinedData.map(function(e){ return {t: e.timestamp, y: e.quote}; });
-  chart.data.datasets[1].data = importedQuotes.map(function(e){ return {t: e.timestamp, y: e.quote}; });
+  chart.data.datasets[0].data = combinedData;
+  chart.data.datasets[1].data = importedQuotes;
   chart.update();
 
   $("#f-submit").attr('disabled', importedQuotes.length == 0);
