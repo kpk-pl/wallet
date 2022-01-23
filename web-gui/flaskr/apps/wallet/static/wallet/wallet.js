@@ -1,8 +1,8 @@
 var strategyTable;
 
-$(function(){
-  $('.color-gain').each(styling.colorGain);
+$('.color-gain').each(styling.colorGain);
 
+$(function(){
   $.fn.dataTable.Buttons.defaults.dom.collection.className += " dropdown-menu-right";
   let datatable = $('#openAssets').DataTable({
     paging: false,
