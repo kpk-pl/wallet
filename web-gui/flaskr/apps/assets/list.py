@@ -48,7 +48,7 @@ class PostBody(BaseModel):
     institution: str
     category: str
     subcategory: str = ''
-    region: str
+    region: Optional[str]
     link: str = ''
     priceQuoteId: Optional[PyObjectId]
     labels: Optional[str]
