@@ -1,4 +1,4 @@
-from flask import render_template, request, jsonify, current_app
+from flask import render_template, request, current_app
 from flaskr import db, header, typing
 from flaskr.session import Session
 from bson.objectid import ObjectId
@@ -164,9 +164,7 @@ def _makeBillingOperation(asset, operation, session):
         {'$project': {
             'type': 1,
             'currency': 1,
-            # restore after a PR to mongomock is merged and new version released
-            # 'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
-            'finalQuantity': {'$ifNull': [{'$arrayElemAt': ['$operations.finalQuantity', -1]}, 0]}
+            'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
         }}
     ], session=session))
 
@@ -231,9 +229,7 @@ def _receiptPost(session):
             'type': 1,
             'currency': 1,
             'coded': { '$ifNull': ['$coded', False]},
-            # use $last when it's supported in mongomock
-            # 'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
-            'finalQuantity': {'$ifNull': [{'$arrayElemAt': ['$operations.finalQuantity', -1]}, 0]}
+            'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
         }}
     ], session=session))
 
