@@ -1,6 +1,6 @@
 from flask import render_template, request
 from flaskr import db, header
-from flaskr.analyzers.profits import Profits
+from flaskr.analyzers import Profits, Operations
 from bson.objectid import ObjectId
 from datetime import datetime
 
@@ -51,5 +51,7 @@ def item():
         if not assets:
             return ('', 404)
 
+        operations = Operations()(assets[0]['operations'])
         asset = Profits(assets[0])()
-        return render_template("assets/item.html", asset=asset, header=header.data())
+
+        return render_template("assets/item.html", asset=asset, operations=operations, header=header.data())

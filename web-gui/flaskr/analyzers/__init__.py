@@ -7,3 +7,7 @@ def _operationNetValue(operation):
 def _printJson(data):
     from bson.json_util import dumps
     print(dumps(data, indent=2))
+
+
+from .operations import Operations
+from .profits import Profits

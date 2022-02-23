@@ -24,7 +24,7 @@
 {% if asset.quoteHistory %}
 <script type="text/javascript">
   const data = {{ asset.quoteHistory | tojson }};
-  const operations = {{ asset.operations | tojson }};
+  const operations = {{ operations | simplify | tojson }};
 
   setupChart('{{ asset.name | safe }}', '{{ asset.currency }}', data, operations);
 </script>
@@ -180,7 +180,7 @@
         </div>
         <div class="card-body">
           <table class="table table-bordered">
-            {% set operationsHaveCodes = (asset.operations | selectattr('code') | list | count) -%}
+            {% set operationsHaveCodes = (operations | selectattr('code') | list | count) -%}
             <thead>
               <tr>
                 <th style="width: 10px">#</th>
@@ -202,12 +202,12 @@
               </tr>
             </thead>
             <tbody>
-              {% for operation in asset.operations | reverse -%}
+              {% for operation in operations | reverse -%}
               <tr>
-                <td>{{ asset.operations|length - loop.index + 1 }}</td>
+                <td>{{ operations|length - loop.index + 1 }}</td>
                 <td>{{ operation.date }}</td>
                 <td>
-                  <span class="badge badge-info badge-op-{{ operation.type }}">
+                  <span class="badge badge-info badge-op-{{ operation.type.value }}">
                     {{ operation.type | operationDisplayString(asset.type) }}
                   </span>
                 </td>

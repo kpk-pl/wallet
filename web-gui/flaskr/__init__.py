@@ -63,6 +63,20 @@ def create_app(test_config=None):
     def operationDisplayString(operation, assetType):
         return typing.Operation.displayString(operation, assetType)
 
+    @app.template_filter()
+    def simplify(model):
+        from decimal import Decimal
+
+        if isinstance(model, list):
+            return [simplify(x) for x in model]
+
+        result = model.dict()
+        for key, value in result.items():
+            if isinstance(value, Decimal):
+                result[key] = float(value)
+
+        return result
+
     @app.context_processor
     def urlProcessor():
         def url_for_self(**args):

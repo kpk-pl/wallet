@@ -1,3 +1,6 @@
+from enum import Enum
+
+
 class Operation:
     class Type:
         buy = 'BUY'
@@ -31,6 +34,9 @@ class Operation:
 
     @staticmethod
     def displayString(op, assetType):
+        if isinstance(op, Enum):
+            op = op.value
+
         if assetType == 'Deposit':
             if op == Operation.Type.buy:
                 return 'DEPOSIT'
