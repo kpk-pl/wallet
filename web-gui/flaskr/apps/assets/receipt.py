@@ -39,7 +39,7 @@ def _receiptGet():
             'currency': 1,
             'labels': 1,
             'link': 1,
-            'codes': 1,
+            'hasOrderIds': 1,
             'finalQuantity': { '$ifNull': [{ '$last': '$operations.finalQuantity' }, 0] }
         }}
     ]
@@ -137,8 +137,8 @@ def _makeOperation(asset):
     if asset['currency']['name'] != typing.Currency.main:
         operation['currencyConversion'] = float(_required('currencyConversion', 104))
 
-    if asset['coded']:
-        operation['code'] = _required('code', 105)
+    if asset['hasOrderIds']:
+        operation['orderId'] = _required('orderId', 105)
 
     return operation
 
@@ -228,7 +228,7 @@ def _receiptPost(session):
         {'$project': {
             'type': 1,
             'currency': 1,
-            'coded': { '$ifNull': ['$coded', False]},
+            'hasOrderIds': { '$ifNull': ['$hasOrderIds', False]},
             'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
         }}
     ], session=session))

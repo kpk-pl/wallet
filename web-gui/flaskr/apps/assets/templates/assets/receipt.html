@@ -91,11 +91,11 @@ setupForm({
                   </select>
                 </div>
               </div>
-              {%- if asset.codes %}
+              {%- if asset.hasOrderIds %}
               <div class="col">
                 <div class="form-group">
-                  <label for="f-code">Code</label>
-                  <input type="text" id="f-code" name="code" required class="form-control" data-lpignore="true"/>
+                  <label for="f-orderId">Order ID</label>
+                  <input type="text" id="f-orderId" name="orderId" required class="form-control" data-lpignore="true"/>
                 </div>
               </div>
               {% endif %}

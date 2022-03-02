@@ -1,4 +1,4 @@
-from pydantic import BaseModel, PositiveInt
+from pydantic import BaseModel
 from enum import Enum
 from datetime import datetime
 from decimal import Decimal
@@ -20,4 +20,4 @@ class AssetOperation(BaseModel):
     finalQuantity: Optional[Decimal]
     provision: Optional[Decimal]
     currencyConversion: Optional[Decimal]
-    code: Optional[str]
+    orderId: Optional[str]
