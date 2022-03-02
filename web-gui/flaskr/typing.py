@@ -62,3 +62,7 @@ class Results:
     def timeranges():
         import datetime
         return [str(y) for y in range(Results.firstYear, datetime.date.today().year +1)]
+
+
+class Locale:
+    mainLocale = 'pl_PL'

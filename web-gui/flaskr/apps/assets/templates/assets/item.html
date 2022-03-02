@@ -215,12 +215,12 @@
                 {%- if asset.type != 'Deposit' %}
                 <td>{{ operation.price }}</td>
                 <td>
-                  {%- if operation.quantity %}
-                  {{ (operation.price / operation.quantity) | round(3) }}
+                  {%- if operation.unitPrice %}
+                  {{ operation.unitPrice | round(3) }}
                   {%- endif %}
                 </td>
                 {%- endif %}
-                {% if asset.currency != 'PLN' -%}
+                {% if asset.currency != currencyMain -%}
                 <td>{{ operation.currencyConversion | round(4) }}</td>
                 {%- endif %}
                 <td>{{ operation.provision if operation.provision else 0 }}</td>

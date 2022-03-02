@@ -15,9 +15,9 @@ class AssetOperationType(str, Enum):
 class AssetOperation(BaseModel):
     date: datetime
     type: AssetOperationType
-    quantity: Decimal
     price: Decimal
-    finalQuantity: Decimal
+    quantity: Optional[Decimal]
+    finalQuantity: Optional[Decimal]
     provision: Optional[Decimal]
     currencyConversion: Optional[Decimal]
     code: Optional[str]

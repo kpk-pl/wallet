@@ -1,6 +1,5 @@
 import os
 from flask import Flask, request, url_for
-from flaskr import typing
 
 
 def create_app(test_config=None):
@@ -27,7 +26,7 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    from flaskr import db
+    from flaskr import db, typing
     db.init_app(app)
 
     from flaskr.apps.assets.views import assets
@@ -73,7 +72,7 @@ def create_app(test_config=None):
         result = model.dict()
         for key, value in result.items():
             if isinstance(value, Decimal):
-                result[key] = float(value)
+                result[key] = str(value)
 
         return result
 

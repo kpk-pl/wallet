@@ -51,7 +51,8 @@ def item():
         if not assets:
             return ('', 404)
 
-        operations = Operations()(assets[0]['operations'])
-        asset = Profits(assets[0])()
+        asset = assets[0]
+        operations = Operations(asset['currency'])(asset['operations'])
+        asset = Profits(asset)()
 
         return render_template("assets/item.html", asset=asset, operations=operations, header=header.data())
