@@ -57,8 +57,9 @@
         <div class="card-header">
           <h3 class="card-title">{{ timerange.name }} results</h3>
           <div class="card-tools">
-            <span id="tableElements" class="px-2"></span>
-            <input id="list-filter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
+            <span id="resultsTableElements" class="px-2"></span>
+            <input id="resultsTableFilter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
+            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
           </div>
         </div>
         <div class="card-body">
@@ -153,17 +154,19 @@
         <div class="card-header">
           <h3 class="card-title">Operations breakdown</h3>
           <div class="card-tools">
+            <span id="breakdownTableElements" class="px-2"></span>
+            <input id="breakdownTableFilter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
             <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i>
             </button>
           </div>
         </div>
         <div class="card-body">
-          <table class="table table-bordered">
-            <thead>
+					<table id="breakdownTable" class="table table-bordered table-striped table-hover">
+            <thead role="row">
               <tr>
                 <th>Date</th>
-                <th style="width: 30px">Type</th>
                 <th>Asset</th>
+                <th style="width: 30px">Type</th>
                 <th>Institution</th>
                 <th>Open price</th>
                 <th>Close price</th>
@@ -177,57 +180,57 @@
               {% for operation in operationBreakdown -%}
               <tr>
                 <td data-title="Date">{{ operation.date }}</td>
-                <td data-title="Type">
-                  <span class="badge badge-info badge-op-{{ operation.type.value }}">
-                    {{ operation.type | operationDisplayString(operation.asset.type) }}
-                  </span>
-                </td>
                 <td data-title="Asset">
                   <a href="{{ url_for('assets.index', id=operation.asset.id) }}">
                     {{ operation.asset.name }}
                   </a>
                 </td>
+                <td data-title="Type" data-order="{{ operation.type.value }}">
+                  <span class="badge badge-info badge-op-{{ operation.type.value }}">
+                    {{ operation.type | operationDisplayString(operation.asset.type) }}
+                  </span>
+                </td>
                 <td data-title="Institution">{{ operation.asset.institution }}</td>
                 {%- if operation.closedPositionInfo %}
-                <td data-title="Open price" class="text-right"
+                <td data-title="Open price" class="text-right" data-order="{{ operation.closedPositionInfo.matchingOpenNetPrice }}"
                   {%- if operation.asset.currency != currencyMain %}
                     title="{{ operation.closedPositionInfo.matchingOpenNetPrice | asCurrency(currencyMain) }}"
                   {%- endif %}
                   >{{ operation.closedPositionInfo.matchingOpenPrice | asCurrency(operation.asset.currency) }}
                 </td>
-                <td data-title="Close price" class="text-right"
+                <td data-title="Close price" class="text-right" data-order="{{ operation.price }}"
                   {%- if operation.asset.currency != currencyMain %}
                     title="{{ operation.netPrice | asCurrency(currencyMain) }}"
                   {%- endif %}
                   >{{ operation.price | asCurrency(operation.asset.currency) }}
                 </td>
                 {%- else %}
-                <td data-title="Open price"></td>
-                <td data-title="Close price"></td>
+                <td data-title="Open price" data-order="0"></td>
+                <td data-title="Close price" data-order="0"></td>
                 {%- endif %}
                 {%- if operation.earningInfo %}
-                <td data-title="Earnings" class="text-right"
+                <td data-title="Earnings" class="text-right" data-order="{{ operation.earningInfo.earning }}"
                   {%- if operation.asset.currency != currencyMain %}
                     title="{{ operation.earningInfo.netEarning | asCurrency(currencyMain) }}"
                   {%- endif %}
                   >{{ operation.earningInfo.earning | asCurrency(operation.asset.currency) }}
                 </td>
                 {%- else %}
-                <td data-title="Earnings"></td>
+                <td data-title="Earnings" data-order="0"></td>
                 {%- endif %}
-                <td data-title="Provisions" class="text-right">
-                  {%- set provision = (operation.provision + (operation.closedPositionInfo.matchingOpenProvision if operation.closedPositionInfo else 0)) %}
+                {%- set provision = (operation.provision + (operation.closedPositionInfo.matchingOpenProvision if operation.closedPositionInfo else 0)) %}
+                <td data-title="Provisions" class="text-right" data-order="{{ provision }}">
                   {%- if provision > 0 %}
                     {{ provision | asCurrency(currencyMain) }}
                   {%- endif %}
                 </td>
-                <td data-title="Profit" class="text-right color-gain"
+                <td data-title="Profit" class="text-right color-gain" data-order="{{ operation.profit }}"
                   {%- if operation.asset.currency != currencyMain %}
                     title="{{ operation.netProfit | asCurrency(currencyMain) }}"
                   {%- endif %}
                   >{{ operation.profit | asCurrency(operation.asset.currency) }}
                 </td>
-                <td data-title="Total Net Profit" class="text-right color-gain">
+                <td data-title="Total Net Profit" class="text-right color-gain" data-order="{{ operation.totalNetProfit }}">
                   {{ operation.totalNetProfit | asCurrency(currencyMain) }}
                 </td>
               </tr>
