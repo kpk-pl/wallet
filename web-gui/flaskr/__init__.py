@@ -59,22 +59,29 @@ def create_app(test_config=None):
         return '{0:.{1}f}'.format(round(value, precision), precision)
 
     @app.template_filter()
+    def asCurrency(value, currency, withSymbol=True):
+        from babel.numbers import format_currency
+        return format_currency(value, currency, format=u'#.##0.00 ¤¤' if withSymbol else u'#.##0.00')
+
+    @app.template_filter()
     def operationDisplayString(operation, assetType):
         return typing.Operation.displayString(operation, assetType)
 
     @app.template_filter()
     def simplify(model):
         from decimal import Decimal
+        from pydantic import BaseModel
 
         if isinstance(model, list):
             return [simplify(x) for x in model]
-
-        result = model.dict()
-        for key, value in result.items():
-            if isinstance(value, Decimal):
-                result[key] = str(value)
-
-        return result
+        elif isinstance(model, dict):
+            return {key: simplify(value) for key,value in model.items()}
+        elif isinstance(model, BaseModel):
+            return simplify(model.dict())
+        elif isinstance(model, Decimal):
+            return str(model)
+        else:
+            return model
 
     @app.context_processor
     def urlProcessor():

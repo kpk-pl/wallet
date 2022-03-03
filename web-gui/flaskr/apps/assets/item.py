@@ -1,6 +1,7 @@
 from flask import render_template, request
 from flaskr import db, header
 from flaskr.analyzers import Profits, Operations
+from flaskr.model import Asset
 from bson.objectid import ObjectId
 from datetime import datetime
 
@@ -28,7 +29,7 @@ def _getPipelineForAssetDetails(assetId):
         "institution": 1,
         "category": 1,
         "subcategory": 1,
-        "currency": '$currency.name',
+        "currency": 1,
         "type": 1,
         "pricing": 1,
         "link": 1,
@@ -51,8 +52,12 @@ def item():
         if not assets:
             return ('', 404)
 
-        asset = assets[0]
-        operations = Operations(asset['currency'])(asset['operations'])
-        asset = Profits(asset)()
+        weakAsset = assets[0]
+        asset = Asset(**weakAsset)
 
-        return render_template("assets/item.html", asset=asset, operations=operations, header=header.data())
+        operations = Operations(asset.currency)(asset.operations)
+
+        weakAsset['currency'] = weakAsset['currency']['name']
+        weakAsset = Profits(weakAsset)()
+
+        return render_template("assets/item.html", asset=weakAsset, operations=operations, header=header.data())

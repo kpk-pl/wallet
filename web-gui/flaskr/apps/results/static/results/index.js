@@ -1,5 +1,11 @@
 "use strict";
 
+$(function(){
+  for (let type of typing.operationTypes) {
+    $(`.badge-op-${type}`).css('background-color', styling.operationColor(type));
+  }
+});
+
 $(function () {
   $.fn.dataTable.Buttons.defaults.dom.collection.className += " dropdown-menu-right";
   let datatable = $('#resultsTable').DataTable({

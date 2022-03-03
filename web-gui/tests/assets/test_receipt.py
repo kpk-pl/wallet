@@ -188,8 +188,8 @@ def test_receipt_failure_no_conversion_rate_for_foreign_currency(clientApp, type
     (pytest.lazy_fixture('client'), "RECEIVE"),
     (pytest.lazy_fixture('client'), "EARNING"),
 ])
-def test_receipt_failure_no_code_for_coded(clientApp, type):
-    assetId = Asset.createEquity().pricing().quantity(10).coded().commit()
+def test_receipt_failure_no_orderid_when_required(clientApp, type):
+    assetId = Asset.createEquity().pricing().quantity(10).hasOrderIds().commit()
 
     data = {k:v for (k,v) in MINIMAL_WORKING_RECEIPT_DATA.items()}
     data['type'] = type
@@ -206,12 +206,12 @@ def test_receipt_failure_no_code_for_coded(clientApp, type):
     (pytest.lazy_fixture('client'), "RECEIVE"),
     (pytest.lazy_fixture('client'), "EARNING"),
 ])
-def test_receipt_successfull_for_coded(clientApp, type):
-    assetId = Asset.createEquity().pricing().quantity(10).coded().commit()
+def test_receipt_successfull_for_orderid(clientApp, type):
+    assetId = Asset.createEquity().pricing().quantity(10).hasOrderIds().commit()
 
     data = {k:v for (k,v) in MINIMAL_WORKING_RECEIPT_DATA.items()}
     data['type'] = type
-    data['code'] = "CD"
+    data['orderId'] = "CD"
 
     rv = clientApp.post(f"/assets/receipt?id={str(assetId)}", data=data, follow_redirects=True)
     assert rv.status_code == 200
@@ -220,7 +220,7 @@ def test_receipt_successfull_for_coded(clientApp, type):
         dbAsset = db.wallet.assets.find_one({'_id': assetId})
         assert len(dbAsset['operations']) == 2
         assert dbAsset['operations'][1]['type'] == type
-        assert dbAsset['operations'][1]['code'] == "CD"
+        assert dbAsset['operations'][1]['orderId'] == "CD"
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])

@@ -86,8 +86,8 @@ class Asset(_DictLike):
         )
         return self
 
-    def coded(self):
-        self._data['coded'] = True
+    def hasOrderIds(self):
+        self._data['hasOrderIds'] = True
         return self
 
     def commit(self):

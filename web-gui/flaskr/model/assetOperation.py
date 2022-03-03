@@ -18,6 +18,6 @@ class AssetOperation(BaseModel):
     price: Decimal
     quantity: Optional[Decimal]
     finalQuantity: Optional[Decimal]
-    provision: Optional[Decimal]
+    provision: Decimal = Decimal(0)
     currencyConversion: Optional[Decimal]
     orderId: Optional[str]
