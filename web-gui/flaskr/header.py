@@ -12,7 +12,7 @@ def _allLabelsPipeline():
     }})
     pipeline.append({'$group': {
         '_id': None,
-        'label': {'$addToSet': '$labels'}
+        'allLabels': {'$addToSet': '$labels'}
     }})
 
     return pipeline
@@ -41,7 +41,8 @@ class HeaderData:
     def __init__(self, showLabels = False):
         self.showLabels = showLabels
 
-        self.allLabels = next(db.get_db().assets.aggregate(_allLabelsPipeline()))['label']
+        labelsResult = list(db.get_db().assets.aggregate(_allLabelsPipeline()))
+        self.allLabels = labelsResult[0]['allLabels'] if labelsResult else []
 
         self.lastQuoteUpdate = HeaderLastQuoteUpdate.create()
 

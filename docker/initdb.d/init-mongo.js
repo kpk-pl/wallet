@@ -12,6 +12,7 @@ db.createUser({
   ]
 });
 
+
 db = db.getSiblingDB('wallet')
 
 /*
@@ -19,4 +20,11 @@ db = db.getSiblingDB('wallet')
  * db.currencies.insertMany([{field: "value"}])
  */
 
-rs.initiate({"_id": "rs", "version": 1, "members": [{"_id": 0, "priority": 2, "host": "mongo:27017"}]);
+
+/*
+The replicaset needs to be initialized for the transactions queries to work. However it is apparently not
+possible to initialize the replicaset in the init script. Issue the below command after you first create an empty
+mongo container. This can be even done through the shell in the MongoDB Compass
+
+rs.initiate({"_id": "rs", "version": 1, "members": [{"_id": 0, "priority": 2, "host": "mongo:27017"}]});
+*/
