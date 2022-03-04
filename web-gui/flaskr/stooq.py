@@ -22,39 +22,8 @@ class Stooq(object):
                 end = len(url)
             self.ticker = url[s+2 : end]
 
-    def data(self):
-        url = f'https://stooq.pl/q/g/?s={self.ticker}'
-        result = {}
-
-        html = requests.get(url)
-        html.encoding = html.apparent_encoding
-        soup = BeautifulSoup(html.text, 'html.parser')
-
-        currency = [element.text for element in soup.find('td', text="Kurs").next_sibling() if element.name == 'a']
-        if currency:
-            result['currency'] = currency[0]
-            if result['currency'] == 'zł':
-                result['currency'] = 'PLN'
-            elif result['currency'] == 'p.':
-                result['currency'] = 'GBX'
-            elif result['currency'] == '£':
-                result['currency'] = 'GBB'
-            elif result['currency'] == '$':
-                result['currency'] = 'USD'
-            elif result['currency'] == '€':
-                result['currency'] = 'EUR'
-
-        name = soup.find(text = lambda t: t.startswith('Ogólnie: '))
-        if name:
-            name = name[9:]
-            if name.endswith(')'):
-                name = name[:name.rfind('(') - 1]
-            result['name'] = name
-
-        return result
-
     def quote(self):
-        url = 'https://stooq.pl/q/l/?s={}&f=snd2t2c&h&e=json'.format(self.ticker)
+        url = 'https://stooq.pl/q/l/?s={}&f=snd2t2c&e=json'.format(self.ticker)
 
         try:
             data = json.loads(requests.get(url).text)
@@ -88,12 +57,13 @@ class Stooq(object):
         return data
 
     def assetAddData(self):
-        data = self.data()
+        data = {}
 
         q = self.quote()
         if q is not None:
             data['quote'] = q['close']
             data['timestamp'] = q['timestamp']
             data['ticker'] = q['symbol']
+            data['name'] = q['name']
 
         return data
