@@ -45,7 +45,7 @@ $(function(){
 });
 
 $(function(){
-  $("form").validate({
+  const validationSettings = {
     submitHandler: function(){
       $.post(addSettings.submitUrl, $('.tab-pane.active > form').serialize(), function(data) {
         $(location).attr("href", addSettings.getNextUrl(data));
@@ -62,5 +62,8 @@ $(function(){
     unhighlight: function (element, errorClass, validClass) {
       $(element).removeClass('is-invalid');
     }
-  });
+  };
+
+  $("#form-general").validate(validationSettings);
+  $("#form-cash").validate(validationSettings);
 });

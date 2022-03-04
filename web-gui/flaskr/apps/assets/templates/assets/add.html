@@ -62,7 +62,7 @@ initialize({
           <div class="tab-content">
             <div class="tab-pane active" id="tab-listed">
               <!-- The onkeypress is to supress Enter from submitting the form because it's used to accept the tagsinput -->
-              <form method="post" action="" onkeypress="return event.keyCode != 13;">
+              <form id="form-general" method="post" action="" onkeypress="return event.keyCode != 13;">
                 <div class="row">
                   <div class="col-6">
                     <div class="form-group">
@@ -180,7 +180,7 @@ initialize({
               </form>
             </div>
             <div class="tab-pane" id="tab-cash">
-              <form method="post" action="">
+              <form id="form-cash" method="post" action="" onkeypress="return event.keyCode != 13;">
                 <input type="hidden" name="type" value="Deposit"/>
                 <input type="hidden" name="category" value="Cash"/>
                 <div class="row">

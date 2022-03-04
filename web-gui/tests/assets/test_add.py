@@ -145,7 +145,3 @@ def test_asset_add_failure_explicit_foreign_currency_not_found(client):
     rv = client.post(f"/assets", data=data, follow_redirects=True)
     assert rv.status_code == 400
     assert rv.json['code'] == 3
-
-
-
-
