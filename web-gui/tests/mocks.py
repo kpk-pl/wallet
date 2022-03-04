@@ -119,3 +119,24 @@ class Asset(_DictLike):
         result['currency'] = {"name": "PLN"}
 
         return result
+
+
+class Quote(_DictLike):
+    def __init__(self, name, unit, id=None):
+        super(Quote, self).__init__()
+        self._data['name'] = name
+        self._data['unit'] = unit
+
+        if isinstance(id, ObjectId):
+            self._data['_id'] = id
+
+    def quote(self, timestamp, quote):
+        if 'quoteHistory' not in self._data:
+            self._data['quoteHistory'] = []
+        self._data['quoteHistory'].append({'timestamp':timestamp, 'quote':quote})
+
+        return self
+
+    def commit(self):
+        with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+            return db.wallet.quotes.insert_one(self.asdict()).inserted_id

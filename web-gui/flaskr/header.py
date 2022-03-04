@@ -18,6 +18,23 @@ def _allLabelsPipeline():
     return pipeline
 
 
+def _lastQuoteUpdateTime():
+    pipeline = [
+        { '$project': {
+            # mongomock error: 'lastQuote': { '$last': ['$quoteHistory.timestamp'] } }
+          'lastQuote': { '$arrayElemAt': ['$quoteHistory.timestamp', -1] } }
+        },
+        { '$sort' : { 'lastQuote': -1 } },
+        { '$limit' : 1 }
+    ]
+
+    result = list(db.get_db().quotes.aggregate(pipeline))
+    if result:
+        return result[0]['lastQuote']
+
+    return None
+
+
 @dataclass
 class HeaderLastQuoteUpdate:
     timestamp: datetime
@@ -25,7 +42,7 @@ class HeaderLastQuoteUpdate:
 
     @classmethod
     def create(cls):
-        lastUpdateTime = db.last_quote_update_time()
+        lastUpdateTime = _lastQuoteUpdateTime()
         if not lastUpdateTime:
             return None
 

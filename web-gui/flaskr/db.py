@@ -22,17 +22,3 @@ def close_db(e=None):
 
 def init_app(app):
     app.teardown_appcontext(close_db)
-
-
-def last_quote_update_time():
-    pipeline = [
-        { '$project': { 'lastQuote': { '$last': ['$quoteHistory.timestamp'] } } },
-        { '$sort' : { 'lastQuote': -1 } },
-        { '$limit' : 1 }
-    ]
-
-    result = list(get_db().quotes.aggregate(pipeline))
-    if result:
-        return result[0]['lastQuote']
-
-    return None
