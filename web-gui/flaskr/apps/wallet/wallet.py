@@ -2,8 +2,8 @@ from flask import render_template, request, json
 
 from flaskr import db, header
 from flaskr.session import Session
-from flaskr.analyzers.profits import Profits
-from flaskr.analyzers.categories import Categories
+from flaskr.model import Asset
+from flaskr.analyzers import Profits, Categories
 from flaskr.analyzers.aggregate import aggregate
 from flaskr.pricing import Context, Pricing
 
@@ -54,6 +54,7 @@ def _getPipeline(label = None):
 
 def wallet():
     session = Session(['label', 'debug'])
+    headerData = header.HeaderData(showLabels = True)
 
     assets = list(db.get_db().assets.aggregate(_getPipeline(session.label())))
     aggregation = request.args.get('aggregation', default='')
@@ -68,17 +69,26 @@ def wallet():
     for asset in assets:
         if session.isDebug():
             asset['_pricingData'] = {}
+
         currentPrice, quantity = pricing.priceAsset(asset, debug=asset['_pricingData'] if session.isDebug() else None)
-        asset['_netValue'] = currentPrice
 
-        quarterAgoPrice, quantityQuarterAgo = pricingQuarterAgo.priceAsset(asset)
-        if quarterAgoPrice is not None and quantityQuarterAgo > 0:
-            asset['_quarterValueChange'] = (currentPrice/quantity - quarterAgoPrice/quantityQuarterAgo) / (quarterAgoPrice/quantityQuarterAgo)
+        if currentPrice is not None:
+            asset['_netValue'] = currentPrice
 
-    categoryAnalyzer = Categories()
-    categoryAllocation = categoryAnalyzer(assets)
+            quarterAgoPrice, quantityQuarterAgo = pricingQuarterAgo.priceAsset(asset)
+            if quarterAgoPrice is not None and quantityQuarterAgo > 0:
+                asset['_quarterValueChange'] = (currentPrice/quantity - quarterAgoPrice/quantityQuarterAgo) / (quarterAgoPrice/quantityQuarterAgo)
+        else:
+            asset['_netValue'] = None
+            headerData.warnings.append(f"Could not determine current value of '{asset['name']}'")
+
+    try:
+        categoryAllocation = Categories()(assets)
+    except RuntimeError as err:
+        headerData.errors.append(str(err))
+        categoryAllocation = None
 
     return render_template("wallet/wallet.html",
                            assets=assets,
                            allocation=json.dumps(categoryAllocation),
-                           header = header.data(showLabels = True))
+                           header = headerData.asDict())

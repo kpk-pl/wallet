@@ -1,0 +1,7 @@
+{
+  "MAIN_CURRENCY": "PLN",
+  "STYLING": {
+    "WARNING_EXCLAMATION_TRIANGLE": "color:rgb(252, 186, 3)",
+    "WALLET_ALLOCATION_CHART": "min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"
+  }
+}

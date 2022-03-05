@@ -69,8 +69,11 @@ class Context(object):
         ]
 
         for item in db.get_db().quotes.aggregate(pipeline):
+            if 'quotes' not in item or not item['quotes']:
+                item['quotes'] = []
             if self.timeScale:
-                item['quotes'] = interp(item['quotes'], self.timeScale)
+                if item['quotes']:
+                    item['quotes'] = interp(item['quotes'], self.timeScale)
 
             self.quotes.append(self.StorageType(**item))
 
@@ -101,7 +104,7 @@ class Context(object):
 
     def getFinalById(self, quoteId, currency=None):
         entry = self._getById(quoteId)
-        if not entry:
+        if not entry or not entry.quotes:
             return None
 
         return self._returnSingle(entry.quotes[-1], entry, currency)

@@ -42,8 +42,9 @@
 {% endblock %}
 
 {% block content %}
-{% set totalNetValue = (assets | sum(attribute='_netValue')) -%}
+{% set totalNetValue = (assets | map(attribute='_netValue') | select('float') | sum()) -%}
 {% set totalStillInvestedNetValue = (assets | sum(attribute='_stillInvestedNetValue')) -%}
+{% set hasAllNetValues = (assets | length) - (assets | map(attribute='_netValue') | select('float') | list | length) == 0 -%}
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
@@ -77,7 +78,7 @@
             <tbody>
               {% for asset in assets %}
               <tr>
-                <td data-order="{{ asset.name }}">
+                <td data-title="Name" data-order="{{ asset.name }}">
                   {%- if asset._id is not list %}
                   <a href="{{ url_for('assets.index', id=asset._id) }}">
                   {%- endif %}
@@ -96,7 +97,7 @@
                   </a>
                   {%- endif -%}
                 </td>
-                <td>
+                <td data-title="Institution">
                   {%- if asset.institution is not list %}
                     {{ asset.institution }}
                   {%- else %}
@@ -105,16 +106,16 @@
                   {%- endfor %}
                   {%- endif %}
                 </td>
-                <td data-order="{{ asset.category }}{{ (" " + asset.subcategory) if asset.subcategory else ""}}">
+                <td data-title="Category" data-order="{{ asset.category }}{{ (" " + asset.subcategory) if asset.subcategory else ""}}">
                   {{- asset.category -}}
                   {%- if asset.subcategory -%}
                   <br/>
                   <span class="smaller">{{ asset.subcategory }}</span>
                   {%- endif -%}
                 </td>
-                <td>{{ asset.region }}</td>
-                <td class="text-right">{{ asset._holdingDays }}</td>
-                <td>
+                <td data-title="Region">{{ asset.region }}</td>
+                <td data-title="Holding period" class="text-right">{{ asset._holdingDays }}</td>
+                <td data-title="Quaterly change" data-order="{{ asset._quarterValueChange if asset._quarterValueChange else 0 }}">
                   <span id="sparkline-{{ asset._id }}">
                   </span>
                   <span class="text-right color-gain float-right">
@@ -123,16 +124,28 @@
                   {%- endif -%}
                   </span>
                 </td>
-                <td class="text-right">{{ asset._stillInvestedNetValue | roundFixed(currencyMainDecimals) }}</td>
-                <td class="text-right">{{ asset._netValue | roundFixed(currencyMainDecimals) }}</td>
-                <td class="text-right">{{ (asset._netValue / totalNetValue * 100) | roundFixed(1) }}%</td>
-                <td class="text-right color-gain">
-                  {%- if asset._stillInvestedNetValue > 0 -%}
-                  {{ ((asset._netValue - asset._stillInvestedNetValue) / asset._stillInvestedNetValue * 100) | roundFixed(currencyMainDecimals) }}
-                  {%- else -%}
-                  {{ 0 | roundFixed(currencyMainDecimals) }}
-                  {%- endif -%}
-                %</td>
+                <td data-title="Investment" class="text-right">{{ asset._stillInvestedNetValue | asCurrency(config.MAIN_CURRENCY, False) }}</td>
+                {%- if asset._netValue %}
+                  <td data-title="Value" class="text-right">{{ asset._netValue | asCurrency(config.MAIN_CURRENCY, False) }}</td>
+                  <td data-title="Share" class="text-right">{{ (asset._netValue / totalNetValue * 100) | roundFixed(1) }}%</td>
+                  <td data-title="Net P/L" class="text-right color-gain">
+                    {%- if asset._stillInvestedNetValue > 0 -%}
+                    {{ ((asset._netValue - asset._stillInvestedNetValue) / asset._stillInvestedNetValue * 100) | asCurrency(config.MAIN_CURRENCY, False) }}
+                    {%- else -%}
+                    {{ 0 | asCurrency(config.MAIN_CURRENCY, False) }}
+                    {%- endif -%}
+                  %</td>
+                {%- else %}
+                  <td data-title="Value" class="text-right">
+                    <i class="fas fa-exclamation-triangle fa-fw" style="{{ config.STYLING.WARNING_EXCLAMATION_TRIANGLE }}" title="Could not determine current value"></i>
+                  </td>
+                  <td data-title="Share" class="text-right">
+                    <i class="fas fa-exclamation-triangle fa-fw" style="{{ config.STYLING.WARNING_EXCLAMATION_TRIANGLE }}" title="Could not determine current value"></i>
+                  </td>
+                  <td data-title="Net P/L" class="text-right color-gain">
+                    {{ 0 | asCurrency(config.MAIN_CURRENCY, False) }}%
+                  </td>
+                {%- endif %}
               </tr>
               {% endfor %}
             </tbody>
@@ -144,16 +157,24 @@
                 <th></th>
                 <th></th>
                 <th></th>
-                <th class="text-right">{{ totalStillInvestedNetValue | roundFixed(currencyMainDecimals) }}</th>
-                <th class="text-right">{{ totalNetValue | roundFixed(currencyMainDecimals) }}</th>
+                <th class="text-right">{{ totalStillInvestedNetValue | asCurrency(config.MAIN_CURRENCY, False) }}</th>
+                {%- if hasAllNetValues %}
+                  <th class="text-right">{{ totalNetValue | asCurrency(config.MAIN_CURRENCY, False) }}</th>
+                {%- else %}
+                  <th></th>
+                {%- endif %}
                 <th class="text-right">100%</th>
-                <th class="text-right color-gain">
-                  {%- if totalStillInvestedNetValue > 0 -%}
-                  {{ ((totalNetValue - totalStillInvestedNetValue) / totalStillInvestedNetValue * 100) | roundFixed(currencyMainDecimals) }}
-                  {%- else -%}
-                  {{ 0 | roundFixed(currencyMainDecimals) }}
-                  {%- endif -%}
+                {%- if hasAllNetValues %}
+                  <th class="text-right color-gain">
+                    {%- if totalStillInvestedNetValue > 0 -%}
+                    {{ ((totalNetValue - totalStillInvestedNetValue) / totalStillInvestedNetValue * 100) | asCurrency(config.MAIN_CURRENCY, False) }}
+                    {%- else -%}
+                    {{ 0 | asCurrency(config.MAIN_CURRENCY, False) }}
+                    {%- endif -%}
                   %</th>
+                {%- else %}
+                  <th></th>
+                {%- endif %}
               </tr>
             </tfoot>
           </table>
@@ -168,7 +189,7 @@
           <h3 class="card-title">Category allocation</h3>
         </div>
         <div class="card-body">
-          <canvas id="allocationChart" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+          <canvas id="allocationChart" style="{{ config.STYLING.WALLET_ALLOCATION_CHART }}"></canvas>
         </div>
       </div>
     </div>
@@ -222,22 +243,22 @@
         <div class="card-body">
           <div class="tab-content">
             <div class="tab-pane active" id="assetAllocation_tab_netpl">
-              <canvas id="assetAllocation_chart_netpl" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+              <canvas id="assetAllocation_chart_netpl" style="{{ config.STYLING.WALLET_ALLOCATION_CHART }}"></canvas>
             </div>
             <div class="tab-pane" id="assetAllocation_tab_plpercent">
-              <canvas id="assetAllocation_chart_plpercent" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+              <canvas id="assetAllocation_chart_plpercent" style="{{ config.STYLING.WALLET_ALLOCATION_CHART }}"></canvas>
             </div>
             <div class="tab-pane" id="assetAllocation_tab_summary">
-              <canvas id="assetAllocation_chart_summary" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+              <canvas id="assetAllocation_chart_summary" style="{{ config.STYLING.WALLET_ALLOCATION_CHART }}"></canvas>
             </div>
             <div class="tab-pane" id="assetAllocation_tab_value">
-              <canvas id="assetAllocation_chart_value" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+              <canvas id="assetAllocation_chart_value" style="{{ config.STYLING.WALLET_ALLOCATION_CHART }}"></canvas>
             </div>
             <div class="tab-pane" id="assetAllocation_tab_investment">
-              <canvas id="assetAllocation_chart_investment" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+              <canvas id="assetAllocation_chart_investment" style="{{ config.STYLING.WALLET_ALLOCATION_CHART }}"></canvas>
             </div>
             <div class="tab-pane" id="assetAllocation_tab_share">
-              <canvas id="assetAllocation_chart_share" style="min-height: 500px; height: 500px; max-height: 500px; max-width: 100%;"></canvas>
+              <canvas id="assetAllocation_chart_share" style="{{ config.STYLING.WALLET_ALLOCATION_CHART }}"></canvas>
             </div>
           </div>
         </div>

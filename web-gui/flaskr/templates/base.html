@@ -90,5 +90,29 @@
     });
   </script>
   {% block user_scripts %}{% endblock %}
+  {%- if header.warnings or header.errors %}
+  <script type="text/javascript">
+    {%- for error in header.errors %}
+      $(document).Toasts('create', {
+        class: 'bg-danger',
+        title: 'Error',
+        body: '{{ error }}',
+        autohide: true,
+        delay: 10000,
+        position: 'bottomRight',
+      });
+    {% endfor %}
+    {%- for warning in header.warnings %}
+      $(document).Toasts('create', {
+        class: 'bg-warning',
+        title: 'Warning',
+        body: '{{ warning }}',
+        autohide: true,
+        delay: 10000,
+        position: 'bottomRight',
+      });
+    {% endfor %}
+  </script>
+  {%- endif %}
 </body>
 </html>

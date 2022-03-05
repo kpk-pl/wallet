@@ -1,4 +1,4 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from flaskr import db
 from flask import request
@@ -29,7 +29,7 @@ def _lastQuoteUpdateTime():
     ]
 
     result = list(db.get_db().quotes.aggregate(pipeline))
-    if result:
+    if result and 'lastQuote' in result[0]:
         return result[0]['lastQuote']
 
     return None
@@ -55,6 +55,9 @@ class HeaderData:
     allLabels : list[str]
     lastQuoteUpdate : HeaderLastQuoteUpdate
 
+    warnings : list[str] = field(default_factory=list)
+    errors : list[str] = field(default_factory=list)
+
     def __init__(self, showLabels = False):
         self.showLabels = showLabels
 
@@ -62,6 +65,9 @@ class HeaderData:
         self.allLabels = labelsResult[0]['allLabels'] if labelsResult else []
 
         self.lastQuoteUpdate = HeaderLastQuoteUpdate.create()
+
+        self.warnings = []
+        self.errors = []
 
     def asDict(self):
         return asdict(self)

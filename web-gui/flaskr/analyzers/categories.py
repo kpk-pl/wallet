@@ -11,6 +11,8 @@ class Categories(object):
             category = asset['category']
             subcategory = asset['subcategory'] if 'subcategory' in asset else None
 
+            if '_netValue' not in asset or asset['_netValue'] is None:
+                raise RuntimeError(f"Could not determine '{asset['name']}' asset value for categories allocation engine")
             self.allocation[category][subcategory] += asset['_netValue']
 
         return self.allocation

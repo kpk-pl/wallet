@@ -71,8 +71,10 @@ def _response(shouldAllocate=False, label=None):
         for asset in assets:
             asset['_netValue'], _ = pricing.priceAsset(asset)
 
-        categoryAnalyzer = Categories()
-        response['allocation'] = categoryAnalyzer(assets)
+        try:
+            response['allocation'] = Categories()(assets)
+        except RuntimeError as e:
+            return None
 
     return response
 
@@ -104,4 +106,7 @@ def strategy_json():
             label = None
 
         response = _response(shouldAllocate, label)
-        return Response(json.dumps(response), mimetype="application/json")
+        if response is not None:
+            return Response(json.dumps(response), mimetype="application/json")
+        else:
+            return '', 500
