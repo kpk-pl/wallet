@@ -86,7 +86,7 @@ def post():
             {"_id": 1})
 
         if not currencyId:
-            return ({"error": True, "message": "Cannot find matching price source for given currency", "code": 3}, 400)
+            return ({"error": True, "message": f"Cannot find matching pricing source for given currency {currency}", "code": 3}, 400)
 
         data['currency']['quoteId'] = currencyId['_id']
 

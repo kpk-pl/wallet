@@ -47,9 +47,18 @@ $(function(){
 $(function(){
   const validationSettings = {
     submitHandler: function(){
-      $.post(addSettings.submitUrl, $('.tab-pane.active > form').serialize(), function(data) {
-        $(location).attr("href", addSettings.getNextUrl(data));
-      });
+      $.post(addSettings.submitUrl, $('.tab-pane.active > form').serialize())
+        .done(function(data) {
+          $(location).attr("href", addSettings.getNextUrl(data));
+        })
+        .fail(function(data) {
+          $(document).Toasts('create', {
+            class: 'bg-danger',
+            title: 'Error',
+            subtitle: `Code ${data.responseJSON.code}`,
+            body: data.responseJSON.message,
+          });
+        });
     },
     errorElement: 'span',
     errorPlacement: function (error, element) {
