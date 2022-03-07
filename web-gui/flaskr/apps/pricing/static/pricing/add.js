@@ -11,15 +11,27 @@ function setupForm(s) {
     },
     errorElement: 'span',
     errorPlacement: function (error, element) {
-            error.addClass('invalid-feedback');
-            element.closest('.form-group').append(error);
-          },
+      error.addClass('invalid-feedback');
+      element.closest('.form-group').append(error);
+    },
     highlight: function (element, errorClass, validClass) {
-            $(element).addClass('is-invalid');
-          },
+      $(element).addClass('is-invalid');
+    },
     unhighlight: function (element, errorClass, validClass) {
-            $(element).removeClass('is-invalid');
-          }
+      $(element).removeClass('is-invalid');
+    },
+    rules: {
+      'unit': {
+        required: function(element) {
+          return $('#f-currencypair-check').is(':checked')
+        }
+      },
+      'currencyPairFrom': {
+        required: function(element) {
+          return $('#f-currencypair-check').is(':checked')
+        }
+      }
+    }
   });
 }
 
@@ -46,5 +58,12 @@ $(function(){
 
   $("#f-unit").change(function() {
     $('#f-quote-unit-prepend').text($(this).val());
+  });
+
+  $("#f-currencypair-check").change(function(){
+    $("#c-currencypair-from").attr('hidden', !this.checked);
+    $("#c-filler").attr('hidden', this.checked);
+    $("#l-unit").html(this.checked ? 'To' : 'Unit');
+    $("#f-unit").valid();
   });
 });

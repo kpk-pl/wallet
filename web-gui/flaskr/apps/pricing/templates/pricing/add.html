@@ -60,11 +60,27 @@
                 </div>
               </div>
               <div class="row">
+                <div class="col">
+                  <div class="form-check">
+                    <input type="checkbox" id="f-currencypair-check" name="currencyPairCheck" class="form-check-input" />
+                    <label for="f-currencypair-check" class="form-check-label">Currency pair</label>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-3" id="c-currencypair-from" hidden="hidden">
+                  <div class="form-group">
+                    <label for="f-currencypair-from">From</label>
+                    <input type="text" id="f-currencypair-from" name="currencyPairFrom" class="form-control" data-lpignore="true"/>
+                  </div>
+                </div>
                 <div class="col-3">
                   <div class="form-group">
-                    <label for="f-unit">Unit</label>
+                    <label for="f-unit" id="l-unit">Unit</label>
                     <input type="text" id="f-unit" name="unit" class="form-control" data-lpignore="true"/>
                   </div>
+                </div>
+                <div class="col-3" id="c-filler">
                 </div>
                 <div class="col-3">
                   <div class="form-group">
@@ -77,7 +93,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="col-6">
+                <div class="col-3">
                   <div class="form-group">
                     <label for="f-updateFreq">Update frequency</label>
                     <select id="f-updateFreq" name="updateFrequency" class="custom-select" required>

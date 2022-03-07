@@ -1,22 +1,45 @@
 from flask import request, render_template, jsonify
 from flaskr import db, header, stooq
+from pydantic import BaseModel, HttpUrl, ValidationError, Field
+from typing import Optional
+from enum import Enum
+
+
+class PostDataUpdateFrequency(str, Enum):
+    daily = "daily"
+    weekly = "weekly"
+    monthly = "monthly"
+
+
+class PostData(BaseModel):
+    name: str
+    ticker: Optional[str]
+    url: HttpUrl
+    unit: Optional[str]
+    updateFrequency: PostDataUpdateFrequency
+    currencyPairCheck: bool = Field(False, exclude=True)
 
 
 def postNewItem():
-    data = {}
-    allowedKeys = ['name', 'ticker', 'url', 'unit', 'updateFrequency']
+    try:
+        model = PostData(**request.form)
+    except ValidationError as e:
+        return ({'error': True, 'code': 1, 'message': "Invalid request"}, 400)
 
-    for key in allowedKeys:
-        if key in request.form.keys() and request.form[key]:
-            data[key] = request.form[key]
+    data = model.dict(exclude_none=True)
 
-    if 'updateFrequency' in data:
-        allowedFreqs = ['daily', 'weekly', 'monthly']
-        if data['updateFrequency'] not in allowedFreqs:
-            return {'error': "Invalid update frequency provided"}
+    if stooq.Stooq.isValidUrl(model.url):
+        data['stooqSymbol'] = stooq.Stooq(url=model.url).ticker
 
-    if 'url' in data and stooq.Stooq.isValidUrl(data['url']):
-        data['stooqSymbol'] = stooq.Stooq(url=data['url']).ticker
+    if model.currencyPairCheck:
+        if 'currencyPairFrom' not in request.form.keys() or not model.unit:
+            return ({'error': True, 'code': 2, 'message': "Invalid request"}, 400)
+
+        data['currencyPair'] = {
+            'from': request.form['currencyPairFrom'],
+            'to': model.unit
+        }
+
 
     addedId = db.get_db().quotes.insert(data)
     return {'ok': True, 'id': str(addedId)}
