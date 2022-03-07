@@ -1,9 +1,9 @@
-from flask import render_template, request, jsonify
+from flask import render_template, request, jsonify, current_app
 from flaskr.session import Session
 from bson.objectid import ObjectId
-from flaskr import db, header, typing
+from flaskr import db, header
 from flaskr.model import PyObjectId
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, Field, ValidationError
 from typing import Optional
 
 
@@ -42,27 +42,25 @@ def listAll():
 
 class PostBody(BaseModel):
     name: str
-    ticker: str = ''
-    currency: Optional[str]
+    ticker: Optional[str]
+    currency: Optional[str] = Field(exclude=True)
     type: str
     institution: str
     category: str
-    subcategory: str = ''
+    subcategory: Optional[str]
     region: Optional[str]
-    link: str = ''
-    priceQuoteId: Optional[PyObjectId]
-    labels: Optional[str]
+    link: Optional[HttpUrl]
+    priceQuoteId: Optional[PyObjectId] = Field(exclude=True)
+    labels: Optional[str] = Field(exclude=True)
 
 
 def post():
-    form = PostBody(**request.form)
+    try:
+        form = PostBody(**request.form)
+    except ValidationError:
+        return ({"error": True, "message": "Invalid request", "code": 10})
 
-    copiedKeys = {'name', 'ticker', 'type', 'category', 'subcategory', 'region', 'institution'}
-    data = form.dict(include=copiedKeys, exclude_none=True, exclude_defaults=True)
-
-    if form.link:
-        data['link'] = str(form.link)
-
+    data = form.dict(exclude_none=True)
     if form.labels:
         data['labels'] = form.labels.split(',')
 
@@ -80,10 +78,15 @@ def post():
         data['currency'] = { 'name': form.currency }
 
     currency = data['currency']['name']
-    if currency != typing.Currency.main:
+    if currency != current_app.config['MAIN_CURRENCY']:
         currencyId = db.get_db().quotes.find_one(
-            {"currencyPair.from": typing.Currency.main, "currencyPair.to": currency},
+            {"currencyPair.from": current_app.config['MAIN_CURRENCY'], "currencyPair.to": currency},
             {"_id": 1})
+
+        if not currencyId and currency == 'GBX':
+            currencyId = db.get_db().quotes.find_one(
+                {"currencyPair.from": current_app.config['MAIN_CURRENCY'], "currencyPair.to": 'GBP'},
+                {"_id": 1})
 
         if not currencyId:
             return ({"error": True, "message": f"Cannot find matching pricing source for given currency {currency}", "code": 3}, 400)

@@ -35,9 +35,12 @@ def postNewItem():
         if 'currencyPairFrom' not in request.form.keys() or not model.unit:
             return ({'error': True, 'code': 2, 'message': "Invalid request"}, 400)
 
+        # Yes, this is reversed in the application logic
+        # The way it was designed is that you need to pay a quote ammount of 'from' currency to convert it to 1 'to'.
+        # So having currency pair 'from': 'PLN', 'to': 'EUR', we take a quote (4.5) of 'PLN' to buy 1 'EUR'
         data['currencyPair'] = {
-            'from': request.form['currencyPairFrom'],
-            'to': model.unit
+            'to': request.form['currencyPairFrom'],
+            'from': model.unit
         }
 
 
@@ -52,6 +55,7 @@ def _getPipeline():
             'name': 1,
             'url': 1,
             'unit': 1,
+            'currencyPair': 1,
             'lastQuote': {'$last': '$quoteHistory'}
         }}
     ]

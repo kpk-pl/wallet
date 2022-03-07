@@ -109,7 +109,7 @@ def test_pricing_add_source_as_currency_pair(client):
         dbPricing = db.wallet.quotes.find_one({'_id': ObjectId(rv.json['id'])})
 
         assert 'currencyPair' in dbPricing
-        assert dbPricing['currencyPair'] == {'from': "PLN", 'to': "USD"}
+        assert dbPricing['currencyPair'] == {'from': "USD", 'to': "PLN"}
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])

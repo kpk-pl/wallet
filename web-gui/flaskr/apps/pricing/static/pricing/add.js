@@ -7,7 +7,16 @@ function setupForm(s) {
 
   $("form").validate({
     submitHandler: function() {
-      $.post(settings.submitUrl, $('form').serialize(), settings.submitSuccessHandler);
+      $.post(settings.submitUrl, $('form').serialize())
+        .done(settings.submitSuccessHandler)
+        .fail(function(data) {
+          $(document).Toasts('create', {
+            class: 'bg-danger',
+            title: 'Error',
+            subtitle: `Code ${data.responseJSON.code}`,
+            body: data.responseJSON.message,
+          });
+        });
     },
     errorElement: 'span',
     errorPlacement: function (error, element) {

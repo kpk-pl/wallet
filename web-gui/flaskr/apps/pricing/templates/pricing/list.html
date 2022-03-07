@@ -53,6 +53,11 @@
                   <a href="{{ url_for('pricing.index', quoteId=source._id) }}">
                     {{ source.name }}
                   </a>
+                  {%- if source.currencyPair %}
+                  <span class="badge badge-info ml-1" title="Currency pair">
+                    {{ source.currencyPair.to}}/{{ source.currencyPair.from }}
+                  </span>
+                  {%- endif %}
                   <a href="{{source.url}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="Source feed">
                     <i class="fas fa-external-link-alt fa-fw fa-pull-right"></i>
                   </a>

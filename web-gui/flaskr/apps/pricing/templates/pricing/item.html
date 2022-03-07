@@ -69,7 +69,11 @@
             <dd class="col-sm-9">{{ item.unit }}</dd>
             {%- if item.currencyPair %}
             <dt class="col-sm-3">Currency pair</dt>
-            <dd class="col-sm-9">{{ item.currencyPair.from }} -> {{ item.currencyPair.to }}</dd>
+            <dd class="col-sm-9">
+              <span class="badge badge-info ml-1" title="Currency pair">
+                {{ item.currencyPair.to}}/{{ item.currencyPair.from }}
+              </span>
+            </dd>
             {%- endif %}
             <dt class="col-sm-3">Link</dt>
             <dd class="col-sm-9"><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.url }}</a></dd>
