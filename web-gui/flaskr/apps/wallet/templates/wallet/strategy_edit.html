@@ -38,6 +38,10 @@ initialize({
 .fancytree-active {
   background-color: rgba(0,0,0,.05);
 }
+.tree-aux-title {
+  width: 300px;
+  display: inline-block;
+}
 .tree-aux-input {
   width: 100px;
   float: right;
@@ -56,14 +60,18 @@ initialize({
     <div class="col-12">
       <div class="card card-primary">
         <div class="card-header">
+          {%- if session['label'] %}
           <h3 class="card-title">Strategy for <span class="badge badge-success">{{ session['label'] }}</span></h3>
+          {%- else %}
+          <h3 class="card-title">Default strategy</h3>
+          {%- endif %}
         </div>
         <div class="card-body">
           <table class="table table-hover fancytree-fade-expander" id="treeTable">
             <thead>
-              <th>Name</th>
-              <th class="text-right" style="width: 150px">Share</th>
-              <th class="text-right" style="width: 150px">Percentage</th>
+              <th title="Strategy component name">Name</th>
+              <th class="text-right" style="width: 150px" title="Percentage of this constituent part that influences this strategy component (default 100%)">Constituent part</th>
+              <th class="text-right" style="width: 150px" title="Percentage share of this strategy component (out of 100%)">Share</th>
             </thead>
             <tbody>
               <tr>
@@ -75,6 +83,7 @@ initialize({
           </table>
         </div>
         <div class="card-footer">
+          <button id="button-add" class="btn btn-success">Add component</button>
           <button id="submit" class="btn btn-primary">Submit</button>
         </div>
       </div>

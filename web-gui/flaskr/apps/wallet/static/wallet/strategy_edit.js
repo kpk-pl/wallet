@@ -16,20 +16,32 @@ function initialize(s) {
   settings.btnAdd = function(e){
     const key = $(e).attr('data-treenode-key');
     const node = $.ui.fancytree.getTree("#treeTable").getNodeByKey(key);
-    node.info("add", node);
+    //node.info("add", node);
 
     if (node.isTopLevel()) {
       let newComponent = node.tree.rootNode.addChildren({
-        title: "New component",
+        title: "New strategy component",
         percentage: 0,
         folder: true
       }, node.getNextSibling());
-      newComponent.addChildren({title: "New mapping", percentage: 100});
+      newComponent.addChildren({title: "New constituent category", percentage: 100});
       newComponent.setActive();
     }
     else {
-      node.appendSibling({title: "New mapping", percentage: 100}).setActive();
+      node.appendSibling({title: "New constituent category", percentage: 100}).setActive();
     }
+  };
+  settings.genericAdd = function(){
+    const rootNode = $.ui.fancytree.getTree("#treeTable").rootNode;
+    //node.info("genericAdd", rootNode);
+
+    let newComponent = rootNode.addChildren({
+      title: "New strategy component",
+      percentage: 0,
+      folder: true
+    });
+    newComponent.addChildren({title: "New constituent category", percentage: 100});
+    newComponent.setActive();
   };
 }
 
@@ -49,11 +61,12 @@ $(function(){
   });
 
   $("#treeTable").fancytree({
-    extensions: ["edit", "table"],
+    extensions: ["table"],
     autoScroll: true,
     keyboard: false,
     aria: true,
     source: strategy,
+    nodata: false,
     table: {
       nodeColumnIdx: 0,
       indentation: 50,
@@ -81,21 +94,24 @@ $(function(){
       const tr = $(node.tr);
       const tdList = tr.find(">td");
 
+      const titleElement = tdList.eq(0).children('span').children('.fancytree-title');
       if (node.isTopLevel()) {
         if (node.isActive()) {
-          tdList.eq(2)
-                .html('<input class="form-control tree-aux-input" type="text" value="' + node.data.percentage + '">');
+          titleElement.html(`<input class="form-control tree-aux-title" type="text" value="${node.title}">`);
+          tdList.eq(2).html('<input class="form-control tree-aux-input" type="text" value="' + node.data.percentage + '">');
         }
         else {
+          //titleElement.text(node.title);
           tdList.eq(2).text(node.data.percentage + '%');
         }
       }
       else {
         if (node.isActive()) {
-          tdList.eq(1)
-                .html('<input class="form-control tree-aux-input" type="text" value="' + node.data.percentage + '">');
+          titleElement.html(`<input class="form-control tree-aux-title" type="text" value="${node.title}">`);
+          tdList.eq(1).html('<input class="form-control tree-aux-input" type="text" value="' + node.data.percentage + '">');
         }
         else {
+          //titleElement.text(node.title);
           tdList.eq(1).text(node.data.percentage + '%');
         }
       }
@@ -118,6 +134,9 @@ $(function(){
         return;
 
       const tdList = $(node.tr).find(">td");
+      const titleElement = tdList.eq(0).children('span').children('.fancytree-title');
+      node.title = titleElement.find("input")[0].value;
+
       if (node.isTopLevel()) {
         node.data.percentage = parseFloat(tdList.eq(2).find("input")[0].value)
         node.setExpanded(false);
@@ -129,13 +148,13 @@ $(function(){
 
       node.render(true);
     },
-    edit: {
-      triggerStart: ["clickActive", "f2", "mac+enter", "shift+click"],
-    }
   });
+
+  $('#button-add').click(settings.genericAdd);
 
   $('#submit').click(function(){
     const tree = $.ui.fancytree.getTree("#treeTable");
+
     const data = tree.toDict(true).children.map(o => {
       return {
         name: o.title,
@@ -148,6 +167,7 @@ $(function(){
         })
       };
     });
+
     $.ajax(settings.submitUrl, {
       data: JSON.stringify(data),
       contentType: 'application/json',
@@ -158,22 +178,3 @@ $(function(){
     });
   });
 });
-
-//let lastClicked;
-
-//$('.test1').click(function(e){
-  //console.log("click");
-	//if (lastClicked === this) {
-  //console.log("second");
-    //let html = $('<input type="text" value="' + this.textContent + '"></input>');
-    //html.blur(function(){
-      //let v = $(this).val();
-			//$(this).parent().empty().text(v);
-    //});
-    //$(this).empty().append(html);
-    //html.focus();
-  //}
-  //else {
-    //lastClicked = this;
-  //}
-//});

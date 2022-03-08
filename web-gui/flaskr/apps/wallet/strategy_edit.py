@@ -20,7 +20,9 @@ def strategy_edit():
         session = Session(['label'])
 
         strategy = list(db.get_db().strategy.aggregate(_lastStrategy(session.label())))
-        if not strategy:
-            return '', 404
+        if strategy:
+            strategy = strategy[0]
+        else:
+            strategy = {'assetTypes': []}
 
-        return render_template("wallet/strategy_edit.html", strategy=json.dumps(strategy[0]), header=header.data(showLabels = True))
+        return render_template("wallet/strategy_edit.html", strategy=json.dumps(strategy), header=header.data(showLabels = True))

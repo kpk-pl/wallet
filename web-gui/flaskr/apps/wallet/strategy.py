@@ -83,9 +83,14 @@ def strategy():
     if request.method == 'GET':
         session = Session(['label'])
         return render_template("wallet/strategy.html", header=header.data(showLabels = True))
+
     elif request.method == 'POST':
         label = request.args.get('label')
+        if not label:
+            label = None
+
         data = json.loads(request.data.decode('utf-8'))
+
         for entry in data:
             entry['categories'] = [v['name'] if v['percentage'] == 100 else v for v in entry['categories']]
 
