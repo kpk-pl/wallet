@@ -27,7 +27,7 @@ def test_stragety_get_without_assets(client):
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
-def test_stragety_json_get_without_assets(client):
+def test_strategy_json_get_without_assets(client):
     rv = client.get(f"/wallet/strategy?allocation=true", follow_redirects=True, headers={"Accept": "application/json"})
     assert rv.status_code == 200
 
@@ -45,4 +45,4 @@ def test_strategy_json_get_with_missing_quotes_for_pricing(client):
     Asset().createEquity().pricing().quantity(1).commit()
 
     rv = client.get(f"/wallet/strategy?allocation=true", follow_redirects=True, headers={"Accept": "application/json"})
-    assert rv.status_code == 500
+    assert rv.status_code == 400

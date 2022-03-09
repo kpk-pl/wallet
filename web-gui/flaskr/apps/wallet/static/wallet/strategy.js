@@ -40,7 +40,15 @@ $(function () {
     rebalancingChange: {column: 7, format: x => x.toFixed(2)}
   });
 
-  $.getJSON(settings.strategyUri, updateStrategyAllocation);
+  $.getJSON(settings.strategyUri)
+    .done(updateStrategyAllocation)
+    .fail(function(data){
+      $(document).Toasts('create', {
+        class: 'bg-danger',
+        title: 'Error',
+        body: data.responseJSON.message,
+      });
+    });
 
   function footerCallback(row, data, start, end, display) {
     let api = this.api();
