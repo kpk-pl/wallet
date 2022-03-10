@@ -18,6 +18,7 @@
 initialize({
   currency: "{{ currencyMain }}",
   strategyUri: "{{ url_for('.strategy', allocation='true', label=session['label']) | safe }}",
+  strategyUriFallback: "{{ url_for('.strategy', label=session['label']) | safe }}",
 });
 </script>
 {% endblock %}

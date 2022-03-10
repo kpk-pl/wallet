@@ -44,10 +44,20 @@ $(function () {
     .done(updateStrategyAllocation)
     .fail(function(data){
       $(document).Toasts('create', {
-        class: 'bg-danger',
-        title: 'Error',
+        class: 'bg-warning',
+        title: 'Warning',
         body: data.responseJSON.message,
       });
+
+      $.getJSON(settings.strategyUriFallback)
+        .done(function(data){ updateStrategyAllocation(data, true); })
+        .fail(function(data){
+          $(document).Toasts('create', {
+            class: 'bg-critical',
+            title: 'Error',
+            body: data.responseJSON.message,
+          });
+        });
     });
 
   function footerCallback(row, data, start, end, display) {
@@ -65,15 +75,17 @@ $(function () {
     }
 
     function adjVal(i) {
-      if (typeof i === 'object')
-        return Number(i.getElementsByTagName('input')[0].value);
+      if (typeof i === 'object') {
+        let inputElement = i.getElementsByTagName('input')[0];
+        return inputElement !== undefined ? Number(inputElement.value) : 0;
+      }
       return i;
     }
     const adjTotal = api.column(4).nodes().reduce((a, b) => adjVal(a) + adjVal(b), 0);
     $(api.column(4).footer()).html(styling.asCurrencyNumber(adjTotal, settings.currency));
   }
 
-  function updateStrategyAllocation(data) {
+  function updateStrategyAllocation(data, simplified=false) {
     function makeList(array, tag='ul', classes=[]) {
       let result = `<${tag} class="${classes.join(' ')}">`;
       for (let element of array) {
@@ -96,7 +108,7 @@ $(function () {
               String(assetType.percentage) + '%',
               makeList(constituents, 'ul', ['list-unstyled', 'm-0']),
               null,
-              makeAdjustmentInput(),
+              simplified ? null :  makeAdjustmentInput(),
               null,
               null,
               null]

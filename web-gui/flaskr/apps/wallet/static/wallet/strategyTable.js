@@ -39,7 +39,7 @@ class StrategyTable {
   }
 
   fillAllocation(data) {
-    if (data.strategy == undefined)
+    if (data.strategy === undefined || data.allocation === undefined)
       return;
 
     const allocation = this._collapseAllocation(data.allocation)
@@ -73,16 +73,18 @@ class StrategyTable {
   }
 
   updateDeviation(data) {
-    if (data.strategy == undefined)
+    if (data.strategy === undefined || data.allocation === undefined)
       return;
 
     let self = this;
     const netValueSum = data.strategy.assetTypes.map(t=>t.netValue).reduce((a,b)=>a+b);
 
     function adjustValue(rowIdx) {
-      if (self.colMap.netAdjust)
-        return Number(self.datatable.cell(rowIdx, self.colMap.netAdjust.column).node().getElementsByTagName('input')[0].value)
-      return 0
+      if (self.colMap.netAdjust) {
+        let inputElement = self.datatable.cell(rowIdx, self.colMap.netAdjust.column).node().getElementsByTagName('input')[0];
+        return inputElement !== undefined ? Number(inputElement.value) : 0;
+      }
+      return 0;
     }
 
     let netAdjustSum = 0;

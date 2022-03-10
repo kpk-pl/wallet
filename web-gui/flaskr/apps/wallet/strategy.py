@@ -57,15 +57,13 @@ def _lastStrategyPipeline(label = None):
 
 
 def _response(shouldAllocate=False, label=None):
-    response = {}
+    response = {'label': label}
 
     strategy = list(db.get_db().strategy.aggregate(_lastStrategyPipeline(label)))
     if strategy:
         response['strategy'] = strategy[0]
 
     if shouldAllocate:
-        response['label'] = label
-
         pricing = Pricing()
         assets = list(db.get_db().assets.aggregate(_getPipeline(label)))
         for asset in assets:
