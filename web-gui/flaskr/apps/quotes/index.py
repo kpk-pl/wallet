@@ -3,6 +3,7 @@ from flaskr import db
 from flaskr.quotes import getQuote
 from datetime import datetime
 from multiprocessing import Pool
+from bson.objectid import ObjectId
 
 
 def _getQuote(item):
@@ -58,8 +59,11 @@ def index():
     if request.method in ['GET', 'PUT']:
         storeQuotes = (request.method == 'PUT')
 
-        assetInfo = list(db.get_db().assets.aggregate(_getPipelineForUsedQuoteIds()))
-        ids = assetInfo[0]['quoteIds'] if assetInfo else []
+        if request.args.get('id'):
+            ids = [ObjectId(i) for i in set(request.args.getlist('id'))]
+        else:
+            assetInfo = list(db.get_db().assets.aggregate(_getPipelineForUsedQuoteIds()))
+            ids = assetInfo[0]['quoteIds'] if assetInfo else []
 
         quotesIds = list(db.get_db().quotes.aggregate(_getPipelineForQuoteUrls(ids)))
         liveQuotes = { e['_id'] : e['url'] for e in quotesIds }
@@ -71,7 +75,8 @@ def index():
         for quote in quotesIds:
             _id = quote['_id']
             liveQuote = liveQuotes[_id]
-            stale = 'lastQuote' in quote and quote['lastQuote']['timestamp'] == liveQuote['timestamp']
+            lastQuote = quote['lastQuote'] if 'lastQuote' in quote else None
+            stale = lastQuote is not None and lastQuote['timestamp'] == liveQuote['timestamp']
             if not stale:
                 if storeQuotes:
                     query = {'_id': _id}
@@ -88,7 +93,7 @@ def index():
         return Response(json.dumps(response), mimetype="application/json")
 
 
-def indexOne():
+def indexUrl():
     if request.method == 'GET':
         quote = getQuote(request.args.get('url'))
         return Response(json.dumps(quote), mimetype="application/json")

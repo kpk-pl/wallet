@@ -6,8 +6,8 @@ quotes = Blueprint('quotes', __name__, template_folder='templates', static_folde
 @quotes.route("/", methods=['GET', 'PUT'])
 def index():
     if request.args.get('url'):
-        from .index import indexOne
-        return indexOne()
+        from .index import indexUrl
+        return indexUrl()
     else:
         from .index import index
         return index()
