@@ -27,7 +27,7 @@
     id: '{{ quote._id }}',
     csvUploadUrl: "{{ url_for('quotes.csvUpload') }}",
     submitUrl: "{{ url_for('quotes.importQuotes') }}",
-    nextUrl: "{{ url_for('pricing.index', id='{{ quote._id }}') }}"
+    nextUrl: "{{ url_for('pricing.index', quoteId=quote._id) }}"
   });
 </script>
 {% endblock %}

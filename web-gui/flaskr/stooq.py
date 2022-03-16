@@ -31,6 +31,7 @@ class Stooq(object):
             return None
 
         data = data['symbols'][0]
+        # Here is a potential error, when the symbol is incorrect the api returns just the 'symbol' field
         data['timestamp'] = dateutil.parser.parse(data['date'] + ' ' + data['time'])
 
         return data
