@@ -76,7 +76,7 @@ def csvUpload():
     result = []
     for csvLine in request.files.get('file'):
         fields = csvLine.decode().strip().split(',')
-        if len(fields) != 2:
+        if len(fields) < 2:
             return ({}, 500)
 
         result.append({

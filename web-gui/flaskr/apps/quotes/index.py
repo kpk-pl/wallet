@@ -1,13 +1,14 @@
 from flask import request, Response, json
 from flaskr import db
-from flaskr.quotes import getQuote
+from flaskr.quotes import Fetcher
+from flaskr.utils import simplifyModel
 from datetime import datetime
 from multiprocessing import Pool
 from bson.objectid import ObjectId
 
 
 def _getQuote(item):
-    return (item[0], getQuote(item[1]))
+    return (item[0], Fetcher(item[1]).fetch())
 
 
 def _getPipelineForUsedQuoteIds():
@@ -76,24 +77,27 @@ def index():
             _id = quote['_id']
             liveQuote = liveQuotes[_id]
             lastQuote = quote['lastQuote'] if 'lastQuote' in quote else None
-            stale = lastQuote is not None and lastQuote['timestamp'] == liveQuote['timestamp']
+            stale = lastQuote is not None and lastQuote['timestamp'] == liveQuote.timestamp
             if not stale:
                 if storeQuotes:
                     query = {'_id': _id}
                     update = {'$push': {'quoteHistory': {
-                        'timestamp': liveQuote['timestamp'],
-                        'quote': liveQuote['quote']
+                        'timestamp': liveQuote.timestamp,
+                        'quote': float(liveQuote.quote)
                     }}}
                     db.get_db().quotes.update(query, update)
-            else:
-                liveQuote['stale'] = True
 
-            response.append({'name': quote['name'], 'quote': liveQuote})
+            responseQuote = simplifyModel(liveQuote.dict(exclude_none=True))
+            if stale:
+                responseQuote['stale'] = True
+
+            response.append({'name': quote['name'], 'quote': responseQuote})
 
         return Response(json.dumps(response), mimetype="application/json")
 
 
 def indexUrl():
     if request.method == 'GET':
-        quote = getQuote(request.args.get('url'))
-        return Response(json.dumps(quote), mimetype="application/json")
+        quote = Fetcher(request.args.get('url')).fetch()
+        responseJson = json.dumps(simplifyModel(quote.dict(exclude_none=True)))
+        return Response(responseJson, mimetype="application/json")

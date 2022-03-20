@@ -5,6 +5,7 @@ from io import StringIO
 import requests
 import dateutil.parser
 
+
 class Stooq(object):
     @staticmethod
     def isValidUrl(url):

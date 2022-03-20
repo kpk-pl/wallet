@@ -68,19 +68,8 @@ def create_app(test_config=None):
 
     @app.template_filter()
     def simplify(model):
-        from decimal import Decimal
-        from pydantic import BaseModel
-
-        if isinstance(model, list):
-            return [simplify(x) for x in model]
-        elif isinstance(model, dict):
-            return {key: simplify(value) for key,value in model.items()}
-        elif isinstance(model, BaseModel):
-            return simplify(model.dict())
-        elif isinstance(model, Decimal):
-            return str(model)
-        else:
-            return model
+        from flaskr.utils import simplifyModel
+        return simplifyModel(model)
 
     @app.context_processor
     def urlProcessor():

@@ -2,4 +2,4 @@
 set -e
 
 source venv/bin/activate
-pytest -s -W ignore::DeprecationWarning
+pytest -s -W ignore::DeprecationWarning "$@"
