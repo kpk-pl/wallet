@@ -59,6 +59,10 @@
             <dd class="col-sm-9">{{ asset.institution }}</dd>
             <dt class="col-sm-3">Currency</dt>
             <dd class="col-sm-9">{{ asset.currency }}</dd>
+            {%- if asset.pricing and asset.pricing.quoteId %}
+            <dt class="col-sm-3">Pricing</dt>
+            <dd class="col-sm-9"><a href="{{ url_for('pricing.index', quoteId=asset.pricing.quoteId) }}">{{ misc.pricingName }}</a></dd>
+            {%- endif %}
             {% if asset.link -%}
             <dt class="col-sm-3">Link</dt>
             <dd class="col-sm-9"><a href="{{ asset.link }}" target="_blank" rel="noopener noreferrer">{{ asset.link }}</a></dd>

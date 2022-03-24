@@ -18,10 +18,11 @@ def _getPipelineForAssetDetails(assetId):
             }},
             { "$project" : {
                 "_id": 0,
+                "name": "$name",
                 "data": "$quoteHistory",
             }}
         ],
-        "as": "quoteHistory",
+        "as": "quoteInfo",
     }})
     pipeline.append({ "$project" : {
         "name": 1,
@@ -37,7 +38,8 @@ def _getPipelineForAssetDetails(assetId):
         "trashed": 1,
         "operations": { "$ifNull": [ '$operations', [] ] },
         "finalQuantity": { "$last": "$operations.finalQuantity" },
-        "quoteHistory": { "$last": "$quoteHistory.data" },
+        "quoteHistory": { "$last": "$quoteInfo.data" },
+        "pricingName": { "$last": "$quoteInfo.name" },
     }})
     return pipeline
 
@@ -60,4 +62,8 @@ def item():
         weakAsset['currency'] = weakAsset['currency']['name']
         weakAsset = Profits(weakAsset)()
 
-        return render_template("assets/item.html", asset=weakAsset, operations=operations, header=header.data())
+        misc = dict(
+            pricingName = weakAsset['pricingName'] if 'pricingName' in weakAsset else None
+        )
+
+        return render_template("assets/item.html", asset=weakAsset, operations=operations, misc=misc, header=header.data())
