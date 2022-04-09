@@ -41,7 +41,7 @@ $(function () {
   });
 
   $.getJSON(settings.strategyUri)
-    .done(updateStrategyAllocation)
+    .done(function(data) { updateStrategyAllocation(data); })
     .fail(function(data){
       $(document).Toasts('create', {
         class: 'bg-warning',
@@ -108,7 +108,7 @@ $(function () {
               String(assetType.percentage) + '%',
               makeList(constituents, 'ul', ['list-unstyled', 'm-0']),
               null,
-              simplified ? null :  makeAdjustmentInput(),
+              simplified ? null : makeAdjustmentInput(),
               null,
               null,
               null]

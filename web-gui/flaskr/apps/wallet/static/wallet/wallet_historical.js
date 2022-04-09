@@ -38,7 +38,7 @@ function updateAllocationCharts(data){
 
   function category(asset) {
     if (asset.subcategory)
-      return asset.category + ' ' + asset.subcategory;
+      return asset.subcategory + ' ' + asset.category;
     return asset.category;
   }
 

@@ -107,11 +107,10 @@
                   {%- endif %}
                 </td>
                 <td data-title="Category" data-order="{{ asset.category }}{{ (" " + asset.subcategory) if asset.subcategory else ""}}">
-                  {{- asset.category -}}
                   {%- if asset.subcategory -%}
-                  <br/>
-                  <span class="smaller">{{ asset.subcategory }}</span>
+                  {{- asset.subcategory -}}&#32;
                   {%- endif -%}
+                  {{- asset.category -}}
                 </td>
                 <td data-title="Region">{{ asset.region }}</td>
                 <td data-title="Holding period" class="text-right">{{ asset._holdingDays }}</td>

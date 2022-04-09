@@ -30,7 +30,7 @@ class StrategyTable {
       for (let subcat of Object.keys(allocation[category])) {
         let key = category
         if (subcat && subcat != 'null') {
-          key += ' ' + subcat
+          key = subcat + ' ' + key
         }
         result[key] = allocation[category][subcat]
       }

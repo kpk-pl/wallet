@@ -21,7 +21,7 @@ class Categories(object):
         strategyAllocation = {}
         for category, subcategories in self.allocation.items():
             for subcategory, value in subcategories.items():
-                name = category + (' ' + subcategory if subcategory else '')
+                name = (subcategory + ' ' if subcategory else '') + category
                 strategyAllocation[name] = {'value': value, 'remainingShare': 100.0}
 
         for assetType in strategy['assetTypes']:

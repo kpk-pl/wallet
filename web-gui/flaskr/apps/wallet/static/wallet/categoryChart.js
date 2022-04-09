@@ -2,7 +2,7 @@ class CategoryChart {
   constructor(allocation) {
     this.allocation = allocation
     this.categories = Object.keys(this.allocation)
-    this.subcategories = this.categories.map(c => { return Object.keys(this.allocation[c]).map(s => c + (s != 'null' ? (' ' + s) : '')); }).flat()
+    this.subcategories = this.categories.map(c => { return Object.keys(this.allocation[c]).map(s => (s != 'null' ? (s + ' ') : '') + c); }).flat()
   }
 
   makeChart(node) {
