@@ -8,7 +8,11 @@ from bson.objectid import ObjectId
 
 
 def _getQuote(item):
-    return (item[0], Fetcher(item[1]).fetch())
+    try:
+        return (item[0], Fetcher(item[1]).fetch())
+    except Exception as e:
+        print(f"ERROR while getting {item[0]} at {item[1]}: {str(e)}")
+        return (item[0], None)
 
 
 def _getPipelineForUsedQuoteIds():
