@@ -11,8 +11,7 @@ def _getQuote(item):
     try:
         return (item[0], Fetcher(item[1]).fetch())
     except Exception as e:
-        print(f"ERROR while getting {item[0]} at {item[1]}: {str(e)}")
-        return (item[0], None)
+        return (item[0], e)
 
 
 def _getPipelineForUsedQuoteIds():
@@ -64,6 +63,12 @@ def index():
     if request.method in ['GET', 'PUT']:
         storeQuotes = (request.method == 'PUT')
 
+        threads = 4
+        try:
+            threads = max(min(int(request.args.get('threads')), 4), 1)
+        except:
+            pass
+
         if request.args.get('id'):
             ids = [ObjectId(i) for i in set(request.args.getlist('id'))]
         else:
@@ -73,29 +78,41 @@ def index():
         quotesIds = list(db.get_db().quotes.aggregate(_getPipelineForQuoteUrls(ids)))
         liveQuotes = { e['_id'] : e['url'] for e in quotesIds }
 
-        with Pool(4) as pool:
+        with Pool(threads) as pool:
             liveQuotes = dict(pool.map(_getQuote, liveQuotes.items()))
 
         response = []
         for quote in quotesIds:
             _id = quote['_id']
             liveQuote = liveQuotes[_id]
-            lastQuote = quote['lastQuote'] if 'lastQuote' in quote else None
-            stale = lastQuote is not None and lastQuote['timestamp'] == liveQuote.timestamp
-            if not stale:
+
+            if isinstance(liveQuote, Exception):
                 if storeQuotes:
-                    query = {'_id': _id}
-                    update = {'$push': {'quoteHistory': {
-                        'timestamp': liveQuote.timestamp,
-                        'quote': float(liveQuote.quote)
-                    }}}
-                    db.get_db().quotes.update(query, update)
+                    db.get_db().price_feed_errors.insert_one(dict(
+                        pricingId = _id,
+                        timestamp = datetime.now(),
+                        trigger = request.url,
+                        error = str(liveQuote)
+                    ))
 
-            responseQuote = simplifyModel(liveQuote.dict(exclude_none=True))
-            if stale:
-                responseQuote['stale'] = True
+                response.append({'name': quote['name'], 'error': str(liveQuote)})
+            else:
+                lastQuote = quote['lastQuote'] if 'lastQuote' in quote else None
+                stale = lastQuote is not None and lastQuote['timestamp'] == liveQuote.timestamp
+                if not stale:
+                    if storeQuotes:
+                        query = {'_id': _id}
+                        update = {'$push': {'quoteHistory': {
+                            'timestamp': liveQuote.timestamp,
+                            'quote': float(liveQuote.quote)
+                        }}}
+                        db.get_db().quotes.update(query, update)
 
-            response.append({'name': quote['name'], 'quote': responseQuote})
+                responseQuote = simplifyModel(liveQuote.dict(exclude_none=True))
+                if stale:
+                    responseQuote['stale'] = True
+
+                response.append({'name': quote['name'], 'quote': responseQuote})
 
         return Response(json.dumps(response), mimetype="application/json")
 
