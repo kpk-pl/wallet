@@ -46,15 +46,18 @@ function updateAllocationCharts(data){
   let totals = {'value': new Array(data.t.length).fill(0), 'investment': new Array(data.t.length).fill(0)}
   for (let asset of data.assets) {
     const cat = category(asset);
+    const assetValue = asset.value.map(parseFloat);
+    const assetInvestedValue = asset.investedValue.map(parseFloat);
+
     if (cat in mapping) {
-      mapping[cat].value = mapping[cat].value.map((v, i) => v + asset.value[i]);
-      mapping[cat].investment = mapping[cat].investment.map((v, i) => v + asset.investedValue[i]);
+      mapping[cat].value = mapping[cat].value.map((v, i) => v + assetValue[i]);
+      mapping[cat].investment = mapping[cat].investment.map((v, i) => v + assetInvestedValue[i]);
     } else {
-      mapping[cat] = {'value': asset.value, 'investment': asset.investedValue};
+      mapping[cat] = {'value': assetValue, 'investment': assetInvestedValue};
     }
 
-    totals.value = totals.value.map((v, i) => v + asset.value[i]);
-    totals.investment = totals.investment.map((v, i) => v + asset.investedValue[i]);
+    totals.value = totals.value.map((v, i) => v + assetValue[i]);
+    totals.investment = totals.investment.map((v, i) => v + assetInvestedValue[i]);
   }
 
   for (let category in mapping) {

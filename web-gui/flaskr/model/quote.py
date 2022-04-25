@@ -1,12 +1,13 @@
 from pydantic import BaseModel, Field, HttpUrl
 from typing import List, Optional
+from decimal import Decimal
 from datetime import datetime
 from .types import PyObjectId
 
 
 class QuoteHistoryItem(BaseModel):
     timestamp: datetime
-    quote: float
+    quote: Decimal
 
 
 class QuoteCurrencyPair(BaseModel):

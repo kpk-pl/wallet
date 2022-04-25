@@ -1,10 +1,13 @@
-from flask import request, Response, json
+from flask import request, Response
 from flaskr import db
 from dataclasses import dataclass, asdict
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 from flaskr.pricing import Context, HistoryPricing
-from flaskr.analyzers.profits import Profits
+from flaskr.analyzers import Profits
+from flaskr.utils import jsonify
+from flaskr.model import Asset
+from decimal import Decimal
 
 
 def _getPipelineForIdsHistorical(daysBack, label = None, ids = []):
@@ -28,6 +31,7 @@ def _getPipelineForIdsHistorical(daysBack, label = None, ids = []):
         }}
     ]}})
 
+    # TODO: Need to move this whole code to use strong types
     pipeline.append(
         { "$project" : {
             '_id': 1,
@@ -36,7 +40,9 @@ def _getPipelineForIdsHistorical(daysBack, label = None, ids = []):
             'name': 1,
             'category': 1,
             'subcategory': { '$ifNull': [ "$subcategory", None ] },
-            'pricing': 1
+            'pricing': 1,
+            'type': 1,
+            'institution': 1
         }}
     )
 
@@ -50,9 +56,9 @@ class ResultAsset:
     category: str
     subcategory: str
 
-    value: list
-    investedValue: list
-    quantity: list
+    value: Decimal
+    investedValue: Decimal
+    quantity: Decimal
 
     def __init__(self, id, name, category, subcategory):
         self.id = str(id)
@@ -90,18 +96,21 @@ def historicalValue():
         pricing = HistoryPricing(pricingCtx, features={'investedValue': investedValue})
 
         assets = list(db.get_db().assets.aggregate(_getPipelineForIdsHistorical(daysBack, ids=ids, label=label)))
+
         if investedValue:
             assets = [Profits(asset)() for asset in assets]
 
         result = Result(pricingCtx.timeScale)
         for asset in assets:
-            dataAsset = ResultAsset(asset['_id'], asset['name'], asset['category'], asset['subcategory'])
+            strongAsset = Asset(**asset)
+            dataAsset = ResultAsset(strongAsset.id, strongAsset.name, strongAsset.category, strongAsset.subcategory)
 
-            priced = pricing(asset)
+            # The second parameter to pricing should be profitsInfo, but that will be refactored to strong types later
+            priced = pricing(strongAsset, asset)
             dataAsset.value = priced.value
             dataAsset.quantity = priced.quantity
             dataAsset.investedValue = priced.investedValue
 
             result.assets.append(dataAsset)
 
-        return Response(json.dumps(asdict(result)), mimetype="application/json")
+        return Response(jsonify(asdict(result)), mimetype="application/json")

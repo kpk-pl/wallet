@@ -13,3 +13,17 @@ def simplifyModel(model):
     else:
         return model
 
+
+def jsonify(obj):
+    from flask import json
+    from flask.json import JSONEncoder
+
+    class JsonEncoder(JSONEncoder):
+        def default(self, obj):
+            from decimal import Decimal
+
+            if isinstance(obj, Decimal):
+               return str(obj)
+            return JSONEncoder.default(self, obj)
+
+    return json.dumps(obj, cls=JsonEncoder)

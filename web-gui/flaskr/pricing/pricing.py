@@ -3,19 +3,11 @@ from dateutil.relativedelta import relativedelta
 from dataclasses import dataclass, asdict
 from bson.objectid import ObjectId
 from flaskr import model
+from decimal import Decimal
 
 from .interp import interp
 from .context import Context
 from .parametrized import ParametrizedQuoting
-
-
-def _yearsBetween(lhs, rhs):
-    return relativedelta(rhs, lhs).years
-
-
-def _monthsBetween(lhs, rhs):
-    delta = relativedelta(rhs, lhs)
-    return delta.years * 12 + delta.months
 
 
 class _PricingType:
@@ -25,11 +17,11 @@ class _PricingType:
 
     @classmethod
     def create(cls, asset):
-        if 'pricing' not in asset.keys():
+        if asset.pricing is None:
             return cls.Quantity
-        elif 'quoteId' in asset['pricing']:
+        elif isinstance(asset.pricing, model.AssetPricingQuotes):
             return cls.Quote
-        elif 'interest' in asset['pricing']:
+        elif isinstance(asset.pricing, model.AssetPricingParametrized):
             return cls.Interest
         else:
             raise NotImplementedError("Not implemented pricing type")
@@ -53,7 +45,7 @@ class Pricing(_PricingBase):
         value: float = None
         operationsInScope: list[dict] = None
         pricingIds: list[ObjectId] = None
-        quotes: dict[str, float] = None
+        quotes: dict[str, Decimal] = None
 
     def __init__(self, ctx = None):
         super(Pricing, self).__init__(ctx)
@@ -83,46 +75,45 @@ class Pricing(_PricingBase):
         self._data.quantity = 0
         self._data.netValue = 0.0
 
-        if 'operations' not in asset or not asset['operations']:
+        if not asset.operations:
             return False
 
-        self._data.operationsInScope = [op for op in asset['operations'] if op['date'] <= self._ctx.finalDate]
+        self._data.operationsInScope = [op for op in asset.operations if op.date <= self._ctx.finalDate]
         if not self._data.operationsInScope:
             return False
 
         self._data.pricingIds = []
 
-        if 'pricing' in asset and 'quoteId' in asset['pricing']:
-            self._data.pricingIds.append(asset['pricing']['quoteId'])
-        if 'quoteId' in asset['currency']:
-            self._data.pricingIds.append(asset['currency']['quoteId'])
+        if isinstance(asset.pricing, model.AssetPricingQuotes):
+            self._data.pricingIds.append(asset.pricing.quoteId)
+        if asset.currency.quoteId is not None:
+            self._data.pricingIds.append(asset.currency.quoteId)
 
         self._ctx.loadQuotes(self._data.pricingIds)
 
         return True
 
     def _netValueForCurrency(self, asset):
-        currency = model.AssetCurrency(**asset['currency'])
-        if not currency.quoteId:
+        if asset.currency.quoteId is None:
             return self._data.value
 
-        currencyQuote = self._ctx.getFinalById(currency.quoteId, currency.name)
-        self._data.quotes[str(currency.quoteId)] = currencyQuote
+        currencyQuote = self._ctx.getFinalById(asset.currency.quoteId, asset.currency.name)
+        self._data.quotes[str(asset.currency.quoteId)] = currencyQuote
         return self._data.value * currencyQuote
 
     def _byQuantity(self, asset):
-        self._data.quantity = self._data.operationsInScope[-1]['finalQuantity']
+        self._data.quantity = self._data.operationsInScope[-1].finalQuantity
         self._data.value = self._data.quantity
         self._data.netValue = self._netValueForCurrency(asset)
 
     def _byQuote(self, asset):
-        self._data.quantity = self._data.operationsInScope[-1]['finalQuantity']
+        self._data.quantity = self._data.operationsInScope[-1].finalQuantity
         if self._data.quantity == 0:
             return
 
         self._data.netValue = None
 
-        quoteId = asset['pricing']['quoteId']
+        quoteId = asset.pricing.quoteId
         # it might be possible in the future to pass currency name to getFinalById and in this way provide
         # pricing for assets with pricing in different currency as quoted
         # for now the currencies must match
@@ -133,20 +124,19 @@ class Pricing(_PricingBase):
             self._data.netValue = self._netValueForCurrency(asset)
 
     def _byInterest(self, asset):
-        paramPricing = model.AssetPricingParametrized(**asset['pricing'])
-        self._data.quantity = self._data.operationsInScope[-1]['finalQuantity']
+        self._data.quantity = self._data.operationsInScope[-1].finalQuantity
         self._data.netValue = None
 
         self._data.value = 0
         for operation in self._data.operationsInScope:
-            if operation['type'] == 'BUY':
-                quoting = ParametrizedQuoting(paramPricing, operation['date'], self._parameterCtx)
+            if operation.type == model.AssetOperationType.buy:
+                quoting = ParametrizedQuoting(asset.pricing, operation.date, self._parameterCtx)
                 keyPoints = quoting.getKeyPoints()
                 if not keyPoints:
                     return
-                self._data.value += operation['price'] * keyPoints[-1].multiplier
+                self._data.value += operation.price * keyPoints[-1].multiplier
             else:
-                raise NotImplementedError("Did not implement {} operation" % (operation['type']))
+                raise NotImplementedError("Did not implement {} operation" % (operation.type))
 
         self._data.netValue = self._data.value
 
@@ -184,7 +174,7 @@ class HistoryPricing(_PricingBase):
         super(HistoryPricing, self).__init__(ctx)
         self._features = features
 
-    def __call__(self, asset, debug=None):
+    def __call__(self, asset, profitsInfo=None, debug=None):
         self._data = HistoryPricing.CalcContext(
             type = _PricingType.create(asset)
         )
@@ -198,7 +188,9 @@ class HistoryPricing(_PricingBase):
                 self._data.result.value = self._priceAssetByInterest(asset, self._data.result)
 
             if 'investedValue' in self._features and self._features['investedValue']:
-                self._data.result.investedValue = self._getInvestedValue(asset)
+                if profitsInfo is None:
+                    raise RuntimeError("Cannot fultill investedValue feature without profitsInfo")
+                self._data.result.investedValue = self._getInvestedValue(asset.operations, profitsInfo)
 
         if isinstance(debug, dict):
             debug.update(asdict(self._data))
@@ -206,7 +198,7 @@ class HistoryPricing(_PricingBase):
         return self._data.result
 
     def _prepare(self, asset):
-        if 'operations' not in asset or not asset['operations']:
+        if not asset.operations:
             self._data.result = HistoryResult.null(self._ctx.timeScale)
             return False
 
@@ -215,7 +207,7 @@ class HistoryPricing(_PricingBase):
         return True
 
     def _getAssetQuantity(self, asset):
-        ops = asset['operations']
+        ops = asset.operations
 
         operationIdx = 0
         quantity = 0
@@ -223,25 +215,24 @@ class HistoryPricing(_PricingBase):
 
         for dateIdx in self._ctx.timeScale:
             # If this is the day the next operation happened, take new quantity
-            while operationIdx < len(ops) and ops[operationIdx]['date'] <= dateIdx:
-                quantity = ops[operationIdx]['finalQuantity']
+            while operationIdx < len(ops) and ops[operationIdx].date <= dateIdx:
+                quantity = ops[operationIdx].finalQuantity
                 operationIdx += 1
 
             result.append(quantity)
 
         return result
 
-    def _getInvestedValue(self, asset):
-        ops = asset['operations']
-
+    def _getInvestedValue(self, operations, profitsInfo):
         operationIdx = 0
         value = 0
         result = []
 
         for dateIdx in self._ctx.timeScale:
             # If this is the day the next operation happened, take new values
-            while operationIdx < len(ops) and ops[operationIdx]['date'] <= dateIdx:
-                value = ops[operationIdx]['finalQuantity'] * ops[operationIdx]['_stats']['averageNetPrice']
+            while operationIdx < len(operations) and operations[operationIdx].date <= dateIdx:
+                # TODO: Usage of profitsInfo needs to be refactored later
+                value = operations[operationIdx].finalQuantity * Decimal(profitsInfo['operations'][operationIdx]['_stats']['averageNetPrice'])
                 operationIdx += 1
 
             result.append(value)
@@ -249,7 +240,7 @@ class HistoryPricing(_PricingBase):
         return result
 
     def _priceAssetByQuantity(self, asset, result):
-        currency = model.AssetCurrency(**asset['currency'])
+        currency = asset.currency
 
         value = [a for a in result.quantity]
         if currency.quoteId:
@@ -258,8 +249,8 @@ class HistoryPricing(_PricingBase):
         return value
 
     def _priceAssetByQuote(self, asset, result):
-        quoteId = asset['pricing']['quoteId']
-        currency = model.AssetCurrency(**asset['currency'])
+        quoteId = asset.pricing.quoteId
+        currency = asset.currency
 
         ids = [quoteId]
         if currency.quoteId:
@@ -273,20 +264,19 @@ class HistoryPricing(_PricingBase):
         return value
 
     def _priceAssetByInterest(self, asset, result):
-        paramPricing = model.AssetPricingParametrized(**asset['pricing'])
-        value = [0.0] * len(result.timescale)
+        value = [Decimal(0.0)] * len(result.timescale)
 
-        for operation in asset['operations']:
-            if operation['type'] == 'BUY':
-                quoting = ParametrizedQuoting(paramPricing, operation['date'], self._parameterCtx)
+        for operation in asset.operations:
+            if operation.type == model.AssetOperationType.buy:
+                quoting = ParametrizedQuoting(asset.pricing, operation.date, self._parameterCtx)
                 keyPoints = quoting.getKeyPoints()
                 if not keyPoints:
                     continue
 
-                quoteHistory = list(map(lambda kp: {'timestamp': kp.timestamp, 'quote': operation['price'] * kp.multiplier}, quoting.getKeyPoints()))
+                quoteHistory = list(map(lambda kp: model.QuoteHistoryItem(timestamp=kp.timestamp, quote=operation.price*kp.multiplier), quoting.getKeyPoints()))
                 quotes = interp(quoteHistory, self._ctx.timeScale, leftFill = 0.0)
-                value = [a + b['quote'] for a, b in zip(value, quotes)]
+                value = [a + b.quote for a, b in zip(value, quotes)]
             else:
-                raise NotImplementedError("Did not implement {} operation" % (operation['type']))
+                raise NotImplementedError("Did not implement {} operation" % (operation.type))
 
         return value

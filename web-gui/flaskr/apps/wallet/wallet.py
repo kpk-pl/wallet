@@ -1,4 +1,4 @@
-from flask import render_template, request, json
+from flask import render_template, request
 
 from flaskr import db, header
 from flaskr.session import Session
@@ -6,6 +6,8 @@ from flaskr.model import Asset
 from flaskr.analyzers import Profits, Categories
 from flaskr.analyzers.aggregate import aggregate
 from flaskr.pricing import Context, Pricing
+from flaskr.utils import jsonify
+from decimal import Decimal
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -35,17 +37,7 @@ def _getPipeline(label = None):
         'trashed': { '$ne': True },
         "finalOperation.finalQuantity": { "$ne": 0 }
     }})
-    pipeline.append({ "$project" : {
-        "_id": 1,
-        "name": 1,
-        "ticker": 1,
-        "institution": 1,
-        "category": 1,
-        "subcategory": 1,
-        "currency": 1,
-        "region": 1,
-        "operations": 1,
-        "pricing": 1,
+    pipeline.append({ "$addFields" : {
         "finalQuantity": "$finalOperation.finalQuantity",
     }})
 
@@ -66,21 +58,25 @@ def wallet():
     pricing = Pricing()
     pricingQuarterAgo = Pricing(Context(finalDate = datetime.now() - relativedelta(months=3)))
 
-    for asset in assets:
+    for rawAsset in assets:
+        asset = Asset(**rawAsset)
         if session.isDebug():
-            asset['_pricingData'] = {}
+            rawAsset['_pricingData'] = {}
 
-        currentPrice, quantity = pricing.priceAsset(asset, debug=asset['_pricingData'] if session.isDebug() else None)
+        # TODO: Need to switch Profits analyzer to using Decimals and strong types
+        rawAsset['_stillInvestedNetValue'] = Decimal(rawAsset['_stillInvestedNetValue'])
+
+        currentPrice, quantity = pricing(asset, debug=rawAsset['_pricingData'] if session.isDebug() else None)
 
         if currentPrice is not None:
-            asset['_netValue'] = currentPrice
+            rawAsset['_netValue'] = currentPrice
 
-            quarterAgoPrice, quantityQuarterAgo = pricingQuarterAgo.priceAsset(asset)
+            quarterAgoPrice, quantityQuarterAgo = pricingQuarterAgo(asset)
             if quarterAgoPrice is not None and quantityQuarterAgo > 0:
-                asset['_quarterValueChange'] = (currentPrice/quantity - quarterAgoPrice/quantityQuarterAgo) / (quarterAgoPrice/quantityQuarterAgo)
+                rawAsset['_quarterValueChange'] = (currentPrice/quantity - quarterAgoPrice/quantityQuarterAgo) / (quarterAgoPrice/quantityQuarterAgo)
         else:
-            asset['_netValue'] = None
-            headerData.warnings.append(f"Could not determine current value of '{asset['name']}'")
+            rawAsset['_netValue'] = None
+            headerData.warnings.append(f"Could not determine current value of '{rawAsset['name']}'")
 
     try:
         categoryAllocation = Categories()(assets)
@@ -90,5 +86,5 @@ def wallet():
 
     return render_template("wallet/wallet.html",
                            assets=assets,
-                           allocation=json.dumps(categoryAllocation),
+                           allocation=jsonify(categoryAllocation),
                            header = headerData.asDict())

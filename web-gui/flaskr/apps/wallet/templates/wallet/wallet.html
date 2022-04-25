@@ -42,9 +42,9 @@
 {% endblock %}
 
 {% block content %}
-{% set totalNetValue = (assets | map(attribute='_netValue') | select('float') | sum()) -%}
+{% set totalNetValue = (assets | map(attribute='_netValue') | select('number') | sum()) -%}
 {% set totalStillInvestedNetValue = (assets | sum(attribute='_stillInvestedNetValue')) -%}
-{% set hasAllNetValues = (assets | length) - (assets | map(attribute='_netValue') | select('float') | list | length) == 0 -%}
+{% set hasAllNetValues = (assets | map(attribute='_netValue') | select('none') | list | length) == 0 -%}
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">

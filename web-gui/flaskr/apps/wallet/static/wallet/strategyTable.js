@@ -32,7 +32,7 @@ class StrategyTable {
         if (subcat && subcat != 'null') {
           key = subcat + ' ' + key
         }
-        result[key] = allocation[category][subcat]
+        result[key] = parseFloat(allocation[category][subcat])
       }
     }
     return result
@@ -56,7 +56,7 @@ class StrategyTable {
           let percentage = (typeof category == "string" ? 100 : category.percentage)
           let name = (typeof category == "string" ? category : category.name)
           if (name in allocation)
-            netValue += allocation[name] * percentage / 100
+            netValue += parseFloat(allocation[name]) * percentage / 100
       }
       assetType.netValue = netValue
       netValueRemaining -= netValue

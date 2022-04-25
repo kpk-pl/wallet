@@ -1,5 +1,6 @@
 from datetime import datetime, time, timedelta
 from pydantic import BaseModel, Field
+from decimal import Decimal
 from typing import List, Optional
 from flaskr import db, model
 from bson.objectid import ObjectId
@@ -71,9 +72,13 @@ class Context(object):
         for item in db.get_db().quotes.aggregate(pipeline):
             if 'quotes' not in item or not item['quotes']:
                 item['quotes'] = []
+
+            for quote in item['quotes']:
+                quote['quote'] = Decimal(quote['quote'])
+
             if self.timeScale:
                 if item['quotes']:
-                    item['quotes'] = interp(item['quotes'], self.timeScale)
+                    item['quotes'] = interp([model.QuoteHistoryItem(**q) for q in item['quotes']], self.timeScale)
 
             self.quotes.append(self.StorageType(**item))
 
@@ -86,9 +91,9 @@ class Context(object):
             return None
 
         if required == "GBP" and quoteEntry.currencyPair.destination == "GBX":
-            return 100.0
+            return Decimal(100)
         if required == "GBX" and quoteEntry.currencyPair.destination == "GBP":
-            return 0.01
+            return Decimal("0.01")
 
         return None
 

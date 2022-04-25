@@ -1,6 +1,7 @@
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from dataclasses import dataclass
+from decimal import Decimal
 from flaskr import model
 
 
@@ -8,7 +9,7 @@ class ParametrizedQuoting:
     @dataclass
     class KeyPoint:
         timestamp: datetime
-        multiplier: float
+        multiplier: Decimal
 
 
     @dataclass
@@ -36,13 +37,13 @@ class ParametrizedQuoting:
             self.interestIdx = min(self.interestIdx + 1, len(self._quoting._params.interest) - 1)
 
         def fixedGrowth(self):
-            percentage = float(self.interest().fixed.percentage)
+            percentage = self.interest().fixed.percentage
             if not self.isPartial():
                 return percentage
 
             passedDays = (self._quoting.finalDate - self.timePoint).days
             periodDays = (self.nextTimePoint - self.timePoint).days
-            return percentage * (float(passedDays) / float(periodDays))
+            return percentage * Decimal(passedDays) / Decimal(periodDays)
 
         def derivedGrowth(self):
             thisInterest = self.interest().derived
@@ -68,9 +69,8 @@ class ParametrizedQuoting:
             if result is None:
                 return result
 
-            result *= float(thisInterest.sample.multiplier)
-            if result < float(thisInterest.sample.clampBelow):
-                result = float(thisInterest.sample.clampBelow)
+            result *= thisInterest.sample.multiplier
+            result = max(thisInterest.sample.clampBelow, result)
 
             return result
 
@@ -90,12 +90,12 @@ class ParametrizedQuoting:
             self.interestPeriod = relativedelta(years=self._params.length.multiplier)
 
     def getKeyPoints(self):
-        keyPoints = [self.KeyPoint(self.startDate, 1.0)]
+        keyPoints = [self.KeyPoint(self.startDate, Decimal(1))]
         ctx = self.Context(self)
 
         while ctx.timePoint < self.finalDate:
             interest = ctx.interest()
-            growth = 0.0
+            growth = Decimal(0)
 
             if interest.fixed:
                 growth += ctx.fixedGrowth()
@@ -106,7 +106,8 @@ class ParametrizedQuoting:
 
                 growth += derivedGrowth
 
-            keyPoints.append(self.KeyPoint(ctx.nextTimePoint, keyPoints[-1].multiplier * (1.0 + growth)));
+            multiplier = keyPoints[-1].multiplier * (Decimal(1) + growth)
+            keyPoints.append(self.KeyPoint(ctx.nextTimePoint, multiplier));
             ctx.advance()
 
         return keyPoints

@@ -1,10 +1,12 @@
-from flask import render_template, request, json, Response
+from flask import render_template, request, Response
 
 from datetime import datetime
 from flaskr import db, header
 from flaskr.session import Session
 from flaskr.pricing import Pricing
 from flaskr.analyzers.categories import Categories
+from flaskr.model import Asset
+from flaskr.utils import jsonify
 
 
 def _getPipelineFilters(label = None):
@@ -31,14 +33,7 @@ def _getPipeline(label = None):
         'trashed': { '$ne': True },
         "finalOperation.finalQuantity": { "$ne": 0 }
     }})
-    pipeline.append({ "$project" : {
-        "_id": 1,
-        "name": 1,
-        "category": 1,
-        "subcategory": 1,
-        "currency": 1,
-        "operations": 1,
-        "pricing": 1,
+    pipeline.append({ "$addFields" : {
         "finalQuantity": "$finalOperation.finalQuantity",
     }})
 
@@ -67,7 +62,7 @@ def _response(shouldAllocate=False, label=None):
         pricing = Pricing()
         assets = list(db.get_db().assets.aggregate(_getPipeline(label)))
         for asset in assets:
-            asset['_netValue'], _ = pricing.priceAsset(asset)
+            asset['_netValue'], _ = pricing(Asset(**asset))
 
         response['allocation'] = Categories()(assets)
 
@@ -113,4 +108,4 @@ def strategy_json():
         if response is None:
             return {'error': True, 'message': "Could not get strategy information"}, 500
 
-        return Response(json.dumps(response), mimetype="application/json")
+        return Response(jsonify(response), mimetype="application/json")

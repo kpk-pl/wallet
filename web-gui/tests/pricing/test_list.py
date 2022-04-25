@@ -12,6 +12,7 @@ MINIMAL_PRICING_SOURCE_DATA = dict(
     updateFrequency = "daily"
 )
 
+
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_pricing_add_source(client):
     rv = client.post(f"/pricing", data=MINIMAL_PRICING_SOURCE_DATA, follow_redirects=True)
@@ -41,6 +42,7 @@ def test_pricing_add_source_supports_predefined_update_frequencies(client):
     data['updateFrequency'] = 'invalid'
     rv = client.post(f"/pricing", data=data, follow_redirects=True)
     assert rv.status_code == 400
+
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_pricing_add_source_maximal_data(client):

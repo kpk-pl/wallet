@@ -15,10 +15,10 @@ class CategoryChart {
       data: {
         labels: categories.concat(this.subcategories),
         datasets: [{
-          data: categories.map(function(c){ return Object.values(allocation[c]).reduce((a,b) => a+b); }),
+          data: categories.map(function(c){ return Object.values(allocation[c]).map(x => parseFloat(x)).reduce((a,b) => a+b); }),
           borderWidth: 1
         }, {
-          data: categories.map(function(c) { return Object.values(allocation[c]); }).flat(),
+          data: categories.map(function(c) { return Object.values(allocation[c]).map(x => parseFloat(x)); }).flat(),
           borderWidth: 1
         }]
       },
