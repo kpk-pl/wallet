@@ -54,6 +54,10 @@ def create_app(test_config=None):
         return dumps(data, indent=indent, json_options=opts)
 
     @app.template_filter()
+    def nthField(iterable, n):
+        return map(lambda e: e[n], iterable)
+
+    @app.template_filter()
     def roundFixed(value, precision=2):
         return '{0:.{1}f}'.format(round(value, precision), precision)
 

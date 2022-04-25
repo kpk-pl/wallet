@@ -1,5 +1,5 @@
 from flask import render_template, request
-from flaskr import db, header
+from flaskr import db, header, utils
 from flaskr.session import Session
 from flaskr.analyzers import Profits, Period, Operations
 from flaskr.model import Asset
@@ -76,17 +76,22 @@ def index():
 
         assets = [Asset(**a) for a in weakAssets]
         breakdown = sum([Operations(asset.currency.name)(asset.operations, asset) for asset in assets], [])
-        breakdown = [op for op in breakdown if op.date >= timerange['periodStart'] and op.date < timerange['periodEnd'] and (op.closedPositionInfo or op.earningInfo)]
+        breakdown = [op for op in breakdown if op.date >= timerange['periodStart'] and op.date <= timerange['periodEnd'] and (op.closedPositionInfo or op.earningInfo)]
         breakdown.sort(key=lambda op: op.date)
 
         weakAssets = [Profits(asset)() for asset in weakAssets]
 
-        periodAnalyzer = Period(timerange['periodStart'], timerange['periodEnd'], debug=session.isDebug())
-        for asset in weakAssets:
-            periodAnalyzer(asset)
+        periodAnalyzer = Period(timerange['periodStart'], timerange['periodEnd'])
+        periodInfo = []
+        debugInfo = []
+        for asset, weakAsset in zip(assets, weakAssets):
+            profitInfo=weakAsset['operations'] if 'operations' in weakAsset else []
+
+            debugInfo.append({})
+            periodInfo.append(periodAnalyzer(asset, profitInfo=profitInfo, debug=debugInfo[-1] if session.isDebug() else None))
 
         return render_template("results/index.html",
-                               assets=weakAssets,
+                               assetData=list(zip(weakAssets, periodInfo, utils.simplifyModel(debugInfo))),
                                operationBreakdown=breakdown,
                                timerange=timerange,
                                header=header.data(showLabels=True)

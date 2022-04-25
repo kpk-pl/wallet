@@ -76,10 +76,10 @@
               </tr>
             </thead>
             <tbody>
-              {% for asset in assets | sort(attribute='name') %}
+              {%- for asset, periodInfo, debugInfo in assetData %}
               <tr>
                 <td data-title="Name">
-                  {%- if asset._periodStats.error %}
+                  {%- if periodInfo.error %}
 										<i class="fas fa-exclamation-triangle fa-fw" style="color:rgb(252, 186, 3)" title="Missing pricing information"></i>
                   {%- endif %}
                   {%- if asset.trashed %}
@@ -116,17 +116,17 @@
                   <br/><span class="smaller">{{ asset.subcategory }}</span>
                   {%- endif -%}
                 </td>
-                <td data-title="Volume change" class="text-right">{{ (asset._periodStats.finalQuantity - asset._periodStats.initialQuantity) | withSign }}</td>
+                <td data-title="Volume change" class="text-right">{{ (periodInfo.finalQuantity - periodInfo.initialQuantity) | withSign }}</td>
                 <td data-title="Cash profit" class="text-right color-gain">
-                  {%- if not asset._periodStats.error -%}
-                  {%- if (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) != 0 -%}
-                  {{ (asset._periodStats.profits.netValue - asset._periodStats.profits.provisions) | roundFixed(currencyMainDecimals) }}
+                  {%- if not periodInfo.error -%}
+                  {%- if (periodInfo.profits.netValue - periodInfo.profits.provisions) != 0 -%}
+                  {{ (periodInfo.profits.netValue - periodInfo.profits.provisions) | asCurrency(currencyMain, false) }}
                   {%- endif -%}
                   {%- endif -%}
                 </td>
                 <td data-title="Total profit" class="text-right color-gain">
-                  {%- if not asset._periodStats.error -%}
-                  {{ (asset._periodStats.profits.total - asset._periodStats.profits.provisions) | roundFixed(currencyMainDecimals) }}
+                  {%- if not periodInfo.error -%}
+                  {{ (periodInfo.profits.total - periodInfo.profits.provisions) | asCurrency(currencyMain, false) }}
                   {%- endif -%}
                 </td>
               </tr>
@@ -139,8 +139,12 @@
                 <th data-title="Institution"></th>
                 <th data-title="Category"></th>
                 <th data-title="Volume change"></th>
-                <th data-title="Cash profit" class="text-right color-gain">{{ assets | sum(attribute='_periodStats.profits.netValue') | roundFixed(currencyMainDecimals) }}</th>
-                <th data-title="Total profit" class="text-right color-gain">{{ assets | sum(attribute='_periodStats.profits.total') | roundFixed(currencyMainDecimals) }}</th>
+                <th data-title="Cash profit" class="text-right color-gain">
+                  {{- (assetData | nthField(1) | sum(attribute='profits.netValue') - assetData | nthField(1) | sum(attribute='profits.provisions')) | asCurrency(currencyMain, false) -}}
+                </th>
+                <th data-title="Total profit" class="text-right color-gain">
+                  {{- (assetData | nthField(1) | sum(attribute='profits.total') - assetData | nthField(1) | sum(attribute='profits.provisions')) | asCurrency(currencyMain, false) -}}
+                </th>
               </tr>
             </tfoot>
 					</table>
@@ -242,7 +246,7 @@
     </div>
   </div>
 </div>
-{%- for asset in assets %}
+{%- for asset, periodInfo, debugData in assetData %}
 <div class="modal fade" id="modalDebug_{{ asset._id }}">
 	<div class="modal-dialog">
 		<div class="modal-content">
@@ -253,7 +257,7 @@
 				</button>
 			</div>
 			<div class="modal-body">
-        <pre>{{ asset | toJson(indent=4) }}</pre>
+        <pre>{{ debugData | toJson(indent=4) }}</pre>
 			</div>
 			<div class="modal-footer justify-content-between">
 				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>

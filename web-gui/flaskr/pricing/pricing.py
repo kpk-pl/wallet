@@ -72,8 +72,8 @@ class Pricing(_PricingBase):
     def _prepare(self, asset):
         self._data.quotes = {}
 
-        self._data.quantity = 0
-        self._data.netValue = 0.0
+        self._data.quantity = Decimal(0)
+        self._data.netValue = Decimal(0)
 
         if not asset.operations:
             return False

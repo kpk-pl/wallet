@@ -1,83 +1,92 @@
 from flaskr.pricing import Pricing, Context
 from flaskr import typing
 from dateutil.relativedelta import relativedelta
-from . import _operationNetValue
+from dataclasses import dataclass, field
+from typing import Optional
+from decimal import Decimal
 
 
 class Period(object):
-    def __init__(self, startDate, finalDate, debug=False):
+    @dataclass
+    class Result:
+        @dataclass
+        class Profits:
+            total: Decimal = field(default_factory=Decimal)
+            netValue: Decimal = field(default_factory=Decimal)
+            provisions: Decimal = field(default_factory=Decimal)
+
+        error: bool = False
+
+        initialNetValue: Optional[Decimal] = None
+        initialQuantity: Optional[Decimal] = None
+
+        finalNetValue: Optional[Decimal] = None
+        finalQuantity: Optional[Decimal] = None
+
+        profits: Profits = field(default_factory=Profits)
+
+
+    def __init__(self, startDate, finalDate):
         super(Period, self).__init__()
 
         self.startDate = startDate
         self.finalDate = finalDate
-        self._debug = debug
 
-        self.pricingStart = Pricing(ctx=Context(finalDate=startDate))
-        self.pricingEnd = Pricing(ctx=Context(finalDate=finalDate))
+        self._pricingStart = Pricing(ctx=Context(finalDate=startDate))
+        self._pricingEnd = Pricing(ctx=Context(finalDate=finalDate))
 
-    def __call__(self, asset):
-        asset['_periodStats'] = {
-            'profits': {
-                'total': 0,
-                'netValue': 0,
-                'provisions': 0
-            }
-        }
+    def __call__(self, asset, profitInfo, debug=None):
+        self._result = self.Result()
+        self._debug = debug if isinstance(debug, dict) else None
 
         self._initialConditions(asset)
         self._finalConditions(asset)
 
-        stats = asset['_periodStats']
-        if stats['initialNetValue'] is None or stats['finalNetValue'] is None:
-            stats['error'] = True
-            return
+        if self._result.initialNetValue is None or self._result.finalNetValue is None:
+            self._result.error = True
+            return self._result
 
-        stats['profits']['total'] = stats['finalNetValue'] - stats['initialNetValue']
+        self._result.profits.total = self._result.finalNetValue - self._result.initialNetValue
 
-        operations = [op for op in asset['operations'] if op['date'] >= self.startDate and op['date'] <= self.finalDate]
-        for operation in operations:
-            self._operationToProfit(stats, operation)
+        operationScope = [(op,info) for op, info in zip(asset.operations, profitInfo) if op.date >= self.startDate and op.date <= self.finalDate]
+        for operation, operationProfit in operationScope:
+            self._operationToProfit(operation, operationProfit)
 
-    def _fromOperationId(self, asset):
-        fromOperationId = -1
-        while fromOperationId < len(asset['operations']) - 1:
-            if asset['operations'][fromOperationId + 1]['date'] > self.startDate:
-                break
-            fromOperationId += 1
-
-        return fromOperationId
+        return self._result
 
     def _initialConditions(self, asset):
-        stats = asset['_periodStats']
-        debug = None
-        if self._debug:
-            stats['initialConditions'] = {}
-            debug = stats['initialConditions']
+        if self._debug is not None:
+            self._debug['initialConditions'] = {}
 
-        stats['initialNetValue'], stats['initialQuantity'] = self.pricingStart(asset, debug=debug)
+        debug = self._debug['initialConditions'] if self._debug else None
+        self._result.initialNetValue, self._result.initialQuantity = self._pricingStart(asset, debug=debug)
 
     def _finalConditions(self, asset):
-        stats = asset['_periodStats']
-        debug = None
-        if self._debug:
-            stats['finalConditions'] = {}
-            debug = stats['finalConditions']
+        if self._debug is not None:
+            self._debug['finalConditions'] = {}
 
-        stats['finalNetValue'], stats['finalQuantity'] = self.pricingEnd(asset, debug=debug)
+        debug = self._debug['finalConditions'] if self._debug else None
+        self._result.finalNetValue, self._result.finalQuantity = self._pricingEnd(asset, debug=debug)
 
-    def _operationToProfit(self, stats, operation):
-        if operation['type'] == typing.Operation.Type.buy:
-            stats['profits']['total'] -= _operationNetValue(operation)
-        elif operation['type'] == typing.Operation.Type.sell:
-            stats['profits']['total'] += _operationNetValue(operation)
-        elif operation['type'] == typing.Operation.Type.receive:
-            stats['profits']['total'] += _operationNetValue(operation)
-        elif operation['type'] == typing.Operation.Type.earning:
-            stats['profits']['total'] += _operationNetValue(operation)
+    def _operationToProfit(self, operation, operationProfit):
+        def _operationNetValue(operation):
+            if operation.currencyConversion:
+                return operation.price * operation.currencyConversion
+            return operation.price
+
+        if operation.type == typing.Operation.Type.buy:
+            self._result.profits.total -= _operationNetValue(operation)
+        elif operation.type == typing.Operation.Type.sell:
+            self._result.profits.total += _operationNetValue(operation)
+        elif operation.type == typing.Operation.Type.receive:
+            self._result.profits.total += _operationNetValue(operation)
+        elif operation.type == typing.Operation.Type.earning:
+            self._result.profits.total += _operationNetValue(operation)
         else:
-            raise NotImplementedError("Did not implement period for operation type {}" % (operation['type']))
+            raise NotImplementedError("Did not implement period for operation type {}" % (operation.type))
 
-        if 'profits' in operation['_stats']:
-            stats['profits']['netValue'] += operation['_stats']['profits']['netValue']
-            stats['profits']['provisions'] += operation['_stats']['profits']['provisions']
+       # TODO: clean this up after Profits analyzer becomes strong typed
+        if operationProfit and 'profits' in operationProfit['_stats']:
+            self._result.profits.netValue += Decimal(operationProfit['_stats']['profits']['netValue'])
+            self._result.profits.provisions += Decimal(operationProfit['_stats']['profits']['provisions'])
 
