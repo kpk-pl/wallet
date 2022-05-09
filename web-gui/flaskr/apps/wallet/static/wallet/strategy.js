@@ -96,7 +96,7 @@ $(function () {
     }
 
     function makeAdjustmentInput() {
-      return '<input type="number" class="strategyTableDeviationInput form-control form-control-sm"></input>';
+      return '<input type="number" step="100" class="strategyTableDeviationInput form-control form-control-sm"></input>';
     }
 
     strategyTable.fillStrategy(data, function(assetType){
