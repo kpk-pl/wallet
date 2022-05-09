@@ -34,6 +34,9 @@
             <a href="{{ url_for('pricing.add') }}">
               <button class="btn btn-tool" type="button" title="Add new pricing source"><i class="fas fa-plus-circle"></i></button>
             </a>
+            <a href="{{ url_for_self(all='true') }}">
+              <button class="btn btn-tool" type="button" title="Show trashed"><i class="fas fa-dumpster"></i></button>
+            </a>
             <a id="refresh-all-quotes" data-refresh-all-url="{{ url_for('quotes.index') }}">
               <button class="btn btn-tool" type="button" title="Refresh all quotes from live sources"><i class="fas fa-sync-alt"></i></button>
             </a>
@@ -51,11 +54,17 @@
             </thead>
             <tbody>
               {% for source in sources %}
-              <tr>
-                <td data-title="Name">
+              <tr {{ ('class="text-muted"' if source.trashed else '') | safe }}>
+                <td data-title="Name" data-order="{{ source.name }}">
+                  {%- if source.trashed %}
+                  <del>
+                  {%- endif %}
                   <a href="{{ url_for('pricing.index', quoteId=source._id) }}">
                     {{ source.name }}
                   </a>
+                  {%- if source.trashed %}
+                  </del>
+                  {%- endif %}
                   {%- if source.currencyPair %}
                   <span class="badge badge-info ml-1" title="Currency pair">
                     {{ source.currencyPair.to}}/{{ source.currencyPair.from }}

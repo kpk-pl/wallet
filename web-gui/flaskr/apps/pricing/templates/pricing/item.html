@@ -13,6 +13,14 @@
 {% endblock %}
 
 {% block user_scripts %}
+<script type="text/javascript">
+  function onTrash() {
+    $.post('{{ url_for('pricing.trash', quoteId=item._id) }}', success=function(data){
+      location.href='{{ url_for('pricing.index') }}'
+    })
+  }
+</script>
+
 {% if item.quoteHistory %}
 <script type="text/javascript">
   const data = {{ item.quoteHistory | tojson }};
@@ -65,6 +73,8 @@
           <dl class="row">
             <dt class="col-sm-3">Name</dt>
             <dd class="col-sm-9">{{ item.name }}</dd>
+            <dt class="col-sm-3">Status</dt>
+            <dd class="col-sm-9">{{ 'Trashed' if item.trashed else ('Active' if item.active else 'Inactive') }}</dd>
             <dt class="col-sm-3">Unit</dt>
             <dd class="col-sm-9">{{ item.unit }}</dd>
             {%- if item.currencyPair %}
@@ -96,6 +106,12 @@
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('quotes.importQuotes', id=item._id) }}'">
             <i class="fa fa-upload"></i> Import quotes
           </button>
+
+          {% if not item.trashed and not item.active -%}
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="onTrash()">
+            <i class="fa fa-trash"></i> Move to trash
+          </button>
+          {%- endif %}
         </div>
       </div>
     </div>

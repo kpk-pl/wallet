@@ -48,21 +48,28 @@ def postNewItem():
     return {'ok': True, 'id': str(addedId)}
 
 
-def _getPipeline():
-    return [
-        {'$project': {
+def _getPipeline(includeTrashed = False):
+    pipeline = []
+
+    if not includeTrashed:
+        pipeline.append({'$match': {'trashed': {'$ne': True}}})
+
+    pipeline.append({'$project': {
             '_id': 1,
             'name': 1,
             'url': 1,
             'unit': 1,
+            'trashed': 1,
             'currencyPair': 1,
             'lastQuote': {'$last': '$quoteHistory'}
-        }}
-    ]
+        }})
+
+    return pipeline
 
 def listAll():
     if request.method == 'GET':
-        sources = list(db.get_db().quotes.aggregate(_getPipeline()))
+        includeTrashed = 'all' in request.args
+        sources = list(db.get_db().quotes.aggregate(_getPipeline(includeTrashed)))
         return render_template("pricing/list.html", sources=sources, header=header.data())
     elif request.method == 'POST':
         return postNewItem()
