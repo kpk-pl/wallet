@@ -7,14 +7,20 @@ from pydantic import BaseModel, HttpUrl, Field, ValidationError
 from typing import Optional
 
 
-def _getPipeline(label = None):
+def _getPipeline(label = None, includeTrashed = False):
     pipeline = []
 
-    match = { 'trashed': { '$ne' : True } }
+    match = {}
+
+    if not includeTrashed:
+        match = { 'trashed': { '$ne' : True } }
+
     if label is not None:
         match['labels'] = label
 
-    pipeline.append({'$match': match})
+    if match:
+        pipeline.append({'$match': match})
+
     pipeline.append({'$project': {
         '_id': 1,
         'name': 1,
@@ -27,6 +33,7 @@ def _getPipeline(label = None):
         'quantity': 1,
         'link': 1,
         'labels': 1,
+        'trashed': 1,
         'finalQuantity': { "$last": "$operations.finalQuantity" }
     }})
 
@@ -35,7 +42,8 @@ def _getPipeline(label = None):
 
 def listAll():
     session = Session(['label', 'debug'])
-    assets = list(db.get_db().assets.aggregate(_getPipeline(session.label())))
+    includeTrashed = 'all' in request.args
+    assets = list(db.get_db().assets.aggregate(_getPipeline(session.label(), includeTrashed)))
 
     return render_template("assets/list.html", assets=assets, header=header.data(showLabels = True))
 

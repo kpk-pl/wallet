@@ -71,7 +71,7 @@ initialize({
                         <option value="" hidden disabled selected></option>
                         {%- for priceSource in quotesList %}
                         {%- if priceSource.unit in currencySupportedList %}
-                        <option value="{{ priceSource._id }}" data-price-source-unit="{{ priceSource.unit }}">{{ priceSource.name }}</option>
+                        <option value="{{ priceSource._id }}" data-price-source-unit="{{ priceSource.unit }}">{{ priceSource.name }} [{{ priceSource.unit }}]</option>
                         {%- endif %}
                         {%- endfor %}
                       </select>

@@ -35,6 +35,9 @@
             <a href="{{ url_for('assets.add') }}">
               <button class="btn btn-tool" type="button" title="Add new asset"><i class="fas fa-plus-circle"></i></button>
             </a>
+            <a href="{{ url_for_self(all='true') }}">
+              <button class="btn btn-tool" type="button" title="Show trashed"><i class="fas fa-dumpster"></i></button>
+            </a>
           </div>
         </div>
         <div class="card-body">
@@ -53,11 +56,17 @@
             </thead>
             <tbody>
               {% for asset in assets %}
-              <tr>
-                <td data-title="Name">
+              <tr {{ ('class="text-muted"' if asset.trashed else '') | safe }}>
+                <td data-title="Name" data-order="{{ asset.name }}">
+                  {%- if asset.trashed %}
+                  <del>
+                  {%- endif %}
                   <a href="{{ url_for('assets.index', id=asset._id) }}">
                     {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
                   </a>
+                  {%- if asset.trashed %}
+                  </del>
+                  {%- endif %}
                   {% if asset.link -%}
                   <a href="{{asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="External asset site">
                     <i class="fas fa-external-link-alt fa-fw fa-pull-right"></i>
