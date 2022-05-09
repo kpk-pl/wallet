@@ -124,6 +124,8 @@ class Operations(object):
         operation.totalNetProfit = operation.netProfit - operation.provision - operation.closedPositionInfo.matchingOpenProvision
 
     def _earning(self, operation):
+        operation.openQuantity = operation.quantity
+
         earning = EarningInfo()
         earning.earning = operation.price
         earning.netEarning = (operation.price * operation.currencyConversion if operation.currencyConversion else operation.price)
