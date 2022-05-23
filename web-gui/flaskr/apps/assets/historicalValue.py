@@ -24,6 +24,7 @@ def _getPipelineForIdsHistorical(daysBack, label = None, ids = []):
         "finalOperation": { "$last": "$operations" },
     }})
 
+    # Only assets that are now active OR those that were sold in the time window
     pipeline.append({ "$match" : { '$or' : [
         { "finalOperation.finalQuantity": { "$ne": 0 } },
         { "finalOperation.date": {

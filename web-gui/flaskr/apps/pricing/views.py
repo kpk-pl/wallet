@@ -16,6 +16,12 @@ def index():
         return listAll()
 
 
+@pricing.route("/trash", methods=['POST'])
+def trash():
+    from .trash import trash
+    return trash()
+
+
 @index.support('application/json')
 def index_json():
     from .item import item
