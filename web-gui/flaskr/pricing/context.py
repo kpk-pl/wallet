@@ -2,13 +2,13 @@ from datetime import datetime, time, timedelta
 from pydantic import BaseModel, Field
 from decimal import Decimal
 from typing import List, Optional
-from flaskr import db, model
+from flaskr import model
 from bson.objectid import ObjectId
 from .interp import interp
 
 
-def _dayByDay(start, finish):
-    idx = datetime.combine(start.date(), time())
+def _dayByDay(start, finish, alignTimescale = None):
+    idx = datetime.combine(start.date(), alignTimescale) if alignTimescale else start
     oneDay = timedelta(days=1)
     result = []
 
@@ -26,14 +26,23 @@ class Context(object):
         quotes: List[model.QuoteHistoryItem] = Field(default_factory=list)
 
 
-    def __init__(self, finalDate=None, startDate=None, interpolate=True, keepOnlyFinalQuote=True):
+    def __init__(self, finalDate=None, startDate=None, interpolate=True, keepOnlyFinalQuote=True, alignTimescale = None, db=None):
         super(Context, self).__init__()
         self.finalDate = finalDate if finalDate is not None else datetime.now()
         self.startDate = startDate
         self.interpolate = interpolate
         self.keepOnlyFinalQuote = keepOnlyFinalQuote
-        self.timeScale = _dayByDay(startDate, finalDate) if startDate is not None and self.interpolate else []
+        self._db = db
+
+        self.timeScale = _dayByDay(startDate, finalDate, alignTimescale) if startDate is not None and self.interpolate else []
         self.quotes = []
+
+    def _getDB(self):
+        if self._db:
+            return self._db
+
+        from flaskr import db
+        return db.get_db()
 
     def storedIds(self):
         return set(q.id for q in self.quotes)
@@ -45,11 +54,11 @@ class Context(object):
         condition = {'$lte': ['$$item.timestamp', self.finalDate]}
         if self.startDate:
             condition = {'$and': [condition, {'$gte': ['$$item.timestamp', self.startDate]}]}
-            projection = '$relevantQuotes'
+            projection = {'$ifNull': ['$relevantQuotes', []]}
         elif self.keepOnlyFinalQuote:
-            projection = {'$slice': ['$relevantQuotes', -1]}
+            projection = {'$ifNull': [{'$slice': ['$relevantQuotes', -1]}, []]}
         else:
-            projection = '$relevantQuotes'
+            projection = {'$ifNull': ['$relevantQuotes', []]}
 
         pipeline = [
             {'$match':
@@ -67,23 +76,31 @@ class Context(object):
                 'currencyPair': 1,
                 'quotes': projection
             }}
+            # {'$set': {
+                # 'quotes': {
+                    # '$map': {
+                        # 'input': "$quotes",
+                        # 'as': "q",
+                        # 'in': {
+                            # "timestamp": "$$q.timestamp",
+                            # "quote": { '$toDecimal': "$$q.quote" }
+                        # }
+                    # }
+                # }
+            # }}
         ]
 
-        for item in db.get_db().quotes.aggregate(pipeline):
-            if 'quotes' not in item or not item['quotes']:
-                item['quotes'] = []
-
-            for quote in item['quotes']:
-                quote['quote'] = Decimal(quote['quote'])
+        for item in self._getDB().quotes.aggregate(pipeline):
+            quoteItem = self.StorageType(**item)
 
             if self.timeScale:
-                if item['quotes']:
-                    item['quotes'] = interp([model.QuoteHistoryItem(**q) for q in item['quotes']], self.timeScale)
+                if quoteItem.quotes:
+                    quoteItem.quotes = interp(quoteItem.quotes, self.timeScale)
 
-            self.quotes.append(self.StorageType(**item))
+            self.quotes.append(quoteItem)
 
     def _getById(self, quoteId):
-        return next(x for x in self.quotes if x.id == quoteId)
+        return next((x for x in self.quotes if x.id == quoteId), None)
 
     @staticmethod
     def _getCurrencyConversion(quoteEntry, required):
@@ -127,24 +144,30 @@ class Context(object):
 
         return result
 
-    def getPreviousById(self, quoteId, timestamp, currency=None):
+    def getPreviousById(self, quoteId, timestamp, currency=None, withTimestamp=False):
         entry = self._getById(quoteId)
         if not entry:
-            return None
+            return None if not withTimestamp else (None, None)
 
         filtered = [q for q in entry.quotes if q.timestamp < timestamp]
         if not filtered:
-            return None
+            return None if not withTimestamp else (None, None)
 
-        return self._returnSingle(filtered[-1], entry, currency)
+        if not withTimestamp:
+            return self._returnSingle(filtered[-1], entry, currency)
+        else:
+            return self._returnSingle(filtered[-1], entry, currency), filtered[-1].timestamp
 
-    def getNextById(self, quoteId, timestamp, currency=None):
+    def getNextById(self, quoteId, timestamp, currency=None, withTimestamp=False):
         entry = self._getById(quoteId)
         if not entry:
-            return None
+            return None if not withTimestamp else (None, None)
 
         filtered = [q for q in entry.quotes if q.timestamp > timestamp]
         if not filtered:
-            return None
+            return None if not withTimestamp else (None, None)
 
-        return self._returnSingle(filtered[-1], entry, currency)
+        if not withTimestamp:
+            return self._returnSingle(filtered[0], entry, currency)
+        else:
+            return self._returnSingle(filtered[0], entry, currency), filtered[0].timestamp

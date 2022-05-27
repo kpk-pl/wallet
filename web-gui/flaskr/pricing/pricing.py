@@ -31,7 +31,13 @@ class _PricingBase(object):
     def __init__(self, ctx = None):
         super(_PricingBase, self).__init__()
         self._ctx = ctx if ctx is not None else Context()
-        self._parameterCtx = Context(finalDate=self._ctx.finalDate, interpolate=False, keepOnlyFinalQuote=False)  # Context for parametrized quoting, without startDate bound
+
+        # Context for parametrized quoting, without startDate bound
+        self._parameterCtx = Context(finalDate=self._ctx.finalDate,
+                                     db=self._ctx._db,
+                                     interpolate=False,
+                                     keepOnlyFinalQuote=False)
+
         self._data = None  # Calculation context used for pricing that can also be copied to the debug dict
 
 
@@ -40,9 +46,9 @@ class Pricing(_PricingBase):
     class CalcContext:
         type: _PricingType
         timerange: tuple[datetime, datetime]
-        quantity: float = None
-        netValue: float = None
-        value: float = None
+        quantity: Decimal = None
+        netValue: Decimal = None
+        value: Decimal = None
         operationsInScope: list[dict] = None
         pricingIds: list[ObjectId] = None
         quotes: dict[str, Decimal] = None
@@ -98,6 +104,9 @@ class Pricing(_PricingBase):
             return self._data.value
 
         currencyQuote = self._ctx.getFinalById(asset.currency.quoteId, asset.currency.name)
+        if currencyQuote is None:
+            return None
+
         self._data.quotes[str(asset.currency.quoteId)] = currencyQuote
         return self._data.value * currencyQuote
 
@@ -127,7 +136,7 @@ class Pricing(_PricingBase):
         self._data.quantity = self._data.operationsInScope[-1].finalQuantity
         self._data.netValue = None
 
-        self._data.value = 0
+        self._data.value = Decimal(0)
         for operation in self._data.operationsInScope:
             if operation.type == model.AssetOperationType.buy:
                 quoting = ParametrizedQuoting(asset.pricing, operation.date, self._parameterCtx)

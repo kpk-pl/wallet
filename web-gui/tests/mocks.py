@@ -25,6 +25,10 @@ class PricingSource(_DictLike):
         if isinstance(id, ObjectId):
             self._data['_id'] = id
 
+    def name(self, value):
+        self._data['name'] = value
+        return self
+
     def unit(self, value):
         self._data['unit'] = value
         return self
@@ -63,10 +67,13 @@ class PricingSource(_DictLike):
 
 
 class Asset(_DictLike):
-    def __init__(self, id=None):
+    def __init__(self, id=None, **kwargs):
         super(Asset, self).__init__()
         if isinstance(id, ObjectId):
             self._data['_id'] = id
+
+        for k, v in kwargs.items():
+            self._data[k] = v
 
     def pricing(self, quoteId = None):
         if not quoteId:
@@ -75,13 +82,28 @@ class Asset(_DictLike):
         return self
 
     def quantity(self, quantity):
-        self._data['operations'] = [dict(
-            type = 'BUY',
-            date = datetime.datetime(1970, 1, 1),
+        if 'operations' in self._data:
+            del self._data['operations']
+        return self.operation('BUY', datetime.datetime(1970, 1, 1), quantity, quantity, 1)
+
+    def operation(self, type, date, quantity, finalQuantity, price):
+        if not 'operations' in self._data:
+            self._data['operations'] = []
+
+        self._data['operations'].append(dict(
+            type = type,
+            date = date,
             quantity = quantity,
-            finalQuantity = quantity,
-            price = 1
-        )]
+            finalQuantity = finalQuantity,
+            price = price
+        ))
+
+        return self
+
+    def main_currency(self, currency):
+        self._data['currency'] = dict(
+            name = currency,
+        )
         return self
 
     def currency(self, currency, quoteId = None):

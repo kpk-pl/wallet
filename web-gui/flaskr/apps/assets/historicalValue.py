@@ -2,7 +2,7 @@ from flask import request, Response
 from flaskr import db
 from dataclasses import dataclass, asdict
 from bson.objectid import ObjectId
-from datetime import datetime, timedelta
+from datetime import time, datetime, timedelta
 from flaskr.pricing import Context, HistoryPricing
 from flaskr.analyzers import Profits
 from flaskr.utils import jsonify
@@ -86,6 +86,10 @@ def historicalValue():
         if 'daysBack' in request.args:
             daysBack = int(request.args.get('daysBack'))
 
+        alignTimescale = None
+        if 'alignTimescale' in request.args:
+            alignTimescale = time.fromisoformat(request.args.get('alignTimescale'))
+
         label = request.args.get('label')
         if not label:
             label = None
@@ -93,7 +97,9 @@ def historicalValue():
         investedValue = 'investedValue' in request.args
 
         now = datetime.now()
-        pricingCtx = Context(finalDate = now, startDate = now - timedelta(daysBack))
+        pricingCtx = Context(finalDate = now,
+                             startDate = now - timedelta(daysBack),
+                             alignTimescale = alignTimescale)
         pricing = HistoryPricing(pricingCtx, features={'investedValue': investedValue})
 
         assets = list(db.get_db().assets.aggregate(_getPipelineForIdsHistorical(daysBack, ids=ids, label=label)))

@@ -24,6 +24,7 @@ class AssetPricingParametrizedLength(BaseModel):
         use_enum_values = True
 
 class AssetPricingParametrizedProfitDistribution(str, Enum):
+    distributing = "distributing"
     accumulating = "accumulating"
 
 

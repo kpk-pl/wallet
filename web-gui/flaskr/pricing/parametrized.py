@@ -36,43 +36,85 @@ class ParametrizedQuoting:
             self.nextTimePoint += self._quoting.interestPeriod
             self.interestIdx = min(self.interestIdx + 1, len(self._quoting._params.interest) - 1)
 
-        def fixedGrowth(self):
-            percentage = self.interest().fixed.percentage
+        def partialMultiplier(self):
             if not self.isPartial():
-                return percentage
+                return Decimal(1)
 
             passedDays = (self._quoting.finalDate - self.timePoint).days
             periodDays = (self.nextTimePoint - self.timePoint).days
-            return percentage * Decimal(passedDays) / Decimal(periodDays)
+            return Decimal(passedDays) / Decimal(periodDays)
 
-        def derivedGrowth(self):
+        def fixedGrowth(self):
+            if not self.interest().fixed:
+                return None
+
+            return self.interest().fixed.percentage * self.partialMultiplier()
+
+        def derivedIntervalDelta(self):
             thisInterest = self.interest().derived
-            quoteTimestamp = datetime(self.nextTimePoint.year, self.nextTimePoint.month, self.nextTimePoint.day)
+            assert thisInterest is not None
 
             if thisInterest.sample.interval == model.assetPricing.AssetPricingParametrizedLengthName.year:
-                intervalDelta = relativedelta(years=1)
-                quoteTimestamp = quoteTimestamp.replace(day=1, month=1) + relativedelta(years=thisInterest.sample.intervalOffset)
+                return relativedelta(years=1)
             elif thisInterest.sample.interval == model.assetPricing.AssetPricingParametrizedLengthName.month:
-                intervalDelta = relativedelta(months=1)
-                quoteTimestamp = quoteTimestamp.replace(day=1) + relativedelta(months=thisInterest.sample.intervalOffset)
+                return relativedelta(months=1)
             elif thisInterest.sample.interval == model.assetPricing.AssetPricingParametrizedLengthName.day:
-                intervalDelta = relativedelta(days=1)
-                quoteTimestamp += relativedelta(days=thisInterest.sample.intervalOffset)
+                return relativedelta(days=1)
+            else:
+                return None
+
+        def derivedQuoteTimestamp(self):
+            thisInterest = self.interest().derived
+            assert thisInterest is not None
+
+            quoteTimestamp = datetime(self.timePoint.year, self.timePoint.month, self.timePoint.day)
+
+            if thisInterest.sample.interval == model.assetPricing.AssetPricingParametrizedLengthName.year:
+                return quoteTimestamp.replace(day=1, month=1) + relativedelta(years=thisInterest.sample.intervalOffset)
+            elif thisInterest.sample.interval == model.assetPricing.AssetPricingParametrizedLengthName.month:
+                return quoteTimestamp.replace(day=1) + relativedelta(months=thisInterest.sample.intervalOffset)
+            elif thisInterest.sample.interval == model.assetPricing.AssetPricingParametrizedLengthName.day:
+                return quoteTimestamp + relativedelta(days=thisInterest.sample.intervalOffset)
+            else:
+                return None
+
+        def derivedPercentageForTimestamp(self, quoteTimestamp):
+            thisInterest = self.interest().derived
+            assert thisInterest is not None
 
             self._quoting._pricingCtx.loadQuotes(thisInterest.quoteId)
+            derivedIntervalDelta = self.derivedIntervalDelta()
 
             if thisInterest.sample.choose == model.assetPricing.AsserPricingParametrizedInterestItemDerivedSampleChoose.last:
-                result = self._quoting._pricingCtx.getPreviousById(thisInterest.quoteId, quoteTimestamp)
+                percentage, timestamp = self._quoting._pricingCtx.getPreviousById(thisInterest.quoteId,
+                                                                                  quoteTimestamp + derivedIntervalDelta,
+                                                                                  withTimestamp=True)
             elif thisInterest.sample.choose == model.AssetPricing.AsserPricingParametrizedInterestItemDerivedSampleChoose.first:
-                result = self._quoting._pricingCtx.getNextById(thisInterest.quoteId, quoteTimestamp - intervalDelta)
+                percentage, timestamp = self._quoting._pricingCtx.getNextById(thisInterest.quoteId,
+                                                                              quoteTimestamp,
+                                                                              withTimestamp=True)
+            else:
+                return None
 
-            if result is None:
-                return result
+            # If retrieved quote is objectively too old (or to new somehow)
+            if timestamp < quoteTimestamp - derivedIntervalDelta or timestamp > quoteTimestamp + derivedIntervalDelta:
+                return None
 
-            result *= thisInterest.sample.multiplier
-            result = max(thisInterest.sample.clampBelow, result)
+            percentage *= thisInterest.sample.multiplier
+            percentage = max(thisInterest.sample.clampBelow, percentage)
+            return percentage
 
-            return result
+        def derivedGrowth(self):
+            if not self.interest().derived:
+                return None
+
+            thisInterest = self.interest().derived
+            quoteTimestamp = self.derivedQuoteTimestamp()
+            percentage = self.derivedPercentageForTimestamp(quoteTimestamp)
+            if percentage is None:
+                return None
+
+            return percentage * self.partialMultiplier()
 
 
     def __init__(self, pricingParameters, startDate, pricingCtx):
@@ -106,8 +148,12 @@ class ParametrizedQuoting:
 
                 growth += derivedGrowth
 
-            multiplier = keyPoints[-1].multiplier * (Decimal(1) + growth)
-            keyPoints.append(self.KeyPoint(ctx.nextTimePoint, multiplier));
+            if self._params.profitDistribution == model.assetPricing.AssetPricingParametrizedProfitDistribution.accumulating:
+                multiplier = keyPoints[-1].multiplier * (Decimal(1) + growth)
+            elif self._params.profitDistribution == model.assetPricing.AssetPricingParametrizedProfitDistribution.distributing:
+                multiplier = Decimal(1) + growth
+
+            keyPoints.append(self.KeyPoint(min(ctx.nextTimePoint, self.finalDate), multiplier));
             ctx.advance()
 
         return keyPoints
