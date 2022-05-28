@@ -1,7 +1,7 @@
 from flask import request, Response, json
 from flaskr import db
 from flaskr.quotes import Fetcher
-from flaskr.utils import simplifyModel
+from flaskr.utils import simplifyModel, clamp
 from datetime import datetime
 from multiprocessing import Pool
 from bson.objectid import ObjectId

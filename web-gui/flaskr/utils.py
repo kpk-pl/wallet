@@ -27,3 +27,7 @@ def jsonify(obj):
             return JSONEncoder.default(self, obj)
 
     return json.dumps(obj, cls=JsonEncoder)
+
+
+def clamp(n, smallest, largest):
+    return max(smallest, min(n, largest))
