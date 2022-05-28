@@ -5,6 +5,7 @@ from flaskr.utils import simplifyModel
 from datetime import datetime
 from multiprocessing import Pool
 from bson.objectid import ObjectId
+from .list import listIds
 
 
 def _getQuote(item):
@@ -12,39 +13,6 @@ def _getQuote(item):
         return (item[0], Fetcher(item[1]).fetch())
     except Exception as e:
         return (item[0], e)
-
-
-def _getPipelineForUsedQuoteIds():
-    pipeline = []
-    pipeline.append({'$match': {
-        'trashed': {'$ne': True}
-    }})
-    pipeline.append({'$project': {
-        'quoteIds': {'$filter': {
-            'input': {'$setUnion': [
-                    ["$currency.quoteId", "$pricing.quoteId"],
-                    {'$ifNull': [
-                        {'$map': {
-                            'input': "$pricing.interest",
-                            'as': "pi",
-                            'in': "$$pi.derived.quoteId"
-                        }},
-                        []
-                    ]}
-            ]},
-            'as': "quoteId",
-            'cond': { '$ne': ["$$quoteId", None] }
-        }}
-    }})
-    pipeline.append({'$unwind': {
-        'path': "$quoteIds",
-        'preserveNullAndEmptyArrays': False
-    }})
-    pipeline.append({'$group': {
-        '_id': None,
-        'quoteIds': {'$addToSet': "$quoteIds"}
-	}})
-    return pipeline
 
 
 def _getPipelineForQuoteUrls(ids):
@@ -64,16 +32,13 @@ def index():
         storeQuotes = (request.method == 'PUT')
 
         threads = 4
-        try:
-            threads = max(min(int(request.args.get('threads')), 4), 1)
-        except:
-            pass
+        if 'threads' in request.args.keys():
+            threads = clamp(int(request.args.get('threads')), 1, 4)
 
         if request.args.get('id'):
             ids = [ObjectId(i) for i in set(request.args.getlist('id'))]
         else:
-            assetInfo = list(db.get_db().assets.aggregate(_getPipelineForUsedQuoteIds()))
-            ids = assetInfo[0]['quoteIds'] if assetInfo else []
+            ids = listIds(used=True)
 
         quotesIds = list(db.get_db().quotes.aggregate(_getPipelineForQuoteUrls(ids)))
         liveQuotes = { e['_id'] : e['url'] for e in quotesIds }

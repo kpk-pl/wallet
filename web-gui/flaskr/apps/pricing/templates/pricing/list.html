@@ -54,12 +54,12 @@
             </thead>
             <tbody>
               {% for source in sources %}
-              <tr {{ ('class="text-muted"' if source.trashed else '') | safe }}>
+              <tr {{ ('class="text-muted"' if source.trashed or not source.active else '') | safe }}>
                 <td data-title="Name" data-order="{{ source.name }}">
                   {%- if source.trashed %}
                   <del>
                   {%- endif %}
-                  <a href="{{ url_for('pricing.index', quoteId=source._id) }}">
+                  <a href="{{ url_for('pricing.index', quoteId=source._id) }}" >
                     {{ source.name }}
                   </a>
                   {%- if source.trashed %}
@@ -68,6 +68,11 @@
                   {%- if source.currencyPair %}
                   <span class="badge badge-info ml-1" title="Currency pair">
                     {{ source.currencyPair.to}}/{{ source.currencyPair.from }}
+                  </span>
+                  {%- endif %}
+                  {%- if not source.active and not source.trashed %}
+                  <span class="badge badge-secondary ml-1" title="Unused">
+                    unused
                   </span>
                   {%- endif %}
                   <a href="{{source.url}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="Source feed">

@@ -1,5 +1,6 @@
 from flask import request, render_template, jsonify
 from flaskr import db, header, stooq
+from flaskr.apps.quotes.list import listIds as listActiveQuoteIds
 from pydantic import BaseModel, HttpUrl, ValidationError, Field
 from typing import Optional
 from enum import Enum
@@ -70,6 +71,12 @@ def listAll():
     if request.method == 'GET':
         includeTrashed = 'all' in request.args
         sources = list(db.get_db().quotes.aggregate(_getPipeline(includeTrashed)))
+
+        activeQuoteIds = listActiveQuoteIds(used=True)
+        for source in sources:
+            source['active'] = source['_id'] in activeQuoteIds
+
         return render_template("pricing/list.html", sources=sources, header=header.data())
+
     elif request.method == 'POST':
         return postNewItem()
