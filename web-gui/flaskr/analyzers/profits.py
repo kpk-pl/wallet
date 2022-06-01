@@ -123,6 +123,9 @@ class Profits(object):
             self.investmentStart = None
 
     def _earning(self, operation):
+        self._running.quantity = operation['finalQuantity']
+        self._running.provision += _valueOr(operation, 'provision', 0)
+
         profits = {
             'value': operation['price'],
             'netValue': operation['price'] * _valueOr(operation, 'currencyConversion', 1.0),
@@ -133,3 +136,6 @@ class Profits(object):
         self.totalProfits['value'] += profits['value']
         self.totalProfits['netValue'] += profits['netValue']
         self.totalProfits['provisions'] += profits['provisions']
+
+        if self.investmentStart is None:
+            self.investmentStart = operation['date']
