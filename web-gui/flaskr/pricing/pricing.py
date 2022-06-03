@@ -143,7 +143,8 @@ class Pricing(_PricingBase):
                 keyPoints = quoting.getKeyPoints()
                 if not keyPoints:
                     return
-                self._data.value += operation.price * keyPoints[-1].multiplier
+                accumulatedValue = operation.price * keyPoints[-1].multiplier
+                self._data.value += accumulatedValue
             else:
                 raise NotImplementedError("Did not implement {} operation" % (operation.type))
 
