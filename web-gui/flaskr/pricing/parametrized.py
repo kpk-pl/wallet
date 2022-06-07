@@ -9,7 +9,9 @@ class ParametrizedQuoting:
     @dataclass
     class KeyPoint:
         timestamp: datetime
-        multiplier: Decimal
+        multiplier: Decimal = Decimal(1)
+        profitDistributedMultiplier: Decimal = Decimal(0)
+        totalValueMultiplier: Decimal = Decimal(1)
 
 
     @dataclass
@@ -101,7 +103,8 @@ class ParametrizedQuoting:
                 return None
 
             percentage *= thisInterest.sample.multiplier
-            percentage = max(thisInterest.sample.clampBelow, percentage)
+            if thisInterest.sample.clampBelow:
+                percentage = max(thisInterest.sample.clampBelow, percentage)
             return percentage
 
         def derivedGrowth(self):
@@ -132,7 +135,7 @@ class ParametrizedQuoting:
             self.interestPeriod = relativedelta(years=self._params.length.multiplier)
 
     def getKeyPoints(self):
-        keyPoints = [self.KeyPoint(self.startDate, Decimal(1))]
+        keyPoints = [self.KeyPoint(self.startDate)]
         ctx = self.Context(self)
 
         while ctx.timePoint < self.finalDate:
@@ -150,10 +153,19 @@ class ParametrizedQuoting:
 
             if self._params.profitDistribution == model.assetPricing.AssetPricingParametrizedProfitDistribution.accumulating:
                 multiplier = keyPoints[-1].multiplier * (Decimal(1) + growth)
+                profitDistributedMultiplier = Decimal(0)
+                totalValueMultiplier = multiplier
             elif self._params.profitDistribution == model.assetPricing.AssetPricingParametrizedProfitDistribution.distributing:
-                multiplier = Decimal(1) + growth
+                multiplier = Decimal(1)
+                totalValueMultiplier = keyPoints[-1].totalValueMultiplier + growth
+                profitDistributedMultiplier = Decimal(1) + growth if not ctx.isPartial() else Decimal(0)
 
-            keyPoints.append(self.KeyPoint(min(ctx.nextTimePoint, self.finalDate), multiplier));
+            keyPoints.append(self.KeyPoint(
+                min(ctx.nextTimePoint, self.finalDate),
+                multiplier,
+                profitDistributedMultiplier,
+                totalValueMultiplier
+            ));
             ctx.advance()
 
         return keyPoints
