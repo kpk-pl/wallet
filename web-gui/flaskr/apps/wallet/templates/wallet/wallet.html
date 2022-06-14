@@ -42,9 +42,15 @@
 {% endblock %}
 
 {% block content %}
-{% set totalNetValue = (assets | map(attribute='_netValue') | select('number') | sum()) -%}
-{% set totalStillInvestedNetValue = (assets | sum(attribute='_stillInvestedNetValue')) -%}
-{% set hasAllNetValues = (assets | map(attribute='_netValue') | select('none') | list | length) == 0 -%}
+{%- set totalNetValue = (assetData | map(attribute='netValue') | select('number') | sum()) %}
+{%- set hasAllNetValues = (assetData | map(attribute='netValue') | select('none') | list | length) == 0 -%}
+{%- set totalStillInvestedNetValue = namespace(value=0) %}
+{%- for data in assetData %}
+  {%- if data.profits.breakdown %}
+    {%- set totalStillInvestedNetValue.value = totalStillInvestedNetValue.value + data.profits.breakdown[-1].netInvestment %}
+  {%- endif %}
+{%- endfor %}
+{%- set totalStillInvestedNetValue = totalStillInvestedNetValue.value %}
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
@@ -76,26 +82,25 @@
               </tr>
             </thead>
             <tbody>
-              {% for asset in assets %}
+              {%- for data in assetData %}
+              {%- set asset = data.asset %}
               <tr>
                 <td data-title="Name" data-order="{{ asset.name }}">
-                  {%- if asset._id is not list %}
-                  <a href="{{ url_for('assets.index', id=asset._id) }}">
+                  {%- if asset.id is not list %}
+                    <a href="{{ url_for('assets.index', id=asset.id) }}">
                   {%- endif %}
-                    {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
-                  {%- if asset._id is not list %}
-                  </a>
+                  {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
+                  {%- if asset.id is not list %}
+                    </a>
+                    {%- if session.debug -%}
+                    <a href="#modalDebug_{{ asset.id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ asset.id }}">
+                      <i class="fas fa-fw fa-bug fa-pull-right"></i>
+                    </a>
+                    <a href="{{ url_for('assets.receipt', id=asset.id) }}" class="imagelink" title="Record operation">
+                      <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
+                    </a>
+                    {%- endif -%}
                   {%- endif %}
-                  {%- if session.debug -%}
-                  <a href="#modalDebug_{{ asset._id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ asset._id }}">
-                    <i class="fas fa-fw fa-bug fa-pull-right"></i>
-                  </a>
-                  {%- endif -%}
-                  {%- if asset._id is not list %}
-                  <a href="{{ url_for('assets.receipt', id=asset._id) }}" class="imagelink" title="Record operation">
-                    <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
-                  </a>
-                  {%- endif -%}
                 </td>
                 <td data-title="Institution">
                   {%- if asset.institution is not list %}
@@ -114,22 +119,23 @@
                 </td>
                 <td data-title="Region">{{ asset.region }}</td>
                 <td data-title="Holding period" class="text-right">{{ asset._holdingDays }}</td>
-                <td data-title="Quaterly change" data-order="{{ asset._quarterValueChange if asset._quarterValueChange else 0 }}">
-                  <span id="sparkline-{{ asset._id }}">
+                <td data-title="Quaterly change" data-order="{{ data.quarterValueChange if data.quarterValueChange else 0 }}">
+                  <span id="sparkline-{{ asset.id }}">
                   </span>
                   <span class="text-right color-gain float-right">
-                  {%- if asset._quarterValueChange -%}
-                  {{ (asset._quarterValueChange * 100) | round(2) }}%
+                  {%- if data.quarterValueChange -%}
+                  {{ (data.quarterValueChange * 100) | round(2) }}%
                   {%- endif -%}
                   </span>
                 </td>
-                <td data-title="Investment" class="text-right">{{ asset._stillInvestedNetValue | asCurrency(config.MAIN_CURRENCY, False) }}</td>
-                {%- if asset._netValue %}
-                  <td data-title="Value" class="text-right">{{ asset._netValue | asCurrency(config.MAIN_CURRENCY, False) }}</td>
-                  <td data-title="Share" class="text-right">{{ (asset._netValue / totalNetValue * 100) | roundFixed(1) }}%</td>
+                {%- set netInvestment = data.profits.breakdown[-1].netInvestment %}
+                <td data-title="Investment" class="text-right">{{ netInvestment | asCurrency(config.MAIN_CURRENCY, False) }}</td>
+                {%- if data.netValue %}
+                  <td data-title="Value" class="text-right">{{ data.netValue | asCurrency(config.MAIN_CURRENCY, False) }}</td>
+                  <td data-title="Share" class="text-right">{{ (data.netValue / totalNetValue * 100) | roundFixed(1) }}%</td>
                   <td data-title="Net P/L" class="text-right color-gain">
-                    {%- if asset._stillInvestedNetValue > 0 -%}
-                    {{ ((asset._netValue - asset._stillInvestedNetValue) / asset._stillInvestedNetValue * 100) | asCurrency(config.MAIN_CURRENCY, False) }}
+                    {%- if netInvestment > 0 -%}
+                    {{ ((data.netValue - netInvestment) / netInvestment * 100) | asCurrency(config.MAIN_CURRENCY, False) }}
                     {%- else -%}
                     {{ 0 | asCurrency(config.MAIN_CURRENCY, False) }}
                     {%- endif -%}
@@ -266,18 +272,18 @@
   </div>
 </div>
 {%- if session.debug %}
-{%- for asset in assets %}
-<div class="modal fade" id="modalDebug_{{ asset._id }}">
+{%- for data in assetData %}
+<div class="modal fade" id="modalDebug_{{ data.asset.id }}">
 	<div class="modal-dialog">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h4 class="modal-title">{{ asset._id }}</h4>
+				<h4 class="modal-title">{{ data.asset.id }}</h4>
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 					<span aria-hidden="true">&times;</span>
 				</button>
 			</div>
 			<div class="modal-body">
-        <pre>{{ asset | simplify | toJson(indent=4) }}</pre>
+        <pre>{{ data.debug | simplify | toJson(indent=4) }}</pre>
 			</div>
 			<div class="modal-footer justify-content-between">
 				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
