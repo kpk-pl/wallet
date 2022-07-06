@@ -48,7 +48,8 @@ class Period(object):
 
         self._result.profits.total = self._result.finalNetValue - self._result.initialNetValue
 
-        operationScope = [(op,info) for op, info in zip(asset.operations, profitInfo) if op.date >= self.startDate and op.date <= self.finalDate]
+        operationScope = [(op,info) for op, info in zip(asset.operations, profitInfo.breakdown) \
+                          if op.date >= self.startDate and op.date <= self.finalDate]
         for operation, operationProfit in operationScope:
             self._operationToProfit(operation, operationProfit)
 
@@ -85,8 +86,6 @@ class Period(object):
         else:
             raise NotImplementedError("Did not implement period for operation type {}" % (operation.type))
 
-       # TODO: clean this up after Profits analyzer becomes strong typed
-        if operationProfit and 'profits' in operationProfit['_stats']:
-            self._result.profits.netValue += Decimal(operationProfit['_stats']['profits']['netValue'])
-            self._result.profits.provisions += Decimal(operationProfit['_stats']['profits']['provisions'])
+        self._result.profits.netValue += operationProfit.netProfit
+        self._result.profits.provisions += operationProfit.provisions
 

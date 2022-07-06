@@ -241,8 +241,8 @@ class HistoryPricing(_PricingBase):
         for dateIdx in self._ctx.timeScale:
             # If this is the day the next operation happened, take new values
             while operationIdx < len(operations) and operations[operationIdx].date <= dateIdx:
-                # TODO: Usage of profitsInfo needs to be refactored later
-                value = operations[operationIdx].finalQuantity * Decimal(profitsInfo['operations'][operationIdx]['_stats']['averageNetPrice'])
+                value = profitsInfo.breakdown[operationIdx].netInvestment
+                # value = operations[operationIdx].finalQuantity * Decimal(profitsInfo['operations'][operationIdx]['_stats']['averageNetPrice'])
                 operationIdx += 1
 
             result.append(value)

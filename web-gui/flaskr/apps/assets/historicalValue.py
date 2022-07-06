@@ -8,12 +8,16 @@ from flaskr.analyzers import Profits
 from flaskr.utils import jsonify
 from flaskr.model import Asset
 from decimal import Decimal
+from typing import List, Optional
 
 
 def _getPipelineForIdsHistorical(daysBack, label = None, ids = []):
     pipeline = []
 
-    match = {}
+    match = {
+        "operations": { "$exists": True, "$not": { "$size": 0 } }
+    }
+
     if ids:
         match['_id'] = { "$in": [ObjectId(id) for id in ids] }
     if label is not None:
@@ -22,6 +26,7 @@ def _getPipelineForIdsHistorical(daysBack, label = None, ids = []):
     pipeline.append({ "$match" : match })
     pipeline.append({ "$addFields" : {
         "finalOperation": { "$last": "$operations" },
+        "subcategory": { '$ifNull': [ "$subcategory", None ] },
     }})
 
     # Only assets that are now active OR those that were sold in the time window
@@ -31,21 +36,6 @@ def _getPipelineForIdsHistorical(daysBack, label = None, ids = []):
           '$gte': datetime.now() - timedelta(days=daysBack)
         }}
     ]}})
-
-    # TODO: Need to move this whole code to use strong types
-    pipeline.append(
-        { "$project" : {
-            '_id': 1,
-            'operations': 1,
-            'currency': 1,
-            'name': 1,
-            'category': 1,
-            'subcategory': { '$ifNull': [ "$subcategory", None ] },
-            'pricing': 1,
-            'type': 1,
-            'institution': 1
-        }}
-    )
 
     return pipeline
 
@@ -58,8 +48,8 @@ class ResultAsset:
     subcategory: str
 
     value: Decimal
-    investedValue: Decimal
     quantity: Decimal
+    investedValue: Optional[Decimal]
 
     def __init__(self, id, name, category, subcategory):
         self.id = str(id)
@@ -70,8 +60,8 @@ class ResultAsset:
 
 @dataclass
 class Result:
-    t: list
-    assets: list
+    t: List[datetime]
+    assets: List[ResultAsset]
 
     def __init__(self, timescale):
         self.t = timescale
@@ -101,22 +91,24 @@ def historicalValue():
                              startDate = now - timedelta(daysBack),
                              alignTimescale = alignTimescale)
         pricing = HistoryPricing(pricingCtx, features={'investedValue': investedValue})
+        profits = Profits()
 
         assets = list(db.get_db().assets.aggregate(_getPipelineForIdsHistorical(daysBack, ids=ids, label=label)))
 
-        if investedValue:
-            assets = [Profits(asset)() for asset in assets]
-
         result = Result(pricingCtx.timeScale)
-        for asset in assets:
-            strongAsset = Asset(**asset)
-            dataAsset = ResultAsset(strongAsset.id, strongAsset.name, strongAsset.category, strongAsset.subcategory)
+        for rawAsset in assets:
+            asset = Asset(**rawAsset)
 
-            # The second parameter to pricing should be profitsInfo, but that will be refactored to strong types later
-            priced = pricing(strongAsset, asset)
+            dataAsset = ResultAsset(asset.id, asset.name, asset.category, asset.subcategory)
+
+            if investedValue:
+                priced = pricing(asset, profitsInfo = profits(asset))
+                dataAsset.investedValue = priced.investedValue
+            else:
+                priced = pricing(asset)
+
             dataAsset.value = priced.value
             dataAsset.quantity = priced.quantity
-            dataAsset.investedValue = priced.investedValue
 
             result.assets.append(dataAsset)
 

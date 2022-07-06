@@ -51,7 +51,7 @@ ASSET_OPERATION_DATE = datetime(2020, 11, 1)
 
 
 def setup_asset(operationDate = ASSET_OPERATION_DATE):
-    asset = mocks.Asset(name="EDO", institution="Bank", category="Inflation Bonds", type="Bonds")
+    asset = mocks.Asset(name="EDO", institution="Bank", category="Inflation Bonds", type="Bond")
 
     asset.main_currency("PLN")
     asset._data['pricing'] = dict(

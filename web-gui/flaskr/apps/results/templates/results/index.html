@@ -76,57 +76,57 @@
               </tr>
             </thead>
             <tbody>
-              {%- for asset, periodInfo, debugInfo in assetData %}
+              {%- for data in assetData %}
               <tr>
                 <td data-title="Name">
-                  {%- if periodInfo.error %}
+                  {%- if data.period.error %}
 										<i class="fas fa-exclamation-triangle fa-fw" style="color:rgb(252, 186, 3)" title="Missing pricing information"></i>
                   {%- endif %}
-                  {%- if asset.trashed %}
+                  {%- if data.asset.trashed %}
                   <del>
                   {%- endif %}
-                  <a href="{{ url_for('assets.index', id=asset._id) }}">
-                    {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker }}
+                  <a href="{{ url_for('assets.index', id=data.asset._id) }}">
+                    {{ data.asset.name }}{{ " [" + data.asset.ticker + "]" if data.asset.ticker }}
                   </a>
-                  {%- if asset.trashed %}
+                  {%- if data.asset.trashed %}
                   </del>
                   {%- endif %}
-									{% if asset.link -%}
-									<a href="{{asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="External asset site">
+									{% if data.asset.link -%}
+									<a href="{{data.asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="External asset site">
 										<i class="fas fa-chart-line fa-fw fa-pull-right"></i>
 									</a>
 									{% else -%}
 									<i class="fas fa-fw fa-pull-right"></i>
 									{% endif %}
                   {%- if session['debug'] -%}
-                  <a href="#modalDebug_{{ asset._id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ asset._id }}">
+                  <a href="#modalDebug_{{ data.asset._id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ data.asset._id }}">
                     <i class="fas fa-fw fa-bug fa-pull-right"></i>
                   </a>
                   {%- endif -%}
                 </td>
                 <td data-title="Labels">
-                  {%- for label in asset.labels | sort %}
+                  {%- for label in data.asset.labels | sort %}
                   <span class="badge badge-{{ 'success' if label == header.label else 'secondary'}} mr-1">{{ label }}</span>
                   {%- endfor -%}
                 </td>
-                <td data-title="Institution">{{ asset.institution }}</td>
-                <td data-title="Category" data-order="{{ asset.category }}{{ (" " + asset.subcategory) if asset.subcategory else ""}}">
-                  {{- asset.category -}}
-                  {%- if asset.subcategory -%}
-                  <br/><span class="smaller">{{ asset.subcategory }}</span>
+                <td data-title="Institution">{{ data.asset.institution }}</td>
+                <td data-title="Category" data-order="{{ data.asset.category }}{{ (" " + data.asset.subcategory) if data.asset.subcategory else ""}}">
+                  {{- data.asset.category -}}
+                  {%- if data.asset.subcategory -%}
+                  <br/><span class="smaller">{{ data.asset.subcategory }}</span>
                   {%- endif -%}
                 </td>
-                <td data-title="Volume change" class="text-right">{{ (periodInfo.finalQuantity - periodInfo.initialQuantity) | withSign }}</td>
+                <td data-title="Volume change" class="text-right">{{ (data.period.finalQuantity - data.period.initialQuantity) | withSign }}</td>
                 <td data-title="Cash profit" class="text-right color-gain">
-                  {%- if not periodInfo.error -%}
-                  {%- if (periodInfo.profits.netValue - periodInfo.profits.provisions) != 0 -%}
-                  {{ (periodInfo.profits.netValue - periodInfo.profits.provisions) | asCurrency(currencyMain, false) }}
+                  {%- if not data.period.error -%}
+                  {%- if (data.period.profits.netValue - data.period.profits.provisions) != 0 -%}
+                  {{ (data.period.profits.netValue - data.period.profits.provisions) | asCurrency(currencyMain, false) }}
                   {%- endif -%}
                   {%- endif -%}
                 </td>
                 <td data-title="Total profit" class="text-right color-gain">
-                  {%- if not periodInfo.error -%}
-                  {{ (periodInfo.profits.total - periodInfo.profits.provisions) | asCurrency(currencyMain, false) }}
+                  {%- if not data.period.error -%}
+                  {{ (data.period.profits.total - data.period.profits.provisions) | asCurrency(currencyMain, false) }}
                   {%- endif -%}
                 </td>
               </tr>
@@ -140,10 +140,10 @@
                 <th data-title="Category"></th>
                 <th data-title="Volume change"></th>
                 <th data-title="Cash profit" class="text-right color-gain">
-                  {{- (assetData | nthField(1) | sum(attribute='profits.netValue') - assetData | nthField(1) | sum(attribute='profits.provisions')) | asCurrency(currencyMain, false) -}}
+                  {{- (assetData | sum(attribute='period.profits.netValue') - assetData | sum(attribute='period.profits.provisions')) | asCurrency(currencyMain, false) -}}
                 </th>
                 <th data-title="Total profit" class="text-right color-gain">
-                  {{- (assetData | nthField(1) | sum(attribute='profits.total') - assetData | nthField(1) | sum(attribute='profits.provisions')) | asCurrency(currencyMain, false) -}}
+                  {{- (assetData | sum(attribute='period.profits.total') - assetData | sum(attribute='period.profits.provisions')) | asCurrency(currencyMain, false) -}}
                 </th>
               </tr>
             </tfoot>

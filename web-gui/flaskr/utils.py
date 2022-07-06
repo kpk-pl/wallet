@@ -1,6 +1,7 @@
 def simplifyModel(model):
     from decimal import Decimal
     from pydantic import BaseModel
+    from enum import Enum
 
     if isinstance(model, list):
         return [simplifyModel(x) for x in model]
@@ -10,6 +11,8 @@ def simplifyModel(model):
         return simplifyModel(model.dict())
     elif isinstance(model, Decimal):
         return str(model)
+    elif isinstance(model, Enum):
+        return model.value
     else:
         return model
 

@@ -3,7 +3,7 @@ from flask import render_template, request
 from flaskr import db, header
 from flaskr.session import Session
 from flaskr.model import Asset
-from flaskr.analyzers import StrongProfits, Categories
+from flaskr.analyzers import Profits, Categories
 from flaskr.analyzers.aggregate import aggregate
 from flaskr.pricing import Context, Pricing
 from flaskr.utils import jsonify
@@ -25,7 +25,7 @@ def _getPipelineFilters(label = None):
 
     pipeline.append({ "$match" : match })
     pipeline.append({ "$addFields" : {
-        "finalOperation": { "$last": "$operations" },
+        "finalQuantity": { "$last": "$operations.finalQuantity" },
     }})
 
     return pipeline
@@ -35,10 +35,7 @@ def _getPipeline(label = None):
     pipeline = _getPipelineFilters(label)
     pipeline.append({ "$match" : {
         'trashed': { '$ne': True },
-        "finalOperation.finalQuantity": { "$ne": 0 }
-    }})
-    pipeline.append({ "$addFields" : {
-        "finalQuantity": "$finalOperation.finalQuantity",
+        "finalQuantity": { "$ne": 0 }
     }})
 
     return pipeline
@@ -53,7 +50,7 @@ def wallet():
     for aggrType in aggregation:
         assets = aggregate(assets, aggrType)
 
-    profits = StrongProfits()
+    profits = Profits()
     pricing = Pricing()
     pricingQuarterAgo = Pricing(Context(finalDate = datetime.now() - relativedelta(months=3)))
 

@@ -51,7 +51,7 @@ class RunningTotals:
         self.quantity = quantity
 
 
-class StrongProfits:
+class Profits:
     @dataclass
     class Result:
         @dataclass
@@ -62,6 +62,7 @@ class StrongProfits:
             avgPrice: Decimal = field(default_factory=Decimal)
             avgNetPrice: Decimal = field(default_factory=Decimal)
             netInvestment: Decimal = field(default_factory=Decimal)
+            quantity: Decimal = field(default_factory=Decimal)
 
         investmentStart: Optional[datetime] = None
         holdingDays: Optional[int] = None
@@ -73,6 +74,7 @@ class StrongProfits:
         provisions: Decimal = field(default_factory=Decimal)
         avgPrice: Optional[Decimal] = None
         avgNetPrice: Optional[Decimal] = None
+        quantity: Decimal = field(default_factory=Decimal)
 
     def __init__(self):
         pass
@@ -95,13 +97,14 @@ class StrongProfits:
             elif operation.type is model.AssetOperationType.receive:
                 breakdown = self._receive(operation)
             elif operation.type is model.AssetOperationType.earning:
-                breakdown = self._earning(operation)
+                breakdown = self._earning(operation, asset.type)
             else:
                 raise NotImplementedError("Did not implement profits for operation type {}" % (operation.type))
 
             breakdown.avgPrice = self._running.avgPrice()
             breakdown.avgNetPrice = self._running.avgNetPrice()
             breakdown.netInvestment = self._running.investment
+            breakdown.quantity = self._running.quantity
 
             self._result.breakdown.append(breakdown)
 
@@ -114,6 +117,7 @@ class StrongProfits:
             self._result.provisions = sum([b.provisions for b in self._result.breakdown]) + self._running.provision
             self._result.avgPrice = self._result.breakdown[-1].avgPrice
             self._result.avgNetPrice = self._result.breakdown[-1].avgNetPrice
+            self._result.quantity = self._result.breakdown[-1].quantity
 
         if self._result.investmentStart is not None:
             self._result.holdingDays = (datetime.now() - self._result.investmentStart).days
@@ -122,6 +126,8 @@ class StrongProfits:
 
     def _buy(self, operation):
         breakdown = self.Result.Breakdown()
+
+        assert self._running.quantity + operation.quantity == operation.finalQuantity
 
         self._running.quantity = operation.finalQuantity
         self._running.price += operation.price
@@ -138,6 +144,8 @@ class StrongProfits:
     def _receive(self, operation):
         breakdown = self.Result.Breakdown()
 
+        assert self._running.quantity + operation.quantity == operation.finalQuantity
+
         self._running.quantity = operation.finalQuantity
         self._running.provision += _valueOr(operation.provision, Decimal(0))
 
@@ -150,6 +158,8 @@ class StrongProfits:
         breakdown = self.Result.Breakdown()
         quantity = operation.quantity
 
+        assert self._running.quantity - operation.quantity == operation.finalQuantity
+
         breakdown.profit = operation.price - self._running.partPrice(quantity)
         breakdown.netProfit =  operation.price * _valueOr(operation.currencyConversion, Decimal(1)) - self._running.partNetPrice(quantity)
         breakdown.provisions = _valueOr(operation.provision, Decimal(0)) + self._running.partProvision(quantity)
@@ -161,10 +171,15 @@ class StrongProfits:
 
         return breakdown
 
-    def _earning(self, operation):
+    def _earning(self, operation, assetType):
         breakdown = self.Result.Breakdown()
 
-        assert self._running.quantity == operation.finalQuantity
+        if assetType == 'Deposit':
+            assert self._running.quantity + operation.quantity == operation.finalQuantity
+
+            self._running.quantity = operation.finalQuantity
+        else:
+            assert self._running.quantity == operation.finalQuantity
 
         breakdown.profit = operation.price
         breakdown.netProfit =  operation.price * _valueOr(operation.currencyConversion, Decimal(1))
@@ -174,109 +189,3 @@ class StrongProfits:
             self._result.investmentStart = operation.date
 
         return breakdown
-
-
-from . import _valueOr as _dictValueOr
-
-class Profits(object):
-    def __init__(self, assetData):
-        super(Profits, self).__init__()
-        self.data = assetData
-        self._running = RunningTotals()
-
-        self.data['_totalProfits'] = {
-            'value' : 0.0,
-            'netValue' : 0.0,
-            'provisions' : 0.0
-        }
-
-        self.totalProfits = self.data['_totalProfits']
-        self.investmentStart = None
-
-    def __call__(self):
-        if 'operations' in self.data:
-            for operation in self.data['operations']:
-                operation['_stats'] = {}
-
-                if operation['type'] == 'BUY':
-                    self._buy(operation)
-                elif operation['type'] == 'SELL':
-                    self._sell(operation)
-                elif operation['type'] == 'RECEIVE':
-                    self._receive(operation)
-                elif operation['type'] == 'EARNING':
-                    self._earning(operation)
-                else:
-                    raise NotImplementedError("Did not implement profits for operation type {}" % (operation['type']))
-
-                stats = operation['_stats']
-                stats['averagePrice'] = self._running.avgPrice()
-                stats['averageNetPrice'] = self._running.avgNetPrice()
-                stats['averageProvision'] = self._running.avgProvision()
-
-                self.currentQuantity = operation['finalQuantity']
-
-        self.data['_averagePrice'] = self._running.avgPrice()
-        self.data['_averageNetPrice'] = self._running.avgNetPrice()
-        self.data['_averageProvision'] = self._running.avgProvision()
-        self.data['_stillInvestedNetValue'] = self._running.investment
-
-        if self.investmentStart is not None:
-            self.data['_holdingDays'] = (datetime.now() - self.investmentStart).days
-
-        return self.data
-
-    def _buy(self, operation):
-        self._running.quantity = operation['finalQuantity']
-        self._running.price += operation['price']
-        self._running.netPrice += _operationNetValue(operation)
-        self._running.investment += _operationNetValue(operation)
-        self._running.provision += _dictValueOr(operation, 'provision', 0)
-
-        if self.investmentStart is None:
-            self.investmentStart = operation['date']
-
-    # a RECEIVE is essentially a BUY with a price 0
-    def _receive(self, operation):
-        self._running.quantity = operation['finalQuantity']
-        self._running.provision += _dictValueOr(operation, 'provision', 0)
-
-        if self.investmentStart is None:
-            self.investmentStart = operation['date']
-
-    def _sell(self, operation):
-        quantity = operation['quantity']
-
-        profits = {
-            'value': operation['price'] - self._running.partPrice(quantity),
-            'netValue': _operationNetValue(operation) - self._running.partNetPrice(quantity),
-            'provisions': _dictValueOr(operation, 'provision', 0.0) + self._running.partProvision(quantity)
-        }
-        operation['_stats']['profits'] = profits
-
-        self._running.scaleTo(operation['finalQuantity'])
-
-        self.totalProfits['value'] += profits['value']
-        self.totalProfits['netValue'] += profits['netValue']
-        self.totalProfits['provisions'] += profits['provisions']
-
-        if operation['finalQuantity'] == 0:
-            self.investmentStart = None
-
-    def _earning(self, operation):
-        self._running.quantity = operation['finalQuantity']
-        self._running.provision += _dictValueOr(operation, 'provision', 0)
-
-        profits = {
-            'value': operation['price'],
-            'netValue': operation['price'] * _dictValueOr(operation, 'currencyConversion', 1.0),
-            'provisions': _dictValueOr(operation, 'provision', 0.0)
-        }
-        operation['_stats']['profits'] = profits
-
-        self.totalProfits['value'] += profits['value']
-        self.totalProfits['netValue'] += profits['netValue']
-        self.totalProfits['provisions'] += profits['provisions']
-
-        if self.investmentStart is None:
-            self.investmentStart = operation['date']

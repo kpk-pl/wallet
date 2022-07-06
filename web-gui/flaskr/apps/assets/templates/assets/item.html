@@ -21,12 +21,12 @@
     })
   }
 </script>
-{% if asset.quoteHistory %}
+{% if quoteHistory %}
 <script type="text/javascript">
-  const data = {{ asset.quoteHistory | tojson }};
+  const data = {{ quoteHistory.data | tojson }};
   const operations = {{ operations | simplify | tojson }};
 
-  setupChart('{{ asset.name | safe }}', '{{ asset.currency }}', data, operations);
+  setupChart('{{ asset.name | safe }}', '{{ asset.currency.name }}', data, operations);
 </script>
 {% endif %}
 {% endblock %}
@@ -44,7 +44,7 @@
             <dt class="col-sm-3">Name</dt>
             <dd class="col-sm-9">{{ asset.name }}</dd>
             <dt class="col-sm-3">Type</dt>
-            <dd class="col-sm-9">{{ asset.type }}</dd>
+            <dd class="col-sm-9">{{ asset.type | simplify }}</dd>
             <dt class="col-sm-3">Category</dt>
             <dd class="col-sm-9">{{ asset.category }}
             {%- if asset.subcategory -%}
@@ -58,10 +58,10 @@
             <dt class="col-sm-3">Institution</dt>
             <dd class="col-sm-9">{{ asset.institution }}</dd>
             <dt class="col-sm-3">Currency</dt>
-            <dd class="col-sm-9">{{ asset.currency }}</dd>
+            <dd class="col-sm-9">{{ asset.currency.name }}</dd>
             {%- if asset.pricing and asset.pricing.quoteId %}
             <dt class="col-sm-3">Pricing</dt>
-            <dd class="col-sm-9"><a href="{{ url_for('pricing.index', quoteId=asset.pricing.quoteId) }}">{{ misc.pricingName }}</a></dd>
+            <dd class="col-sm-9"><a href="{{ url_for('pricing.index', quoteId=asset.pricing.quoteId) }}">{{ quoteHistory.name }}</a></dd>
             {%- endif %}
             {% if asset.link -%}
             <dt class="col-sm-3">Link</dt>
@@ -88,7 +88,7 @@
             <dd class="col-sm-4">
               {%- if asset.trashed -%}
               <span class="text-muted">Trashed</span>
-              {%- elif asset.finalQuantity and asset.finalQuantity > 0 -%}
+              {%- elif asset.operations and asset.operations[-1].finalQuantity > 0 -%}
               <span class="text-success">Active</span>
               {%- else -%}
               <span class="text-muted">Inactive</span>
@@ -96,23 +96,21 @@
             </dd>
             <dt class="col-sm-8">Holding period</dt>
             <dd class="col-sm-4">
-              {%- if asset.finalQuantity and asset.finalQuantity > 0 -%}
-              {{ asset._holdingDays }} days
-              {%- endif -%}
+              {{ profitInfo.holdingDays if profitInfo.holdingDays else 0 }} days
             </dd>
             <dt class="col-sm-8">Volume</dt>
-            <dd class="col-sm-4">{{ asset.finalQuantity if asset.finalQuantity else 0 }}</dd>
+            <dd class="col-sm-4">{{ asset.operations[-1].finalQuantity if asset.operations else 0 }}</dd>
             {%- if asset.type != 'Deposit' %}
             <dt class="col-sm-8">Average open price</dt>
             <dd class="col-sm-4">
-              {%- if asset.finalQuantity and asset.finalQuantity > 0 -%}
-              {{ asset._averagePrice | round(2) }} {{ asset.currency }}
+              {%- if asset.operations and asset.operations[-1].finalQuantity > 0 -%}
+              {{ profitInfo.avgPrice | round(2) }} {{ asset.currency.name }}
               {%- endif -%}
             </dd>
-            {%- elif asset.currency != currencyMain %}
+            {%- elif asset.currency.name != currencyMain %}
             <dt class="col-sm-8">Average conversion rate</dt>
             <dd class="col-sm-4">
-              {{ asset._averageNetPrice | round(8) }}
+              {{ profitInfo.avnNetPrice | round(8) }}
             </dd>
             {%- endif %}
           </dl>
@@ -141,7 +139,7 @@
           </button>
           {%- endif %}
 
-          {% if not asset.trashed and (not asset.finalQuantity or asset.finalQuantity == 0) -%}
+          {% if not asset.trashed and not (asset.operations and asset.operations[-1].finalQuantity > 0) -%}
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="onTrash()">
             <i class="fa fa-trash"></i> Move to trash
           </button>
@@ -151,7 +149,7 @@
     </div>
   </div>
 </div>
-{% if asset.quoteHistory -%}
+{% if quoteHistory -%}
 <div class="container-sm">
   <div class="row">
     <div class="col-12">
@@ -192,10 +190,10 @@
                 <th style="width: 30px">Type</th>
                 <th>{{ 'Value' if asset.type == 'Deposit' else 'Volume' }}</th>
                 {%- if asset.type != 'Deposit' %}
-                <th>Price <span class="smaller">[{{ asset.currency }}]</span></th>
-                <th>Unit price <span class="smaller">[{{ asset.currency }}]</span></th>
+                <th>Price <span class="smaller">[{{ asset.currency.name }}]</span></th>
+                <th>Unit price <span class="smaller">[{{ asset.currency.name }}]</span></th>
                 {%- endif %}
-                {% if asset.currency != 'PLN' -%}
+                {% if asset.currency.name != currencyMain -%}
                 <th>Conversion rate</th>
                 {%- endif %}
                 <th>Provision &amp; tax <span class="smaller">[PLN]</span></th>
@@ -208,29 +206,29 @@
             <tbody>
               {% for operation in operations | reverse -%}
               <tr>
-                <td>{{ operations|length - loop.index + 1 }}</td>
-                <td>{{ operation.date }}</td>
-                <td>
+                <td data-title="#">{{ operations|length - loop.index + 1 }}</td>
+                <td data-title="Date">{{ operation.date }}</td>
+                <td data-title="Type">
                   <span class="badge badge-info badge-op-{{ operation.type.value }}">
                     {{ operation.type | operationDisplayString(asset.type) }}
                   </span>
                 </td>
-                <td>{{ operation.quantity }}</td>
+                <td data-title="{{ 'Value' if asset.type == 'Deposit' else 'Volume' }}">{{ operation.quantity }}</td>
                 {%- if asset.type != 'Deposit' %}
-                <td>{{ operation.price }}</td>
-                <td>
+                <td data-title="Price">{{ operation.price }}</td>
+                <td data-title="Unit price">
                   {%- if operation.unitPrice %}
                   {{ operation.unitPrice | round(3) }}
                   {%- endif %}
                 </td>
                 {%- endif %}
-                {% if asset.currency != currencyMain -%}
-                <td>{{ operation.currencyConversion | round(4) }}</td>
+                {% if asset.currency.name != currencyMain -%}
+                <td data-title="Conversion rate">{{ operation.currencyConversion | round(4) }}</td>
                 {%- endif %}
-                <td>{{ operation.provision if operation.provision else 0 }}</td>
-                <td>{{ operation.finalQuantity }}</td>
+                <td data-title="Provision">{{ operation.provision if operation.provision else 0 }}</td>
+                <td data-title="Final {{ 'value' if asset.type == 'Deposit' else 'volume' }}">{{ operation.finalQuantity }}</td>
                 {% if operationsHaveOrderIds -%}
-                <td>{{ operation.orderId }}</td>
+                <td data-title="Order ID">{{ operation.orderId }}</td>
                 {%- endif %}
               </tr>
               {%- endfor %}

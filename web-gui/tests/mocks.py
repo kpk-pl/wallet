@@ -75,6 +75,9 @@ class Asset(_DictLike):
         for k, v in kwargs.items():
             self._data[k] = v
 
+        if 'type' not in self._data:
+            self._data['type'] = "Equity"
+
     def pricing(self, quoteId = None):
         if not quoteId:
             quoteId = PricingSource.createSimple().commit()

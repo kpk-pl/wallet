@@ -1,9 +1,11 @@
 from flask import render_template, request
 from flaskr import db, header
 from flaskr.analyzers import Profits, Operations
-from flaskr.model import Asset
+from flaskr.model import Asset, QuoteHistoryItem
 from bson.objectid import ObjectId
 from datetime import datetime
+from typing import List
+from dataclasses import dataclass
 
 
 def _getPipelineForAssetDetails(assetId):
@@ -24,24 +26,13 @@ def _getPipelineForAssetDetails(assetId):
         ],
         "as": "quoteInfo",
     }})
-    pipeline.append({ "$project" : {
-        "name": 1,
-        "ticker": 1,
-        "institution": 1,
-        "category": 1,
-        "subcategory": 1,
-        "currency": 1,
-        "type": 1,
-        "pricing": 1,
-        "link": 1,
-        "labels": 1,
-        "trashed": 1,
-        "operations": { "$ifNull": [ '$operations', [] ] },
-        "finalQuantity": { "$last": "$operations.finalQuantity" },
-        "quoteHistory": { "$last": "$quoteInfo.data" },
-        "pricingName": { "$last": "$quoteInfo.name" },
-    }})
     return pipeline
+
+
+@dataclass
+class QuoteHistoryData:
+    name: str
+    data: List[QuoteHistoryItem]
 
 
 def item():
@@ -54,16 +45,14 @@ def item():
         if not assets:
             return ('', 404)
 
-        weakAsset = assets[0]
-        asset = Asset(**weakAsset)
-
+        asset = Asset(**assets[0])
+        quoteHistory = QuoteHistoryData(**assets[0]['quoteInfo'][0]) if assets[0]['quoteInfo'] else None
         operations = Operations(asset.currency)(asset.operations)
+        profitInfo = Profits()(asset)
 
-        weakAsset['currency'] = weakAsset['currency']['name']
-        weakAsset = Profits(weakAsset)()
-
-        misc = dict(
-            pricingName = weakAsset['pricingName'] if 'pricingName' in weakAsset else None
-        )
-
-        return render_template("assets/item.html", asset=weakAsset, operations=operations, misc=misc, header=header.data())
+        return render_template("assets/item.html",
+                               asset=asset,
+                               quoteHistory=quoteHistory,
+                               profitInfo=profitInfo,
+                               operations=operations,
+                               header=header.data())

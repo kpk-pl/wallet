@@ -35,19 +35,7 @@ def _getPipeline(startDate, finalDate, label = None):
         ]
     }})
 
-    pipeline.append({ '$project': {
-        '_id': 1,
-        'name': 1,
-        'type': 1,
-        'ticker': 1,
-        'institution': 1,
-        'currency': 1,
-        'link': 1,
-        'labels': 1,
-        'category': 1,
-        'subcategory': 1,
-        'pricing': 1,
-        'trashed': 1,
+    pipeline.append({ '$addFields': {
         'operations': { '$filter': {
             'input': '$operations',
             'as': 'op',
@@ -79,19 +67,24 @@ def index():
         breakdown = [op for op in breakdown if op.date >= timerange['periodStart'] and op.date <= timerange['periodEnd'] and (op.closedPositionInfo or op.earningInfo)]
         breakdown.sort(key=lambda op: op.date)
 
-        weakAssets = [Profits(asset)() for asset in weakAssets]
+        profits = Profits()
+        period = Period(timerange['periodStart'], timerange['periodEnd'])
 
-        periodAnalyzer = Period(timerange['periodStart'], timerange['periodEnd'])
-        periodInfo = []
-        debugInfo = []
-        for asset, weakAsset in zip(assets, weakAssets):
-            profitInfo=weakAsset['operations'] if 'operations' in weakAsset else []
+        assetData = []
+        for asset in assets:
+            data = dict()
+            assetData.append(data)
 
-            debugInfo.append({})
-            periodInfo.append(periodAnalyzer(asset, profitInfo=profitInfo, debug=debugInfo[-1] if session.isDebug() else None))
+            data['asset'] = asset
+
+            if session.isDebug():
+                data['debug'] = dict(profits=dict(), period=dict())
+
+            data['profits'] = profits(asset, debug=data['debug']['profits'] if session.isDebug() else None)
+            data['period'] = period(asset, data['profits'], debug=data['debug']['period'] if session.isDebug() else None)
 
         return render_template("results/index.html",
-                               assetData=list(zip(weakAssets, periodInfo, utils.simplifyModel(debugInfo))),
+                               assetData=assetData,
                                operationBreakdown=breakdown,
                                timerange=timerange,
                                header=header.data(showLabels=True)
