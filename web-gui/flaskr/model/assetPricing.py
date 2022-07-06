@@ -32,7 +32,7 @@ class AssetPricingParametrizedInterestItemFixed(BaseModel):
     percentage: Decimal
 
 
-class AsserPricingParametrizedInterestItemDerivedSampleChoose(str, Enum):
+class AssetPricingParametrizedInterestItemDerivedSampleChoose(str, Enum):
     first = "first"
     last = "last"
 
@@ -40,7 +40,7 @@ class AsserPricingParametrizedInterestItemDerivedSampleChoose(str, Enum):
 class AssetPricingParametrizedInterestItemDerivedSample(BaseModel):
     interval: AssetPricingParametrizedLengthName
     intervalOffset: int = 0
-    choose: AsserPricingParametrizedInterestItemDerivedSampleChoose
+    choose: AssetPricingParametrizedInterestItemDerivedSampleChoose
     multiplier: Decimal = "1"
     clampBelow: Optional[Decimal]
 
