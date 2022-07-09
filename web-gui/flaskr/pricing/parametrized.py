@@ -38,7 +38,7 @@ class ParametrizedQuoting:
 
         def partialMultiplier(self):
             periodDays = Decimal((self.nextTimePoint - self.timePoint).days)
-            daysInYear = Decimal("365.25") # does not account for leap years but is good enough
+            daysInYear = Decimal("365") # does not account for leap years but is good enough
 
             if not self.isPartial():
                 if self._quoting._params.length.name == model.assetPricing.AssetPricingParametrizedLengthName.year:
@@ -139,6 +139,8 @@ class ParametrizedQuoting:
             self.interestPeriod = relativedelta(months=self._params.length.multiplier)
         elif self._params.length.name == model.assetPricing.AssetPricingParametrizedLengthName.year:
             self.interestPeriod = relativedelta(years=self._params.length.multiplier)
+
+        self.finalDate = min(self.finalDate, self.startDate + self.interestPeriod * self._params.length.count)
 
     def getKeyPoints(self):
         keyPoints = [self.KeyPoint(self.startDate)]
