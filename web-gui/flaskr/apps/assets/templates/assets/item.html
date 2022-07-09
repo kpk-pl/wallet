@@ -124,7 +124,7 @@
         </div>
         <div class="card-body">
           {%- if not asset.trashed %}
-          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('assets.receipt', id=asset._id) }}'">
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('assets.receipt', id=asset.id) }}'">
             <i class="fa fa-shopping-cart"></i> Record operation
           </button>
           {%- endif %}
