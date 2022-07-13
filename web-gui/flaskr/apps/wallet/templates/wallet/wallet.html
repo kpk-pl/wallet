@@ -96,10 +96,10 @@
                     <a href="#modalDebug_{{ asset.id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ asset.id }}">
                       <i class="fas fa-fw fa-bug fa-pull-right"></i>
                     </a>
+                    {%- endif -%}
                     <a href="{{ url_for('assets.receipt', id=asset.id) }}" class="imagelink" title="Record operation">
                       <i class="fas fa-shopping-cart fa-fw fa-pull-right"></i>
                     </a>
-                    {%- endif -%}
                   {%- endif %}
                 </td>
                 <td data-title="Institution">
