@@ -3,7 +3,6 @@
 # quantity bought and sold and its prices. The EARNING and RECEIVE operations are also taken into account
 
 
-from . import _operationNetValue
 from datetime import datetime
 from dataclasses import dataclass, field, asdict
 import flaskr.model as model
@@ -56,28 +55,45 @@ class Profits:
     class Result:
         @dataclass
         class Breakdown:
+            # Profit taken on a single operation, in native currency
             profit: Decimal = field(default_factory=Decimal)
+            # Profit taken on a single operation adjusted with currency conversion rate, in default currency
             netProfit: Decimal = field(default_factory=Decimal)
+            # Provisions realised with the profit taken, in default currency. For SELL operation this will be the operation provisions summed with previous BUY provision for the sold quantity
             provisions: Decimal = field(default_factory=Decimal)
+            # Current average price up to this operation, in native currency
             avgPrice: Decimal = field(default_factory=Decimal)
+            # Current average price up to this operation adjusted with currency conversion rate, in default currency
             avgNetPrice: Decimal = field(default_factory=Decimal)
+            # Current investment up to this operation, in default currency
             netInvestment: Decimal = field(default_factory=Decimal)
+            # Current quantity
             quantity: Decimal = field(default_factory=Decimal)
 
+        # Datetime when last time quantity increased from 0 to some value
+        # Is None when the current quantity is 0
         investmentStart: Optional[datetime] = None
+        # Number of days since investmentStart
         holdingDays: Optional[int] = None
 
         breakdown: List[Breakdown] = field(default_factory=list)
 
+        # Total profit taken on the asset in native currency
         profit: Decimal = field(default_factory=Decimal)
+        # Total net profit (profit adjusted with currency conversion) taken on an asset in default currency
         netProfit: Decimal = field(default_factory=Decimal)
+        # Total provisions from all operations
         provisions: Decimal = field(default_factory=Decimal)
+
+        # Last average price in native currency. Average price multiplied by last quantity yields current investment
         avgPrice: Optional[Decimal] = None
+        # Last average price in default currency
         avgNetPrice: Optional[Decimal] = None
+        # Last quantity
         quantity: Decimal = field(default_factory=Decimal)
 
-    def __init__(self):
-        pass
+    def __init__(self, currentDate = datetime.now()):
+        self._currentDate = currentDate
 
     def __call__(self, asset:model.Asset, debug=None):
         self._result = self.Result()
@@ -91,11 +107,11 @@ class Profits:
 
         for operation in asset.operations:
             if operation.type is model.AssetOperationType.buy:
-                breakdown = self._buy(operation)
+                breakdown = self._buy(operation, asset.type)
             elif operation.type is model.AssetOperationType.sell:
-                breakdown = self._sell(operation)
+                breakdown = self._sell(operation, asset.type)
             elif operation.type is model.AssetOperationType.receive:
-                breakdown = self._receive(operation)
+                breakdown = self._receive(operation, asset.type)
             elif operation.type is model.AssetOperationType.earning:
                 breakdown = self._earning(operation, asset.type)
             else:
@@ -120,11 +136,11 @@ class Profits:
             self._result.quantity = self._result.breakdown[-1].quantity
 
         if self._result.investmentStart is not None:
-            self._result.holdingDays = (datetime.now() - self._result.investmentStart).days
+            self._result.holdingDays = (self._currentDate - self._result.investmentStart).days
 
         return self._result
 
-    def _buy(self, operation):
+    def _buy(self, operation:model.AssetOperation, assetType:model.AssetType):
         breakdown = self.Result.Breakdown()
 
         assert self._running.quantity + operation.quantity == operation.finalQuantity
@@ -133,7 +149,11 @@ class Profits:
         self._running.price += operation.price
         self._running.netPrice += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
         self._running.investment += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
-        self._running.provision += _valueOr(operation.provision, Decimal(0))
+
+        if assetType == model.AssetType.deposit:
+            breakdown.provisions = _valueOr(operation.provision, Decimal(0))
+        else:
+            self._running.provision += _valueOr(operation.provision, Decimal(0))
 
         if self._result.investmentStart is None:
             self._result.investmentStart = operation.date
@@ -141,9 +161,10 @@ class Profits:
         return breakdown
 
     # a RECEIVE is essentially a BUY with a price 0
-    def _receive(self, operation):
+    def _receive(self, operation:model.AssetOperation, assetType:model.AssetType):
         breakdown = self.Result.Breakdown()
 
+        assert assetType != model.AssetType.deposit
         assert self._running.quantity + operation.quantity == operation.finalQuantity
 
         self._running.quantity = operation.finalQuantity
@@ -154,7 +175,7 @@ class Profits:
 
         return breakdown
 
-    def _sell(self, operation):
+    def _sell(self, operation:model.AssetOperation, assetType:model.AssetType):
         breakdown = self.Result.Breakdown()
         quantity = operation.quantity
 
@@ -171,13 +192,16 @@ class Profits:
 
         return breakdown
 
-    def _earning(self, operation, assetType):
+    def _earning(self, operation:model.AssetOperation, assetType:model.AssetType):
         breakdown = self.Result.Breakdown()
 
-        if assetType == 'Deposit':
+        if assetType == model.AssetType.deposit:
             assert self._running.quantity + operation.quantity == operation.finalQuantity
 
             self._running.quantity = operation.finalQuantity
+            self._running.price += operation.price
+            self._running.netPrice += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
+            self._running.investment += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
         else:
             assert self._running.quantity == operation.finalQuantity
 

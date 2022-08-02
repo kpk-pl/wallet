@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from enum import Enum
 from datetime import datetime
 from decimal import Decimal
@@ -17,7 +17,7 @@ class AssetOperation(BaseModel):
     type: AssetOperationType
     price: Decimal
     quantity: Optional[Decimal]
-    finalQuantity: Optional[Decimal]
-    provision: Decimal = Decimal(0)
+    finalQuantity: Decimal
+    provision: Decimal = Field(default_factory=Decimal)
     currencyConversion: Optional[Decimal]
     orderId: Optional[str]

@@ -1,8 +1,8 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, validator
 from typing import Optional, List
 from enum import Enum
 from .types import PyObjectId
-from .assetOperation import AssetOperation
+from .assetOperation import AssetOperation, AssetOperationType
 from .assetPricing import AssetPricing
 
 
@@ -36,3 +36,10 @@ class Asset(BaseModel):
     labels: List[str] = Field(default_factory=list)
     trashed: bool = False
     hasOrderIds: bool = False
+
+    @validator('operations', each_item=True)
+    def check_no_receive_ops_for_deposit(cls, op, values):
+        if 'type' in values and values['type'] == AssetType.deposit:
+            if op.type == AssetOperationType.receive:
+                raise ValueError("Invalid RECEIVE operation for Deposit asset")
+        return op

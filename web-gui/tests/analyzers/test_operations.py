@@ -116,7 +116,7 @@ def test_matches_closing_position_in_foreign_currency_with_provision():
 
 
 def test_decorates_earning():
-    earning = AssetOperation(date=datetime(2020, 11, 2), type=AssetOperationType.earning, price="50", currencyConversion="1.5", provision="2")
+    earning = AssetOperation(date=datetime(2020, 11, 2), type=AssetOperationType.earning, price="50", currencyConversion="1.5", provision="2", finalQuantity="0")
 
     result = Operations("EUR")([earning])
     assert len(result) == 1
