@@ -4,6 +4,7 @@ from dataclasses import dataclass, asdict
 from bson.objectid import ObjectId
 from flaskr import model
 from decimal import Decimal
+from typing import List
 
 from .interp import interp
 from .context import Context
@@ -49,8 +50,8 @@ class Pricing(_PricingBase):
         quantity: Decimal = None
         netValue: Decimal = None
         value: Decimal = None
-        operationsInScope: list[dict] = None
-        pricingIds: list[ObjectId] = None
+        operationsInScope: List[model.AssetOperation] = None
+        pricingIds: List[ObjectId] = None
         quotes: dict[str, Decimal] = None
 
     def __init__(self, ctx = None):
@@ -132,7 +133,7 @@ class Pricing(_PricingBase):
             self._data.value = quote * self._data.quantity
             self._data.netValue = self._netValueForCurrency(asset)
 
-    def _byInterest(self, asset):
+    def _byInterest(self, asset:model.Asset):
         self._data.quantity = self._data.operationsInScope[-1].finalQuantity
         self._data.netValue = None
 
@@ -145,6 +146,9 @@ class Pricing(_PricingBase):
                     return
                 accumulatedValue = operation.price * keyPoints[-1].multiplier
                 self._data.value += accumulatedValue
+            elif operation.type == model.AssetOperationType.earning:
+                # This is noop in this context as we are only pricing current market value of the asset
+                pass
             else:
                 raise NotImplementedError("Did not implement {} operation" % (operation.type))
 
@@ -156,10 +160,11 @@ class Pricing(_PricingBase):
 
 @dataclass
 class HistoryResult:
-    timescale : list[datetime]
-    value : list[float] = None
-    investedValue : list[float] = None
-    quantity : list[float] = None
+    timescale : List[datetime]
+    value : List[float] = None
+    investedValue : List[float] = None
+    quantity : List[float] = None
+    profit : List[Decimal] = None
 
     def __init__(self, timescale):
         self.timescale = timescale
@@ -170,6 +175,7 @@ class HistoryResult:
         result.value = [0.0] * len(result.timescale)
         result.investedValue = [0.0] * len(result.timescale)
         result.quantity = [0.0] * len(result.timescale)
+        result.profit = [Decimal(0)] * len(result.timescale)
         return result
 
 
@@ -214,9 +220,10 @@ class HistoryPricing(_PricingBase):
 
         self._data.result = HistoryResult(self._ctx.timeScale)
         self._data.result.quantity = self._getAssetQuantity(asset)
+        self._data.result.profit = self._getAssetProfit(asset)
         return True
 
-    def _getAssetQuantity(self, asset):
+    def _getAssetQuantity(self, asset:model.Asset):
         ops = asset.operations
 
         operationIdx = 0
@@ -232,6 +239,21 @@ class HistoryPricing(_PricingBase):
             result.append(quantity)
 
         return result
+
+    def _getAssetProfit(self, asset:model.Asset):
+        ops = asset.operations
+
+        operationIdx = 0
+        profit = Decimal(0)
+        result = []
+
+        for dateIdx in self._ctx.timeScale:
+            # If this is the day the next operation happened, take new quantity
+            while operationIdx < len(ops) and ops[operationIdx].date <= dateIdx:
+                profit += ops[operationIdx].price
+                operationIdx += 1
+
+            result.append(profit)
 
     def _getInvestedValue(self, operations, profitsInfo):
         operationIdx = 0
@@ -273,7 +295,7 @@ class HistoryPricing(_PricingBase):
 
         return value
 
-    def _priceAssetByInterest(self, asset, result):
+    def _priceAssetByInterest(self, asset:model.Asset, result):
         value = [Decimal(0.0)] * len(result.timescale)
 
         for operation in asset.operations:
@@ -283,9 +305,12 @@ class HistoryPricing(_PricingBase):
                 if not keyPoints:
                     continue
 
-                quoteHistory = list(map(lambda kp: model.QuoteHistoryItem(timestamp=kp.timestamp, quote=operation.price*kp.multiplier), quoting.getKeyPoints()))
+                quoteHistory = list(map(lambda kp: model.QuoteHistoryItem(timestamp=kp.timestamp, quote=operation.price*kp.multiplier), keyPoints))
                 quotes = interp(quoteHistory, self._ctx.timeScale, leftFill = 0.0)
                 value = [a + b.quote for a, b in zip(value, quotes)]
+            elif operation.type == model.AssetOperationType.earning:
+                # This is noop in this context as profits are already taken into account
+                pass
             else:
                 raise NotImplementedError("Did not implement {} operation" % (operation.type))
 

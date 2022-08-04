@@ -43,3 +43,12 @@ class Asset(BaseModel):
             if op.type == AssetOperationType.receive:
                 raise ValueError("Invalid RECEIVE operation for Deposit asset")
         return op
+
+    @validator('hasOrderIds')
+    def check_each_operation_has_orderId_when_required(cls, hasOrderIds, values):
+        if hasOrderIds:
+            for operation in values['operations']:
+                if not operation.orderId:
+                    raise ValueError("Each operation is required to have orderId when asset hasOrderIds")
+        return hasOrderIds
+

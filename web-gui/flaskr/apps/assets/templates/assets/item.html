@@ -213,7 +213,7 @@
                     {{ operation.type | operationDisplayString(asset.type) }}
                   </span>
                 </td>
-                <td data-title="{{ 'Value' if asset.type == 'Deposit' else 'Volume' }}">{{ operation.quantity }}</td>
+                <td data-title="{{ 'Value' if asset.type == 'Deposit' else 'Volume' }}">{{ operation.quantity if operation.quantity else '' }}</td>
                 {%- if asset.type != 'Deposit' %}
                 <td data-title="Price">{{ operation.price }}</td>
                 <td data-title="Unit price">

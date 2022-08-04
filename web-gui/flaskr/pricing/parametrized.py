@@ -162,7 +162,10 @@ class ParametrizedQuoting:
             if self._params.profitDistribution == model.assetPricing.AssetPricingParametrizedProfitDistribution.accumulating:
                 multiplier = keyPoints[-1].multiplier * (Decimal(1) + growth)
             elif self._params.profitDistribution == model.assetPricing.AssetPricingParametrizedProfitDistribution.distributing:
-                multiplier = keyPoints[-1].multiplier + growth
+                if ctx.isPartial():
+                    multiplier = keyPoints[-1].multiplier + growth
+                else:  # For passed periods we don't calculate any value increase since it was supposed to be redistributed
+                    multiplier = Decimal(1)
 
             keyPoints.append(self.KeyPoint(
                 min(ctx.nextTimePoint, self.finalDate),

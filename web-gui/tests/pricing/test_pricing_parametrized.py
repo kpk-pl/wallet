@@ -297,9 +297,10 @@ def setup_distributing_asset(operationDate = ASSET_OPERATION_DATE):
 @pytest.mark.parametrize("params", [
     (0, Decimal(0)), # The day of creation there is no profit
     (1, Decimal("0.02") / 100 / 365), # First day, 1/365 of yield, CPI date 2020-10-05, yield 0.02
-    (30, Decimal("0.02") * 30 / 100 / 365), # 30th day, still should be the same month so the same yield 0.02
-    (45, (Decimal("0.02") * 30 + Decimal("0.04") * 15) / 100 / 365), # 30 days of November at 0.02 and 15 days of December at 0.04 yield from 2020-11-05
-    (70, (Decimal("0.02") * 30 + Decimal("0.04") * 31 + Decimal("0.05") * 9) / 100 / 365), # January yield is 0.05 from 2020-12-05
+    (29, Decimal("0.02") * 29 / 100 / 365), # 29th day, still should be the same month so the same yield 0.02, last day of the month in the first period
+    (30, Decimal(0)), # 30th day which is the end of the month. Profit should be distributed and not reflected with the price
+    (45, Decimal("0.04") * 15 / 100 / 365), # 15 days of December at 0.04 yield from 2020-11-05 in the current period
+    (70, Decimal("0.05") * 9 / 100 / 365), # January yield is 0.05 from 2020-12-05 and this is third pricing period
 ])
 def test_price_distributing(params):
     daysIn, expectedMultiplier = params
