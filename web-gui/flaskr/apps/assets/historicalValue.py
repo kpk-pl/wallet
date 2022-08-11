@@ -45,11 +45,12 @@ class ResultAsset:
     id: str
     name: str
     category: str
-    subcategory: str
+    subcategory: Optional[str]
 
-    value: Decimal
-    quantity: Decimal
-    investedValue: Optional[Decimal]
+    value: List[Decimal]
+    quantity: List[Decimal]
+    investedValue: Optional[List[Decimal]]
+    profit: List[Decimal]
 
     def __init__(self, id, name, category, subcategory):
         self.id = str(id)
@@ -90,7 +91,7 @@ def historicalValue():
         pricingCtx = Context(finalDate = now,
                              startDate = now - timedelta(daysBack),
                              alignTimescale = alignTimescale)
-        pricing = HistoryPricing(pricingCtx, features={'investedValue': investedValue})
+        pricing = HistoryPricing(pricingCtx, features={'investedValue': investedValue, 'profit': investedValue})
         profits = Profits()
 
         assets = list(db.get_db().assets.aggregate(_getPipelineForIdsHistorical(daysBack, ids=ids, label=label)))
@@ -109,6 +110,7 @@ def historicalValue():
 
             dataAsset.value = priced.value
             dataAsset.quantity = priced.quantity
+            dataAsset.profit = priced.profit
 
             result.assets.append(dataAsset)
 

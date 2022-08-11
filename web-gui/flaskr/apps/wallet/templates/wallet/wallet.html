@@ -23,7 +23,7 @@
 <script type="text/javascript" src="{{ url_for('.static', filename='wallet/wallet_historical.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('.static', filename='wallet/wallet_sparklines.js') }}"></script>
 
-<script>
+<script type="text/javascript">
   const categoryAllocation = JSON.parse({{ allocation | tojson }});
 
   $(function(){

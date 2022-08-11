@@ -43,21 +43,29 @@ function updateAllocationCharts(data){
   }
 
   let mapping = Object.create(null);
-  let totals = {'value': new Array(data.t.length).fill(0), 'investment': new Array(data.t.length).fill(0)}
+  let totals = {
+    'value': new Array(data.t.length).fill(0),
+    'investment': new Array(data.t.length).fill(0),
+    'profit': new Array(data.t.length).fill(0)
+  }
+
   for (let asset of data.assets) {
     const cat = category(asset);
     const assetValue = asset.value.map(parseFloat);
     const assetInvestedValue = asset.investedValue.map(parseFloat);
+    const assetProfit = asset.profit.map(parseFloat);
 
     if (cat in mapping) {
       mapping[cat].value = mapping[cat].value.map((v, i) => v + assetValue[i]);
       mapping[cat].investment = mapping[cat].investment.map((v, i) => v + assetInvestedValue[i]);
+      mapping[cat].profit = mapping[cat].profit.map((v, i) => v + assetProfit[i]);
     } else {
-      mapping[cat] = {'value': assetValue, 'investment': assetInvestedValue};
+      mapping[cat] = {'value': assetValue, 'investment': assetInvestedValue, 'profit': assetProfit};
     }
 
     totals.value = totals.value.map((v, i) => v + assetValue[i]);
     totals.investment = totals.investment.map((v, i) => v + assetInvestedValue[i]);
+    totals.profit = totals.profit.map((v, i) => v + assetProfit[i]);
   }
 
   for (let category in mapping) {
@@ -95,16 +103,16 @@ function updateAllocationCharts(data){
     cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
   });
 
-  const netPlAdjust = totals.value[0] - totals.investment[0];
+  const netPlAdjust = totals.value[0] + totals.profit[0] - totals.investment[0];
   assetAllocationCharts.netpl.data.datasets.push({
-    data: totals.value.map((v, i) => v - totals.investment[i] - netPlAdjust),
+    data: totals.value.map((v, i) => v + totals.profit[i] - totals.investment[i] - netPlAdjust),
     label: 'Net P/L',
     cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
   });
 
-  const plPercentAdjust = safeRatio(totals.value[0] - totals.investment[0], totals.investment[0]);
+  const plPercentAdjust = safeRatio(totals.value[0] + totals.profit[0] - totals.investment[0], totals.investment[0]);
   assetAllocationCharts.plpercent.data.datasets.push({
-    data: totals.value.map((v, i) => (safeRatio(v - totals.investment[i], totals.investment[i]) - plPercentAdjust) * 100),
+    data: totals.value.map((v, i) => (safeRatio(v + totals.profit[i] - totals.investment[i], totals.investment[i]) - plPercentAdjust) * 100),
     label: '% P/L',
     cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
   });

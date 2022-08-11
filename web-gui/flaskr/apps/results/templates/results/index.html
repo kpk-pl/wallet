@@ -85,7 +85,7 @@
                   {%- if data.asset.trashed %}
                   <del>
                   {%- endif %}
-                  <a href="{{ url_for('assets.index', id=data.asset._id) }}">
+                  <a href="{{ url_for('assets.index', id=data.asset.id) }}">
                     {{ data.asset.name }}{{ " [" + data.asset.ticker + "]" if data.asset.ticker }}
                   </a>
                   {%- if data.asset.trashed %}

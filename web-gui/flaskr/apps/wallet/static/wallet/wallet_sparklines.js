@@ -12,8 +12,14 @@ function updateSparklines(historicalData, months, getter) {
 
   for (let asset of historicalData.assets) {
     getter(asset).sparkline(
-      asset.value.slice(fromIdx).map((v, i) => v > 0 ? utils.float.normalize(v - asset.investedValue[i + fromIdx]) : null),
-      options
+      asset.value.slice(fromIdx)
+                 .map(parseFloat)
+                 .map(
+                   (v, i) =>
+                     (v > 0 || parseFloat(asset.profit[i + fromIdx]) > 0) ?
+                     utils.float.normalize(v + parseFloat(asset.profit[i + fromIdx]) - parseFloat(asset.investedValue[i + fromIdx])) :
+                     null
+                 ), options
     );
   }
 }

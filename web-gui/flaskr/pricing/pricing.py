@@ -174,7 +174,7 @@ class HistoryResult:
         result = cls(timescale)
         result.value = [0.0] * len(result.timescale)
         result.investedValue = [0.0] * len(result.timescale)
-        result.quantity = [0.0] * len(result.timescale)
+        result.quantity = [Decimal(0.0)] * len(result.timescale)
         result.profit = [Decimal(0)] * len(result.timescale)
         return result
 
@@ -208,6 +208,11 @@ class HistoryPricing(_PricingBase):
                     raise RuntimeError("Cannot fultill investedValue feature without profitsInfo")
                 self._data.result.investedValue = self._getInvestedValue(asset.operations, profitsInfo)
 
+            if 'profit' in self._features and self._features['profit']:
+                if profitsInfo is None:
+                    raise RuntimeError("Cannot fultill profit feature without profitsInfo")
+                self._data.result.profit = self._getAssetProfit(asset.operations, profitsInfo)
+
         if isinstance(debug, dict):
             debug.update(asdict(self._data))
 
@@ -220,14 +225,13 @@ class HistoryPricing(_PricingBase):
 
         self._data.result = HistoryResult(self._ctx.timeScale)
         self._data.result.quantity = self._getAssetQuantity(asset)
-        self._data.result.profit = self._getAssetProfit(asset)
         return True
 
     def _getAssetQuantity(self, asset:model.Asset):
         ops = asset.operations
 
         operationIdx = 0
-        quantity = 0
+        quantity = Decimal(0)
         result = []
 
         for dateIdx in self._ctx.timeScale:
@@ -240,20 +244,20 @@ class HistoryPricing(_PricingBase):
 
         return result
 
-    def _getAssetProfit(self, asset:model.Asset):
-        ops = asset.operations
-
+    def _getAssetProfit(self, operations:List[model.AssetOperation], profitsInfo):
         operationIdx = 0
         profit = Decimal(0)
         result = []
 
         for dateIdx in self._ctx.timeScale:
             # If this is the day the next operation happened, take new quantity
-            while operationIdx < len(ops) and ops[operationIdx].date <= dateIdx:
-                profit += ops[operationIdx].price
+            while operationIdx < len(operations) and operations[operationIdx].date <= dateIdx:
+                profit += profitsInfo.breakdown[operationIdx].netProfit
                 operationIdx += 1
 
             result.append(profit)
+
+        return result
 
     def _getInvestedValue(self, operations, profitsInfo):
         operationIdx = 0
@@ -264,7 +268,6 @@ class HistoryPricing(_PricingBase):
             # If this is the day the next operation happened, take new values
             while operationIdx < len(operations) and operations[operationIdx].date <= dateIdx:
                 value = profitsInfo.breakdown[operationIdx].netInvestment
-                # value = operations[operationIdx].finalQuantity * Decimal(profitsInfo['operations'][operationIdx]['_stats']['averageNetPrice'])
                 operationIdx += 1
 
             result.append(value)
