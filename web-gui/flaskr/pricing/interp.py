@@ -1,12 +1,17 @@
 from decimal import Decimal
 from flaskr.model import QuoteHistoryItem
+from datetime import datetime
+from typing import List
 
 
 # based on the quote info from 'data' performs linear interpolation to fill all
 # timepoints in 'timeScale'. If there is no quote available for some of the leftmost
 # points in the 'timeScale', uses 'leftFill'. If 'leftFill' is None then uses next available
 # quote from the future. The same applies for 'rightFill' on the right side
-def interp(data, timeScale, leftFill = None, rightFill = None):
+def interp(data:List[QuoteHistoryItem], timeScale:List[datetime], leftFill = None, rightFill = None):
+    if len(timeScale) == 0:
+        return []
+
     assert len(data) > 0
 
     if leftFill is not None and not isinstance(leftFill, Decimal):
