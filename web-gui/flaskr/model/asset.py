@@ -44,6 +44,15 @@ class Asset(BaseModel):
                 raise ValueError("Invalid RECEIVE operation for Deposit asset")
         return op
 
+    @validator('pricing')
+    def check_no_pricing_for_deposits(cls, pricing, values):
+        if 'type' in values and values['type'] == AssetType.deposit:
+            if pricing is not None:
+                raise ValueError("Pricing is not allowed for Deposit asset")
+
+        return pricing
+
+
     @validator('hasOrderIds')
     def check_each_operation_has_orderId_when_required(cls, hasOrderIds, values):
         if hasOrderIds:

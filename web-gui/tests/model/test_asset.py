@@ -33,6 +33,28 @@ def test_model_cannot_create_asset_deposit_with_receive_operations():
     Asset(**data)
 
 
+def test_model_cannot_create_asset_deposit_with_pricing():
+    data = dict(
+        _id = PyObjectId(),
+        name = "Test asset",
+        currency = dict(
+            name = "TST"
+        ),
+        institution = "Test",
+        type = "Deposit",
+        category = "Testing",
+        pricing = dict(
+            quoteId = PyObjectId()
+        )
+    )
+
+    with pytest.raises(ValidationError):
+        asset = Asset(**data)
+
+    del data['pricing']
+    Asset(**data)
+
+
 def test_model_enforces_order_ids():
     data = dict(
         _id = PyObjectId(),
