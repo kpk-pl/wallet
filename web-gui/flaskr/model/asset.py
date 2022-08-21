@@ -3,7 +3,7 @@ from typing import Optional, List
 from enum import Enum
 from .types import PyObjectId
 from .assetOperation import AssetOperation, AssetOperationType
-from .assetPricing import AssetPricing
+from .assetPricing import AssetPricing, AssetPricingQuotes
 
 
 class AssetCurrency(BaseModel):
@@ -31,8 +31,8 @@ class Asset(BaseModel):
     subcategory: Optional[str]
     region: Optional[str]
     link: Optional[HttpUrl]
-    operations: List[AssetOperation] = Field(default_factory=list)
     pricing: Optional[AssetPricing]
+    operations: List[AssetOperation] = Field(default_factory=list)
     labels: List[str] = Field(default_factory=list)
     trashed: bool = False
     hasOrderIds: bool = False
@@ -52,6 +52,19 @@ class Asset(BaseModel):
 
         return pricing
 
+    @validator('operations', each_item=True)
+    def check_quantity_equals_price_for_deposits(cls, op, values):
+        if 'type' in values and values['type'] == AssetType.deposit:
+            if op.quantity != op.price:
+                raise ValueError("Quantity must be equal to price for Deposit asset operation")
+        return op
+
+    @validator('operations', each_item=True)
+    def check_each_op_has_currency_conversion_when_asset_in_foreign_currency(cls, op, values):
+        if 'pricing' in values and values['pricing'] is not None and isinstance(values['pricing'], AssetPricingQuotes):
+            if op.currencyConversion is None:
+                raise ValueError("Operation must have currency conversion specified for assets in foreign currency")
+        return op
 
     @validator('hasOrderIds')
     def check_each_operation_has_orderId_when_required(cls, hasOrderIds, values):
@@ -60,4 +73,5 @@ class Asset(BaseModel):
                 if not operation.orderId:
                     raise ValueError("Each operation is required to have orderId when asset hasOrderIds")
         return hasOrderIds
+
 

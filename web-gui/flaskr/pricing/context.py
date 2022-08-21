@@ -103,7 +103,7 @@ class Context(object):
         return next((x for x in self.quotes if x.id == quoteId), None)
 
     @staticmethod
-    def _getCurrencyConversion(quoteEntry, required):
+    def _getCurrencyConversion(quoteEntry, required:str):
         if not quoteEntry.currencyPair or not required:
             return None
 

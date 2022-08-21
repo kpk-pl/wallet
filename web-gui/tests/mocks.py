@@ -2,6 +2,7 @@ from bson.objectid import ObjectId
 import tests
 import datetime
 import pymongo
+import flaskr.model as model
 
 
 class _DictLike(object):
@@ -101,6 +102,9 @@ class Asset(_DictLike):
             price = price
         ))
 
+        if 'pricing' in self._data and 'quoteId' in self._data['pricing']:
+            self._data['operations'][-1]['currencyConversion'] = 1
+
         return self
 
     def main_currency(self, currency):
@@ -125,6 +129,11 @@ class Asset(_DictLike):
     def commit(self):
         with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
             return db.wallet.assets.insert_one(self.asdict()).inserted_id
+
+    def model(self):
+        if '_id' not in self._data:
+            self._data['_id'] = model.PyObjectId()
+        return model.Asset(**self._data)
 
     @classmethod
     def createEquity(cls, id=None):

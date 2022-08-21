@@ -170,12 +170,12 @@ class HistoryResult:
         self.timescale = timescale
 
     @classmethod
-    def null(cls, timescale):
+    def null(cls, timescale, features):
         result = cls(timescale)
-        result.value = [0.0] * len(result.timescale)
-        result.investedValue = [0.0] * len(result.timescale)
-        result.quantity = [Decimal(0.0)] * len(result.timescale)
-        result.profit = [Decimal(0)] * len(result.timescale)
+        result.value = [Decimal(0)] * len(result.timescale)
+        result.quantity = [Decimal(0)] * len(result.timescale)
+        result.profit = [Decimal(0)] * len(result.timescale) if features['profit'] else None
+        result.investedValue = [Decimal(0)] * len(result.timescale) if features['investedValue'] else None
         return result
 
 
@@ -189,6 +189,10 @@ class HistoryPricing(_PricingBase):
     def __init__(self, ctx = None, features = {}):
         super(HistoryPricing, self).__init__(ctx)
         self._features = features
+        if 'investedValue' not in self._features:
+            self._features['investedValue'] = False
+        if 'profit' not in self._features:
+            self._features['profit'] = False
 
     def __call__(self, asset, profitsInfo=None, debug=None):
         self._data = HistoryPricing.CalcContext(
@@ -203,14 +207,14 @@ class HistoryPricing(_PricingBase):
             elif self._data.type is _PricingType.Interest:
                 self._data.result.value = self._priceAssetByInterest(asset, self._data.result)
 
-            if 'investedValue' in self._features and self._features['investedValue']:
+            if self._features['investedValue']:
                 if profitsInfo is None:
-                    raise RuntimeError("Cannot fultill investedValue feature without profitsInfo")
+                    raise RuntimeError("Cannot fulfill investedValue feature without profitsInfo")
                 self._data.result.investedValue = self._getInvestedValue(asset.operations, profitsInfo)
 
-            if 'profit' in self._features and self._features['profit']:
+            if self._features['profit']:
                 if profitsInfo is None:
-                    raise RuntimeError("Cannot fultill profit feature without profitsInfo")
+                    raise RuntimeError("Cannot fulfill profit feature without profitsInfo")
                 self._data.result.profit = self._getAssetProfit(asset.operations, profitsInfo)
 
         if isinstance(debug, dict):
@@ -220,8 +224,16 @@ class HistoryPricing(_PricingBase):
 
     def _prepare(self, asset):
         if not asset.operations:
-            self._data.result = HistoryResult.null(self._ctx.timeScale)
+            self._data.result = HistoryResult.null(self._ctx.timeScale, self._features)
             return False
+
+        idsToLoad = []
+        if asset.pricing is not None and isinstance(asset.pricing, model.AssetPricingQuotes):
+            idsToLoad.append(asset.pricing.quoteId)
+        if asset.currency.quoteId is not None:
+            idsToLoad.append(asset.currency.quoteId)
+
+        self._ctx.loadQuotes(idsToLoad)
 
         self._data.result = HistoryResult(self._ctx.timeScale)
         self._data.result.quantity = self._getAssetQuantity(asset)
@@ -286,11 +298,6 @@ class HistoryPricing(_PricingBase):
     def _priceAssetByQuote(self, asset, result):
         quoteId = asset.pricing.quoteId
         currency = asset.currency
-
-        ids = [quoteId]
-        if currency.quoteId:
-            ids.append(currency.quoteId)
-        self._ctx.loadQuotes(ids)
 
         value = [a * b for a, b in zip(result.quantity, self._ctx.getHistoricalById(quoteId))]
         if currency.quoteId:
