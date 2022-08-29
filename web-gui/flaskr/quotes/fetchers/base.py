@@ -1,4 +1,4 @@
-class FetchError:
+class FetchError(BaseException):
     def __init__(self, url, desc):
         self.url = url
         self.desc = desc
