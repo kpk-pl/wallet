@@ -5,72 +5,29 @@ $(function(){
 });
 
 function setupChart(name, currency, data, operations) {
-  let types = {};
-  for (let type of typing.operationTypes)
-    types[type] = { operations: [] };
-
-  operations.forEach(op => types[op.type].operations.push(op));
-
-  let chart = new Chart($('#chart'), {
-    type: 'line',
-    data: {
-      datasets: [{
-        label: name,
-        data: data,
-        parsing: { xAxisKey: 'timestamp', yAxisKey: 'quote' },
-        cubicInterpolationMode: 'monotone',
-        pointRadius: 0,
-        fill: true,
-        backgroundColor: 'rgba(0, 123, 255, 0.65)',
-        borderColor: 'rgba(0, 123, 255, 1)',
-        borderWidth: 2,
-        order: 1
-      }]
+  const chartOpts = jQuery.extend(true, {}, apexOptions, {
+    series: [{
+      name: name,
+      data: data.map(v => { return {x: v.timestamp, y: v.quote}; })
+    }],
+    yaxis: {
+      title: { text: currency }
     },
-    options: {
-      scales: {
-        x: {
-          type: 'time',
-          time: { unit: 'day', displayFormats: { day: 'D MMM YY' } }
-        },
-        y: {
-          title: { display: true, text: currency }
-        },
-      },
-      plugins: {
-        legend: {
-          labels: {
-            filter: function(legendItem) {
-              return legendItem.datasetIndex == 0;
-            }
-          }
-        },
-        tooltip: {
-          callbacks: {
-            label: function(ctx) {
-              if (ctx.datasetIndex == 0)
-                return `${ctx.dataset.label}: ${styling.asCurrency(ctx.parsed.y, currency)}`;
-
-              const op = types[ctx.dataset.label].operations[ctx.dataIndex];
-              return `${op.type} ${op.quantity} @ ${styling.asCurrency(op.price/op.quantity, currency)}`;
-            }
-          }
+    annotations: {
+      points: operations.filter(op => op.type != 'EARNING')
+                        .map(op => { return {
+        x: new Date(op.date).getTime(),
+        y: op.price/op.quantity,
+        marker: {
+          size: 4,
+          fillColor: styling.operationColor(op.type),
+          strokeColor: styling.operationColor(op.type),
+          radius: 2
         }
-      }
+      }; })
     }
   });
 
-  for (let type of Object.keys(types).filter(t => t != 'EARNING')) {
-    chart.data.datasets.push({
-      label: type,
-      data: types[type].operations.map(function(op){ return {t: op.date, y: op.price/op.quantity}; }),
-      parsing: { xAxisKey: 't', yAxisKey: 'y' },
-      pointRadius: 4,
-      showLine: false,
-      pointBackgroundColor: styling.operationColor(type),
-      pointBorderColor: styling.operationColor(type)
-    });
-  }
-
-  chart.update();
+  let chart = new ApexCharts(document.getElementById('chart'), chartOpts);
+  chart.render();
 }

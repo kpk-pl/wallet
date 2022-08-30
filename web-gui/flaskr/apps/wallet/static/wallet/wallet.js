@@ -26,7 +26,7 @@ $(function(){
   datatable.buttons().container().appendTo("#tableElements");
 
   if (categoryAllocation) {
-    let categoryChart = new CategoryChart(categoryAllocation).makeChart(document.getElementById('allocationChart'));
+    let categoryChart = new CategoryChart(categoryAllocation, defaultCurrency).makeChart(document.getElementById('allocationChart'));
   }
 
   $("#wallet-filter").on("keyup search input paste cut", function() {

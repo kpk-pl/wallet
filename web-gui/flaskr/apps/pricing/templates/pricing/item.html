@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
-
 {% block title %}{{ item.name }}{% endblock %}
 
 {% block links %}
 {% endblock %}
 
 {% block plugins_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.6.2/dist/chart.min.js" integrity="sha256-D2tkh/3EROq+XuDEmgxOLW1oNxf0rLNlOwsPIUX+co4=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js" integrity="sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js" integrity="sha256-sFB24K2xU2EOgWAtb3ySAGjhMqcUvUJGmwjDcTQa04k=" crossorigin="anonymous"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='chartjs.defaults.js') }}"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/charts.js') }}"></script>
 {% endblock %}
 
 {% block user_scripts %}
+<script type="text/javascript" src="{{ url_for('.static', filename='pricing/item.js') }}"></script>
+
 <script type="text/javascript">
   function onTrash() {
     $.post('{{ url_for('pricing.trash', quoteId=item._id) }}', success=function(data){
@@ -24,39 +24,7 @@
 {% if item.quoteHistory %}
 <script type="text/javascript">
   const data = {{ item.quoteHistory | tojson }};
-  let chart = new Chart($('#chart'), {
-    type: 'line',
-    data: {
-      datasets: [{
-        label: '{{ item.name | safe }}',
-        data: data,
-        cubicInterpolationMode: 'monotone',
-        pointRadius: 1,
-        fill: true,
-        backgroundColor: 'rgba(0, 123, 255, 0.65)',
-        borderColor: 'rgba(0, 123, 255, 1)',
-        borderWidth: 2
-      }]
-    },
-    options: {
-      parsing: {
-        xAxisKey: 'timestamp',
-        yAxisKey: 'quote'
-      },
-      scales: {
-        x: {
-          type: 'time',
-          time: { unit: 'day', displayFormats: { day: 'D MMM YY' } }
-        },
-        y: {
-          title: {
-            display: true,
-            text: '{{ item.unit }}'
-          }
-        },
-      }
-    }
-  });
+  createQuoteHistoryChart(document.getElementById('chart'), '{{ item.name | safe }}', data, '{{ item.unit | safe }}');
 </script>
 {% endif %}
 {% endblock %}
@@ -130,7 +98,7 @@
           </div>
         </div>
         <div class="card-body">
-          <canvas id="chart" style="min-height: 400px; height: 400px; max-height: 400px; max-width: 100%;"></canvas>
+          <div id="chart" style="min-height: 400px; height: 400px; max-height: 400px; max-width: 100%;"></div>
         </div>
       </div>
     </div>

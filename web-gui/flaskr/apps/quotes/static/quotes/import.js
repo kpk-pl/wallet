@@ -11,45 +11,22 @@ class ChartUi {
   }
 
   init(name, unit) {
-    this.chart = new Chart($('#chart'), {
-      type: 'line',
-      data: {
-        datasets: [{
-          label: name,
-          cubicInterpolationMode: 'monotone',
-          pointRadius: 2,
-          data: this.existingQuotes,
-          parsing: { xAxisKey: 'timestamp', yAxisKey: 'quote' },
-          backgroundColor: 'rgba(0, 123, 255, 0.65)',
-          borderColor: 'rgba(0, 123, 255, 1)',
-          borderWidth: 2,
-          fill: true,
-          order: 2
-        }, {
-          label: 'Imported data',
-          cubicInterpolationMode: 'monotone',
-          pointRadius: 2,
-          data: [],
-          parsing: { xAxisKey: 'timestamp', yAxisKey: 'quote' },
-          fill: false,
-          borderColor: 'rgba(255, 123, 0, 1)',
-          borderWidth: 2,
-          order: 1
-        }]
+    const chartOpts = jQuery.extend(true, {}, apexOptions, {
+      series: [{
+        name: name,
+        data: this.existingQuotes
+      },{
+        name: 'Imported data',
+        data: []
+      }],
+      yaxis: {
+        title: { text: unit }
       },
-      options: {
-        animation: { duration: 0 },
-        scales: {
-          x: {
-            type: 'time',
-            time: { unit: 'day', displayFormats: { day: 'D MMM YY' } }
-          },
-          y: {
-            title: { display: true, text: unit }
-          },
-        }
-      }
+      markers: { size: 3 }
     });
+
+    this.chart = new ApexCharts(document.getElementById('chart'), chartOpts);
+    this.chart.render();
   }
 
   importNew(quotes) {
@@ -62,15 +39,12 @@ class ChartUi {
     let filteredQuotes = this.existingQuotes;
     if (method == 'replace' && this.importedQuotes.length > 0) {
       filteredQuotes = filteredQuotes.filter(function(q) {
-        return q.timestamp < this.importedQuotes.at(0).timestamp || q.timestamp > this.importedQuotes.at(-1).timestamp;
+        return q.x < this.importedQuotes.at(0).x || q.x > this.importedQuotes.at(-1).x;
       });
     }
 
-    let combinedData = filteredQuotes.concat(this.importedQuotes).sort((lhs, rhs) => { return lhs.timestamp - rhs.timestamp; });
-
-    this.chart.data.datasets[0].data = combinedData;
-    this.chart.data.datasets[1].data = this.importedQuotes;
-    this.chart.update();
+    const combinedData = filteredQuotes.concat(this.importedQuotes).sort((lhs, rhs) => { return lhs.x - rhs.x; });
+    this.chart.updateSeries([{data: combinedData}, {data: this.importedQuotes}]);
 
     $("#f-submit").attr('disabled', this.importedQuotes.length == 0);
   }
@@ -109,7 +83,7 @@ function loadCsvQuotes() {
 
   fetchCsv(file).then(function(quotes){
     ui.importNew(
-      quotes.map(function(e){ return {timestamp: Date.parse(e.timestamp), quote: e.quote}; }));
+      quotes.map(function(e){ return {x: Date.parse(e.timestamp), y: e.quote}; }));
   });
 }
 

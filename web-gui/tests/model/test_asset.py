@@ -40,7 +40,8 @@ def test_model_cannot_create_asset_deposit_with_receive_operations():
 def test_model_currency_conversion_required_in_foreign_currency():
     data = copy.deepcopy(PROTO_DEPOSIT)
     data['type'] = 'ETF'
-    data['pricing'] = dict(
+    data['currency'] = dict(
+            name = "EUR",
             quoteId = PyObjectId()
         )
 

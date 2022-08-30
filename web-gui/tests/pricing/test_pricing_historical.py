@@ -133,8 +133,8 @@ def test_foreign_currency_with_no_features():
 def test_foreign_currency_deposit_with_no_features():
     asset = mocks.Asset(name="Test Asset", institution="Test", category="Directly quoted", type="Deposit")
     asset.currency("USD", setup_usd())
-    asset.operation('BUY', datetime(2022, 3, 10, 17), 5, 5, 5)
-    asset.operation('BUY', datetime(2022, 3, 11, 17), 5, 10, 5)
+    asset.operation('BUY', datetime(2022, 3, 10, 17), 5, 5, 5, D(3.5))
+    asset.operation('BUY', datetime(2022, 3, 11, 17), 5, 10, 5, D(3.5))
     asset = asset.model()
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:

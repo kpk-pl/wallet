@@ -1,41 +1,31 @@
-var assetAllocationCharts = Object.create(null);
+var apexAssetAllocationCharts = Object.create(null);
 
 $(function(){
-  for (let type of ['netpl', 'plpercent', 'summary', 'value', 'investment', 'share']) {
-    assetAllocationCharts[type] = new Chart(document.getElementById('assetAllocation_chart_' + type).getContext('2d'), {
-      type: 'line',
-      data: { labels: [], datasets: [] },
-      options: {
-        maintainAspectRatio: false,
-        responsive: true,
-        plugins: {
-          colorschemes: {
-            scheme: ((type == 'netpl' || type == 'plpercent' || type == 'summary') ? 'office.Frame6' : 'tableau.MillerStone11'),
-            fillAlpha: (type == 'summary' ? 0.8 : 1)
-          }
-        },
-        hover: { mode: 'nearest' },
-        tooltips: { enabled: true, },
-        scales: {
-          xAxes: [{
-            type: 'time',
-            time: { unit: 'day', displayFormats: { day: 'D MMM YY' } }
-          }],
-          yAxes: [{
-            stacked: (type != 'summary'),
-            scaleLabel: { display: true, labelString: (['plpercent', 'share'].includes(type) ? '%' : 'PLN') }
-          }]
-        }
+  function options(type) {
+    return jQuery.extend(true, {}, apexOptions, {
+      chart: {
+        stacked: ['value', 'investment', 'share'].includes(type)
+      },
+      stroke: {
+        width: ['value', 'investment', 'share'].includes(type) ? 0 : undefined
+      },
+      yaxis: {
+        decimalsInFloat: (['plpercent'].includes(type) ? 1 : (['share'].includes(type) ? 2 : 0)),
+        title: { text: (['plpercent', 'share'].includes(type) ? '%' : 'PLN') }
+      },
+      fill: {
+        opacity: ['summary'].includes(type) ? [0.6, 1] : (['value', 'investment', 'share'].includes(type) ? 1 : undefined)
       }
     });
+  }
+
+  for (let type of ['netpl', 'plpercent', 'summary', 'value', 'investment', 'share']) {
+    apexAssetAllocationCharts[type] = new ApexCharts(document.getElementById('assetAllocation_chart_' + type), options(type));
+    apexAssetAllocationCharts[type].render();
   }
 });
 
 function updateAllocationCharts(data){
-  for (let [type, chart] of Object.entries(assetAllocationCharts)) {
-    chart.data.labels = data.t
-  }
-
   function category(asset) {
     if (asset.subcategory)
       return asset.subcategory + ' ' + asset.category;
@@ -69,55 +59,44 @@ function updateAllocationCharts(data){
   }
 
   for (let category in mapping) {
-    assetAllocationCharts.value.data.datasets.push({
-      data: mapping[category].value,
-      label: category,
-      cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+    apexAssetAllocationCharts.value.appendSeries({
+      name: category,
+      data: mapping[category].value.map((v, i) => { return {x: data.t[i], y: v}; })
     });
-    assetAllocationCharts.investment.data.datasets.push({
-      data: mapping[category].investment,
-      label: category,
-      cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+    apexAssetAllocationCharts.investment.appendSeries({
+      name: category,
+      data: mapping[category].investment.map((v, i) => { return {x: data.t[i], y: v}; })
     });
-    assetAllocationCharts.share.data.datasets.push({
-      data: mapping[category].value.map((v, i) => v/totals.value[i]*100),
-      label: category,
-      cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+    apexAssetAllocationCharts.share.appendSeries({
+      name: category,
+      data: mapping[category].value.map((v, i) => { return {x: data.t[i], y: v/totals.value[i]*100}; })
     });
   }
 
-  function safeRatio(nom, denom) {
-    if (denom == 0)
-      return 0;
-    return nom/denom;
-  }
-
-  assetAllocationCharts.summary.data.datasets.push({
-    data: totals.value,
-    label: 'Value',
-    cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+  apexAssetAllocationCharts.summary.appendSeries({
+    name: "Value",
+    type: "area",
+    data: totals.value.map((v, i) => { return {x: data.t[i], y: v}; })
   });
-  assetAllocationCharts.summary.data.datasets.push({
-    data: totals.investment,
-    label: 'Investment',
-    cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+  apexAssetAllocationCharts.summary.appendSeries({
+    name: "Investment",
+    type: "line",
+    data: totals.investment.map((v, i) => { return {x: data.t[i], y: v}; })
   });
 
   const netPlAdjust = totals.value[0] + totals.profit[0] - totals.investment[0];
-  assetAllocationCharts.netpl.data.datasets.push({
-    data: totals.value.map((v, i) => v + totals.profit[i] - totals.investment[i] - netPlAdjust),
-    label: 'Net P/L',
-    cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+  apexAssetAllocationCharts.netpl.appendSeries({
+    name: "Net P/L",
+    data: totals.value.map((v, i) => { return {x: data.t[i], y: (v + totals.profit[i] - totals.investment[i] - netPlAdjust)}; })
   });
+
+  function safeRatio(nom, denom) {
+    return (denom == 0) ? 0 : nom/denom;
+  }
 
   const plPercentAdjust = safeRatio(totals.value[0] + totals.profit[0] - totals.investment[0], totals.investment[0]);
-  assetAllocationCharts.plpercent.data.datasets.push({
-    data: totals.value.map((v, i) => (safeRatio(v + totals.profit[i] - totals.investment[i], totals.investment[i]) - plPercentAdjust) * 100),
-    label: '% P/L',
-    cubicInterpolationMode: 'monotone', pointRadius: 0, borderWidth: 1
+  apexAssetAllocationCharts.plpercent.appendSeries({
+    name: "% P/L",
+    data: totals.value.map((v, i) => { return {x: data.t[i], y: (safeRatio(v + totals.profit[i] - totals.investment[i], totals.investment[i]) - plPercentAdjust) * 100}; })
   });
-
-  for (let [type, chart] of Object.entries(assetAllocationCharts)) {
-    chart.update();
-  }
 }

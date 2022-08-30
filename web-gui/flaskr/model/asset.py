@@ -61,7 +61,7 @@ class Asset(BaseModel):
 
     @validator('operations', each_item=True)
     def check_each_op_has_currency_conversion_when_asset_in_foreign_currency(cls, op, values):
-        if 'pricing' in values and values['pricing'] is not None and isinstance(values['pricing'], AssetPricingQuotes):
+        if 'currency' in values and values['currency'] is not None and values['currency'].quoteId is not None:
             if op.currencyConversion is None:
                 raise ValueError("Operation must have currency conversion specified for assets in foreign currency")
         return op
