@@ -61,8 +61,8 @@ def index():
 
         weakAssets = list(db.get_db().assets.aggregate(
             _getPipeline(timerange['periodStart'], timerange['periodEnd'], session.label())))
-
         assets = [Asset(**a) for a in weakAssets]
+
         breakdown = sum([Operations(asset.currency.name)(asset.operations, asset) for asset in assets], [])
         breakdown = [op for op in breakdown if op.date >= timerange['periodStart'] and op.date <= timerange['periodEnd'] and (op.closedPositionInfo or op.earningInfo)]
         breakdown.sort(key=lambda op: op.date)
@@ -73,7 +73,6 @@ def index():
         assetData = []
         for asset in assets:
             data = dict()
-            assetData.append(data)
 
             data['asset'] = asset
 
@@ -82,6 +81,9 @@ def index():
 
             data['profits'] = profits(asset, debug=data['debug']['profits'] if session.isDebug() else None)
             data['period'] = period(asset, data['profits'], debug=data['debug']['period'] if session.isDebug() else None)
+
+            if not data['period'].profits.isZero():
+                assetData.append(data)
 
         return render_template("results/index.html",
                                assetData=assetData,

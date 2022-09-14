@@ -138,6 +138,9 @@ class Profits:
         if self._result.investmentStart is not None:
             self._result.holdingDays = (self._currentDate - self._result.investmentStart).days
 
+        if self._debug is not None:
+            self._debug["result"] = asdict(self._result)
+
         return self._result
 
     def _buy(self, operation:model.AssetOperation, assetType:model.AssetType):

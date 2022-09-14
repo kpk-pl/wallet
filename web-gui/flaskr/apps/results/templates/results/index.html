@@ -71,8 +71,12 @@
                 <th>Institution</th>
                 <th>Category</th>
                 <th>Volume change</th>
-                <th title="Profits from all positions closed within the selected timeframe">Cash profit <span class="smaller">[PLN]</span></th>
-                <th title="Asset value change within the selected timeframe with new investments deduced and cash profits added">Total profit <span class="smaller">[PLN]</span></th>
+                <th title="Profits from all positions closed within the selected timeframe">
+                  Cash profit <span class="smaller">[{{currencyMain}}]</span>
+                </th>
+                <th title="Asset value change within the selected timeframe with new investments deduced and cash profits added">
+                  Total profit <span class="smaller">[{{currencyMain}}]</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -91,15 +95,8 @@
                   {%- if data.asset.trashed %}
                   </del>
                   {%- endif %}
-									{% if data.asset.link -%}
-									<a href="{{data.asset.link}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="External asset site">
-										<i class="fas fa-chart-line fa-fw fa-pull-right"></i>
-									</a>
-									{% else -%}
-									<i class="fas fa-fw fa-pull-right"></i>
-									{% endif %}
                   {%- if session['debug'] -%}
-                  <a href="#modalDebug_{{ data.asset._id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ data.asset._id }}">
+                  <a href="#modalDebug_{{ data.asset.id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ data.asset.id }}">
                     <i class="fas fa-fw fa-bug fa-pull-right"></i>
                   </a>
                   {%- endif -%}
@@ -119,14 +116,16 @@
                 <td data-title="Volume change" class="text-right">{{ (data.period.finalQuantity - data.period.initialQuantity) | withSign }}</td>
                 <td data-title="Cash profit" class="text-right color-gain">
                   {%- if not data.period.error -%}
-                  {%- if (data.period.profits.netValue - data.period.profits.provisions) != 0 -%}
-                  {{ (data.period.profits.netValue - data.period.profits.provisions) | asCurrency(currencyMain, false) }}
+                  {%- if (data.period.profits.netProfit - data.period.profits.provisions) != 0 -%}
+                  {{ (data.period.profits.netProfit - data.period.profits.provisions) | asCurrency(currencyMain, false) }}
                   {%- endif -%}
                   {%- endif -%}
                 </td>
                 <td data-title="Total profit" class="text-right color-gain">
                   {%- if not data.period.error -%}
-                  {{ (data.period.profits.total - data.period.profits.provisions) | asCurrency(currencyMain, false) }}
+                  {%- if (data.period.profits.totalNetProfit - data.period.profits.provisions) != 0 -%}
+                  {{ (data.period.profits.totalNetProfit - data.period.profits.provisions) | asCurrency(currencyMain, false) }}
+                  {%- endif -%}
                   {%- endif -%}
                 </td>
               </tr>
@@ -140,10 +139,9 @@
                 <th data-title="Category"></th>
                 <th data-title="Volume change"></th>
                 <th data-title="Cash profit" class="text-right color-gain">
-                  {{- (assetData | sum(attribute='period.profits.netValue') - assetData | sum(attribute='period.profits.provisions')) | asCurrency(currencyMain, false) -}}
+                  {{- (assetData | sum(attribute='period.profits.netProfit') - assetData | sum(attribute='period.profits.provisions')) | asCurrency(currencyMain, false) -}}
                 </th>
                 <th data-title="Total profit" class="text-right color-gain">
-                  {{- (assetData | sum(attribute='period.profits.total') - assetData | sum(attribute='period.profits.provisions')) | asCurrency(currencyMain, false) -}}
                 </th>
               </tr>
             </tfoot>
@@ -246,18 +244,18 @@
     </div>
   </div>
 </div>
-{%- for asset, periodInfo, debugData in assetData %}
-<div class="modal fade" id="modalDebug_{{ asset._id }}">
+{%- for data in assetData %}
+<div class="modal fade" id="modalDebug_{{ data.asset.id }}">
 	<div class="modal-dialog">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h4 class="modal-title">{{ asset._id }}</h4>
+				<h4 class="modal-title">{{ data.asset.id }}</h4>
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 					<span aria-hidden="true">&times;</span>
 				</button>
 			</div>
 			<div class="modal-body">
-        <pre>{{ debugData | toJson(indent=4) }}</pre>
+        <pre>{{ data.debug | simplify | toJson(indent=4) }}</pre>
 			</div>
 			<div class="modal-footer justify-content-between">
 				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
