@@ -244,6 +244,7 @@
     </div>
   </div>
 </div>
+{%- if session['debug'] -%}
 {%- for data in assetData %}
 <div class="modal fade" id="modalDebug_{{ data.asset.id }}">
 	<div class="modal-dialog">
@@ -264,4 +265,5 @@
 	</div>
 </div>
 {%- endfor %}
+{%- endif %}
 {% endblock %}

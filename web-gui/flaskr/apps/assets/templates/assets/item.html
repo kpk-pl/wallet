@@ -15,8 +15,8 @@
 <script type="text/javascript" src="{{ url_for('.static', filename='assets/item.js') }}"></script>
 <script type="text/javascript">
   function onTrash() {
-    $.post('{{ url_for('assets.trash', id=asset._id) }}', success=function(data){
-      location.href='{{ url_for('assets.index') }}'
+    $.post('{{ url_for('assets.trash', id=asset.id) }}', success=function(data){
+      location.href='{{ url_for('assets.index', label=session['label']) }}'
     })
   }
 </script>
