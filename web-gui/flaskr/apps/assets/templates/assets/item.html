@@ -216,9 +216,7 @@
                 {%- if asset.type != 'Deposit' %}
                 <td data-title="Price">{{ operation.price }}</td>
                 <td data-title="Unit price">
-                  {%- if operation.quantity %}
-                  {{ operation.price/operation.quantity | round(3) }}
-                  {%- endif %}
+                  {{ operation.unitPrice | asCurrency(asset.currency.name, False) }}
                 </td>
                 {%- endif %}
                 {% if asset.currency.name != currencyMain -%}

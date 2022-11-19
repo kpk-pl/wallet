@@ -1,12 +1,13 @@
 from flask import render_template, request
 from flaskr import db, header, utils
 from flaskr.session import Session
-from flaskr.analyzers import Profits, Period, Operations
-from flaskr.model import Asset
+from flaskr.analyzers import Profits, Period
+from flaskr.model import Asset, AssetOperation
 import time
 from datetime import datetime, date
 from bson.objectid import ObjectId
 import itertools
+from dataclasses import dataclass
 
 
 def _getPipeline(startDate, finalDate, label = None):
@@ -46,6 +47,21 @@ def _getPipeline(startDate, finalDate, label = None):
     return pipeline
 
 
+@dataclass
+class AssetData:
+    asset: Asset
+    profits: Profits.Result
+    period: Period.Result
+    debug: dict
+
+
+@dataclass
+class BreakdownElement:
+    asset: Asset
+    operation: AssetOperation
+    breakdown: Profits.Result.Breakdown
+
+
 def index():
     if request.method == 'GET':
         session = Session(['label', 'debug'])
@@ -59,35 +75,34 @@ def index():
             'periodEnd': min(datetime(int(rangeName) + 1, 1, 1), datetime.now())
         }
 
-        weakAssets = list(db.get_db().assets.aggregate(
-            _getPipeline(timerange['periodStart'], timerange['periodEnd'], session.label())))
-        assets = [Asset(**a) for a in weakAssets]
+        pipeline = _getPipeline(timerange['periodStart'], timerange['periodEnd'], session.label())
+        assets = [Asset(**a) for a in db.get_db().assets.aggregate(pipeline)]
 
-        breakdown = sum([Operations(asset.currency.name)(asset.operations, asset) for asset in assets], [])
-        breakdown = [op for op in breakdown if op.date >= timerange['periodStart'] and op.date <= timerange['periodEnd'] and (op.closedPositionInfo or op.earningInfo)]
-        breakdown.sort(key=lambda op: op.date)
-
-        profits = Profits()
-        period = Period(timerange['periodStart'], timerange['periodEnd'])
+        profitsAnalyzer = Profits()
+        periodAnalyzer = Period(timerange['periodStart'], timerange['periodEnd'])
 
         assetData = []
         for asset in assets:
-            data = dict()
-
-            data['asset'] = asset
-
+            debug = None
             if session.isDebug():
-                data['debug'] = dict(profits=dict(), period=dict())
+                debug = dict(profits=dict(), period=dict())
 
-            data['profits'] = profits(asset, debug=data['debug']['profits'] if session.isDebug() else None)
-            data['period'] = period(asset, data['profits'], debug=data['debug']['period'] if session.isDebug() else None)
+            profits = profitsAnalyzer(asset, debug=debug['profits'] if session.isDebug() else None)
+            period = periodAnalyzer(asset, profits, debug=debug['period'] if session.isDebug() else None)
 
-            if not data['period'].profits.isZero():
-                assetData.append(data)
+            if not period.profits.isZero():
+                assetData.append(AssetData(asset, profits, period, debug))
+
+        operationsBreakdown = []
+        for data in assetData:
+            for op, bdown in zip(data.asset.operations, data.profits.breakdown):
+                if op.date >= timerange['periodStart'] and op.date <= timerange['periodEnd'] and bdown.profit > 0:
+                    operationsBreakdown.append(BreakdownElement(data.asset, op, bdown))
+
 
         return render_template("results/index.html",
                                assetData=assetData,
-                               operationBreakdown=breakdown,
+                               operationsBreakdown=operationsBreakdown,
                                timerange=timerange,
                                header=header.data(showLabels=True)
                                )

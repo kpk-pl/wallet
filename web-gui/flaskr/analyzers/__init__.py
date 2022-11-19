@@ -9,7 +9,6 @@ def _printJson(data):
     print(dumps(data, indent=2))
 
 
-from .operations import Operations
 from .profits import Profits
 from .period import Period
 from .categories import Categories

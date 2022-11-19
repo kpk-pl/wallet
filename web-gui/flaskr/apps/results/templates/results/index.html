@@ -179,61 +179,51 @@
               </tr>
             </thead>
             <tbody>
-              {% for operation in operationBreakdown -%}
+              {% for element in operationsBreakdown -%}
               <tr>
-                <td data-title="Date">{{ operation.date }}</td>
+                <td data-title="Date">{{ element.operation.date }}</td>
                 <td data-title="Asset">
-                  <a href="{{ url_for('assets.index', id=operation.asset.id) }}">
-                    {{ operation.asset.name }}
+                  <a href="{{ url_for('assets.index', id=element.asset.id) }}">
+                    {{ element.asset.name }}
                   </a>
                 </td>
-                <td data-title="Type" data-order="{{ operation.type.value }}">
-                  <span class="badge badge-info badge-op-{{ operation.type.value }}">
-                    {{ operation.type | operationDisplayString(operation.asset.type) }}
+                <td data-title="Type" data-order="{{ element.operation.type.value }}">
+                  <span class="badge badge-info badge-op-{{ element.operation.type.value }}">
+                    {{ element.operation.type | operationDisplayString(element.asset.type) }}
                   </span>
                 </td>
-                <td data-title="Institution">{{ operation.asset.institution }}</td>
-                {%- if operation.closedPositionInfo %}
-                <td data-title="Open price" class="text-right" data-order="{{ operation.closedPositionInfo.matchingOpenNetPrice }}"
-                  {%- if operation.asset.currency != currencyMain %}
-                    title="{{ operation.closedPositionInfo.matchingOpenNetPrice | asCurrency(currencyMain) }}"
-                  {%- endif %}
-                  >{{ operation.closedPositionInfo.matchingOpenPrice | asCurrency(operation.asset.currency) }}
+                <td data-title="Institution">{{ element.asset.institution }}</td>
+                {%- if element.operation.type != "EARNING" %}
+                <td data-title="Open price" class="text-right"
+                    data-order="{{ element.breakdown.avgNetPrice * element.operation.quantity|valueOr(1) }}"
+                    title="{{ (element.breakdown.avgNetPrice * element.operation.quantity|valueOr(1)) | asCurrency(currencyMain) }} @ {{ element.breakdown.avgPrice | asCurrency(element.asset.currency.name) }}"
+                  >{{ (element.breakdown.avgPrice * element.operation.quantity|valueOr(1)) | asCurrency(element.asset.currency.name) }}
                 </td>
-                <td data-title="Close price" class="text-right" data-order="{{ operation.price }}"
-                  {%- if operation.asset.currency != currencyMain %}
-                    title="{{ operation.netPrice | asCurrency(currencyMain) }}"
-                  {%- endif %}
-                  >{{ operation.price | asCurrency(operation.asset.currency) }}
+                <td data-title="Close price" class="text-right"
+                    data-order="{{ element.operation.baseCurrencyPrice }}"
+                    title="{{ element.operation.baseCurrencyPrice | asCurrency(currencyMain) }} @ {{ element.operation.unitPrice | asCurrency(element.asset.currency.name) }}"
+                  >{{ element.operation.price | asCurrency(element.asset.currency.name) }}
                 </td>
-                {%- else %}
-                <td data-title="Open price" data-order="0"></td>
-                <td data-title="Close price" data-order="0"></td>
-                {%- endif %}
-                {%- if operation.earningInfo %}
-                <td data-title="Earnings" class="text-right" data-order="{{ operation.earningInfo.earning }}"
-                  {%- if operation.asset.currency != currencyMain %}
-                    title="{{ operation.earningInfo.netEarning | asCurrency(currencyMain) }}"
-                  {%- endif %}
-                  >{{ operation.earningInfo.earning | asCurrency(operation.asset.currency) }}
-                </td>
-                {%- else %}
                 <td data-title="Earnings" data-order="0"></td>
+                {%- else %}
+                <td data-title="Open price" class="text-right" data-order="0"></td>
+                <td data-title="Close price" class="text-right" data-order="0"></td>
+                <td data-title="Earnings" data-order="{{ element.operation.price }}">
+                  {{ element.operation.price | asCurrency(element.asset.currency.name) }}
+                </td>
                 {%- endif %}
-                {%- set provision = (operation.provision + (operation.closedPositionInfo.matchingOpenProvision if operation.closedPositionInfo else 0)) %}
-                <td data-title="Provisions" class="text-right" data-order="{{ provision }}">
-                  {%- if provision > 0 %}
-                    {{ provision | asCurrency(currencyMain) }}
+                <td data-title="Provisions" class="text-right" data-order="{{ element.operation.provision }}">
+                  {%- if element.operation.provision > 0 %}
+                    {{ element.operation.provision | asCurrency(currencyMain) }}
                   {%- endif %}
                 </td>
-                <td data-title="Profit" class="text-right color-gain" data-order="{{ operation.profit }}"
-                  {%- if operation.asset.currency != currencyMain %}
-                    title="{{ operation.netProfit | asCurrency(currencyMain) }}"
-                  {%- endif %}
-                  >{{ operation.profit | asCurrency(operation.asset.currency) }}
+                <td data-title="Profit" class="text-right color-gain"
+                    data-order="{{ element.breakdown.netProfit }}"
+                    title="{{ element.breakdown.netProfit | asCurrency(currencyMain) }}"
+                  >{{ element.breakdown.profit | asCurrency(element.asset.currency.name) }}
                 </td>
-                <td data-title="Total Net Profit" class="text-right color-gain" data-order="{{ operation.totalNetProfit }}">
-                  {{ operation.totalNetProfit | asCurrency(currencyMain) }}
+                <td data-title="Total Net Profit" class="text-right color-gain" data-order="{{ element.breakdown.netProfit - element.operation.provision|valueOr(0) }}">
+                  {{ (element.breakdown.netProfit - element.operation.provision|valueOr(0)) | asCurrency(currencyMain) }}
                 </td>
               </tr>
               {%- endfor %}

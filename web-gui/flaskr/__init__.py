@@ -64,7 +64,7 @@ def create_app(test_config=None):
     @app.template_filter()
     def asCurrency(value, currency, withSymbol=True):
         from babel.numbers import format_currency
-        return format_currency(value, currency, format=u'#.##0.00 ¤¤' if withSymbol else u'#.##0.00')
+        return format_currency(float(value), currency, format=u'#.##0.00 ¤¤' if withSymbol else u'#.##0.00')
 
     @app.template_filter()
     def operationDisplayString(operation, assetType):
@@ -74,6 +74,12 @@ def create_app(test_config=None):
     def simplify(model):
         from flaskr.utils import simplifyModel
         return simplifyModel(model)
+
+    @app.template_filter()
+    def valueOr(optValue, default):
+        if optValue is not None:
+            return optValue
+        return default
 
     @app.context_processor
     def urlProcessor():
