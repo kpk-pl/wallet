@@ -23,7 +23,7 @@
 {% if quoteHistory %}
 <script type="text/javascript">
   const data = {{ quoteHistory.data | tojson }};
-  const operations = {{ operations | simplify | tojson }};
+  const operations = {{ asset.operations | simplify | tojson }};
 
   setupChart('{{ asset.name | safe }}', '{{ asset.currency.name }}', data, operations);
 </script>
@@ -181,7 +181,7 @@
         </div>
         <div class="card-body">
           <table class="table table-bordered">
-            {% set operationsHaveOrderIds = (operations | selectattr('orderId') | list | count) -%}
+            {% set operationsHaveOrderIds = (asset.operations | selectattr('orderId') | list | count) -%}
             <thead>
               <tr>
                 <th style="width: 10px">#</th>
@@ -203,9 +203,9 @@
               </tr>
             </thead>
             <tbody>
-              {% for operation in operations | reverse -%}
+              {% for operation in asset.operations | reverse -%}
               <tr>
-                <td data-title="#">{{ operations|length - loop.index + 1 }}</td>
+                <td data-title="#">{{ asset.operations|length - loop.index + 1 }}</td>
                 <td data-title="Date">{{ operation.date }}</td>
                 <td data-title="Type">
                   <span class="badge badge-info badge-op-{{ operation.type.value }}">
@@ -216,8 +216,8 @@
                 {%- if asset.type != 'Deposit' %}
                 <td data-title="Price">{{ operation.price }}</td>
                 <td data-title="Unit price">
-                  {%- if operation.unitPrice %}
-                  {{ operation.unitPrice | round(3) }}
+                  {%- if operation.quantity %}
+                  {{ operation.price/operation.quantity | round(3) }}
                   {%- endif %}
                 </td>
                 {%- endif %}

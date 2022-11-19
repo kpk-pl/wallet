@@ -1,6 +1,6 @@
 from flask import render_template, request
 from flaskr import db, header
-from flaskr.analyzers import Profits, Operations
+from flaskr.analyzers import Profits
 from flaskr.model import Asset, QuoteHistoryItem
 from bson.objectid import ObjectId
 from datetime import datetime
@@ -47,12 +47,10 @@ def item():
 
         asset = Asset(**assets[0])
         quoteHistory = QuoteHistoryData(**assets[0]['quoteInfo'][0]) if assets[0]['quoteInfo'] else None
-        operations = Operations(asset.currency)(asset.operations)
         profitInfo = Profits()(asset)
 
         return render_template("assets/item.html",
                                asset=asset,
                                quoteHistory=quoteHistory,
                                profitInfo=profitInfo,
-                               operations=operations,
                                header=header.data())
