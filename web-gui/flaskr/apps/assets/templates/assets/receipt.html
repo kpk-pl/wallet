@@ -17,6 +17,7 @@
 <script type="text/javascript" src="{{ url_for('.static', filename='assets/receipt.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('.static', filename='assets/receipt_logic.js') }}"></script>
 <script type="text/javascript">
+setupDatetimePicker('{{ data.suggestedDate }}');
 setupForm({
   initQuantity: {{ asset.finalQuantity }},
   currency: '{{ asset.currency.name }}',
@@ -44,7 +45,7 @@ setupForm({
             <dt class="col-sm-3">Name</dt>
             <dd class="col-sm-9">{{ asset.name }}</dd>
             <dt class="col-sm-3">Type</dt>
-            <dd class="col-sm-9">{{ asset.type }}</dd>
+            <dd class="col-sm-9">{{ asset.type | simplify }}</dd>
             {% if asset.ticker -%}
             <dt class="col-sm-3">Ticker</dt>
             <dd class="col-sm-9">{{ asset.ticker }}</dd>
@@ -153,7 +154,7 @@ setupForm({
                     <div class="input-group-prepend">
                       <span class="input-group-text">{{ asset.currency.name }}</span>
                     </div>
-                    <input type="number" value="{{ asset.lastQuote if asset.lastQuote else 0 }}" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-unit-price" name="unit-price" required/>
+                    <input type="number" value="{{ data.lastQuote if data.lastQuote else 0 }}" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-unit-price" name="unit-price" required/>
                   </div>
                 </div>
               </div>
@@ -176,7 +177,7 @@ setupForm({
               <div class="col-12">
                 <div class="form-group" id="g-conversion">
                   <label for="f-conversion">Currency rate {{ asset.currency.name }}/{{ currencyMain }}</label>
-                  <input type="number" value="{{ asset.lastCurrencyRate if asset.lastCurrencyRate else 0 }}" step="any" id="f-conversion" class="form-control" name="currencyConversion" required/>
+                  <input type="number" value="{{ data.lastCurrencyRate if data.lastCurrencyRate else 0 }}" step="any" id="f-conversion" class="form-control" name="currencyConversion" required/>
                 </div>
               </div>
             </div>
@@ -209,7 +210,7 @@ setupForm({
                   <label for="f-billing-asset">Billing asset acount</label>
                   <select id="f-billing-asset" name="billingAsset" class="custom-select">
                     <option value="" hidden disabled selected value></option>
-                    {%- for account in depositAccounts %}
+                    {%- for account in data.depositAccounts %}
                     <option value="{{ account._id }}">{{ account.name }} [{{ account.currency.name }}] in {{ account.institution }}</option>
                     {%- endfor %}
                   </select>

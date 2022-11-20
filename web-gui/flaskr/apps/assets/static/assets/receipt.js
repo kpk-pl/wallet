@@ -1,8 +1,10 @@
 "use strict";
 
-$(function(){
+function setupDatetimePicker(defaultDate){
+  $("#f-date").val(defaultDate);
+
   $('#f-date-group').datetimepicker({
-    locale: 'pl',
-    format: 'YYYY-MM-DD HH:mm:ss',
+    locale: typing.datetimeLocale,
+    format: typing.datetimeFormat,
   });
-});
+};

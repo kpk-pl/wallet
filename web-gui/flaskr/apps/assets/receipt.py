@@ -3,7 +3,9 @@ from flaskr import db, header, typing
 from flaskr.session import Session
 from bson.objectid import ObjectId
 import bson.errors
+from datetime import datetime
 from dateutil import parser
+from flaskr.model import Asset, AssetPricingQuotes
 
 
 def _parseNumeric(value):
@@ -28,55 +30,53 @@ def _receiptGet():
         return ({"error": "No id provided in request"}, 400)
 
     pipeline = [
-        { "$match" : { "_id" : ObjectId(id) } },
-        { "$project" : {
-            '_id': 1,
-            'name': 1,
-            'pricing': 1,
-            'type': 1,
-            'ticker': 1,
-            'institution': 1,
-            'currency': 1,
-            'labels': 1,
-            'link': 1,
-            'hasOrderIds': 1,
-            'finalQuantity': { '$ifNull': [{ '$last': '$operations.finalQuantity' }, 0] }
-        }}
+        { "$match" : { "_id" : ObjectId(id) } }
     ]
 
     assets = list(db.get_db().assets.aggregate(pipeline))
     if not assets:
         return ({"error": "Could not find asset"}, 404)
 
-    asset = assets[0]
+    asset = Asset(**assets[0])
+    data = dict()
 
-    if 'pricing' in asset and 'quoteId' in asset['pricing']:
+    if isinstance(asset.pricing, AssetPricingQuotes) and asset.pricing.quoteId is not None:
         quote = list(db.get_db().quotes.aggregate([
-            {'$match': {'_id': ObjectId(asset['pricing']['quoteId'])}},
+            {'$match': {'_id': ObjectId(asset.pricing.quoteId)}},
             {'$project': {'lastQuote': {'$last': '$quoteHistory.quote'}}}
         ]))
         if quote and 'lastQuote' in quote[0]:
-            asset['lastQuote'] = quote[0]['lastQuote']
+            data['lastQuote'] = quote[0]['lastQuote']
 
-    if asset['currency']['name'] != typing.Currency.main:
+    if asset.currency.name != typing.Currency.main:
         quote = list(db.get_db().quotes.aggregate([
-            {'$match': {'_id': ObjectId(asset['currency']['quoteId'])}},
+            {'$match': {'_id': ObjectId(asset.currency.quoteId)}},
             {'$project': {'lastQuote': {'$last': '$quoteHistory.quote'}}}
         ]))
         if quote:
-            asset['lastCurrencyRate'] = quote[0]['lastQuote']
+            data['lastCurrencyRate'] = quote[0]['lastQuote']
 
-    depositAccounts = list(db.get_db().assets.aggregate([
+    data['depositAccounts'] = list(db.get_db().assets.aggregate([
         {'$match': {
             'trashed': {'$ne': True},
             'type': 'Deposit',
             'category': 'Cash',
-            '_id': {'$ne': asset['_id']},
-            'currency.name': {'$in': [asset['currency']['name'], typing.Currency.main]},
+            '_id': {'$ne': asset.id},
+            'currency.name': {'$in': [asset.currency.name, typing.Currency.main]},
         }}
     ]))
 
-    return render_template("assets/receipt.html", asset=asset, depositAccounts=depositAccounts, header=header.data())
+    suggestedDate = datetime.now()
+    operationDates = list(set([op.date for op in asset.operations]))
+    if len(operationDates) == 1:
+        suggestedDate = suggestedDate.replace(hour=operationDates[0].hour, minute=operationDates[0].minute, second=operationDates[0].second)
+
+    data['suggestedDate'] = suggestedDate.strftime('%Y-%m-%d %H:%M:%S')
+
+    return render_template("assets/receipt.html",
+                           asset=asset,
+                           data=data,
+                           header=header.data())
 
 
 class ReceiptError(RuntimeError):

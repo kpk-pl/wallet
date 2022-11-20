@@ -12,11 +12,6 @@ var formState = {
 function setupForm(settings) {
   formSettings = settings;
 
-  $("#f-date").val(function(d){
-    return d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2) + " " +
-      ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2) + ":" + ("0" + d.getSeconds()).slice(-2);
-  }(new Date()));
-
   $("form").validate({
     submitHandler: function(){
       $.post(formSettings.submitUrl, $('form').serialize(), function(data) {

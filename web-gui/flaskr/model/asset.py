@@ -37,6 +37,12 @@ class Asset(BaseModel):
     trashed: bool = False
     hasOrderIds: bool = False
 
+    @property
+    def finalQuantity(self):
+        if self.operations:
+            return self.operations[-1].finalQuantity
+        return 0
+
     @validator('operations', each_item=True)
     def check_no_receive_ops_for_deposit(cls, op, values):
         if 'type' in values and values['type'] == AssetType.deposit:
