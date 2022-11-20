@@ -8,6 +8,8 @@ from flaskr.analyzers.aggregate import aggregate
 from flaskr.pricing import Context, Pricing
 from flaskr.utils import jsonify
 from decimal import Decimal
+from dataclasses import dataclass
+from typing import Optional
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -41,6 +43,15 @@ def _getPipeline(label = None):
     return pipeline
 
 
+@dataclass
+class WalletData:
+    asset: Asset
+    profits: Profits.Result
+    debug: Optional[dict]
+    netValue: Optional[Decimal]
+    quantity: Optional[Decimal]
+
+
 def wallet():
     session = Session(['label', 'debug'])
     headerData = header.HeaderData(showLabels = True)
@@ -50,36 +61,28 @@ def wallet():
     for aggrType in aggregation:
         assets = aggregate(assets, aggrType)
 
-    profits = Profits()
+    profitsAnalyzer = Profits()
     pricing = Pricing()
-    pricingQuarterAgo = Pricing(Context(finalDate = datetime.now() - relativedelta(months=3)))
 
     assetData = []
     for rawAsset in assets:
-        data = dict()
-        assetData.append(data)
-
         asset = Asset(**rawAsset)
-        data['asset'] = asset
+        debug = None
 
         if session.isDebug():
-            data['debug'] = dict(pricing=dict(), quarterAgoPricing=dict(), profits=dict())
+            debug = dict(pricing=dict(), quarterAgoPricing=dict(), profits=dict())
 
-        netValue, quantity = pricing(asset, debug=data['debug']['pricing'] if session.isDebug() else None)
-        data['netValue'] = netValue
-        data['quantity'] = quantity
+        netValue, quantity = pricing(asset, debug=debug['pricing'] if session.isDebug() else None)
 
-        if netValue is not None:
-            quarterAgoValue, quarterAgoQuantity = pricingQuarterAgo(asset, debug=data['debug']['quarterAgoPricing'] if session.isDebug() else None)
-            if quarterAgoValue is not None and quarterAgoQuantity > 0:
-                data['quarterValueChange'] = (netValue/quantity - quarterAgoValue/quarterAgoQuantity) / (quarterAgoValue/quarterAgoQuantity)
-        else:
+        if netValue is None:
             headerData.warnings.append(f"Could not determine current value of '{asset.name}'")
 
-        data['profits'] = profits(asset, debug=data['debug']['profits'] if session.isDebug() else None)
+        profits = profitsAnalyzer(asset, debug=debug['profits'] if session.isDebug() else None)
+        assetData.append(WalletData(asset, profits, debug, netValue, quantity))
 
-    for i in range(len(assets)):
-        assets[i]['_netValue'] = assetData[i]['netValue']
+    for asset, data in zip(assets, assetData):
+        asset['_netValue'] = data.netValue
+
     try:
         categoryAllocation = Categories()(assets)
     except RuntimeError as err:

@@ -30,7 +30,7 @@
 
   $(function(){
     $.getJSON("{{ url_for('wallet.strategy', allocation='true', label=session['label']) | safe }}", updateStrategyAllocation);
-    $.getJSON("{{ url_for('assets.historicalValue', daysBack=180, label=session['label'], investedValue=true) | safe }}", historicalValueDone);
+    $.getJSON("{{ url_for('assets.historicalValue', daysBack=360, label=session['label'], investedValue=true) | safe }}", historicalValueDone);
   });
 </script>
 {% endblock %}
@@ -47,12 +47,18 @@
 {%- set totalNetValue = (assetData | map(attribute='netValue') | select('number') | sum()) %}
 {%- set hasAllNetValues = (assetData | map(attribute='netValue') | select('none') | list | length) == 0 -%}
 {%- set totalStillInvestedNetValue = namespace(value=0) %}
+{%- set totalNetProfit = namespace(value=0) %}
+{%- set totalProvisions = namespace(value=0) %}
 {%- for data in assetData %}
   {%- if data.profits.breakdown %}
     {%- set totalStillInvestedNetValue.value = totalStillInvestedNetValue.value + data.profits.breakdown[-1].netInvestment %}
+    {%- set totalNetProfit.value = totalNetProfit.value + data.profits.netProfit %}
+    {%- set totalProvisions.value = totalProvisions.value + data.profits.provisions %}
   {%- endif %}
 {%- endfor %}
 {%- set totalStillInvestedNetValue = totalStillInvestedNetValue.value %}
+{%- set totalNetProfit = totalNetProfit.value %}
+{%- set totalProvisions = totalProvisions.value %}
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
@@ -79,6 +85,7 @@
                 <th>Quaterly change</th>
                 <th>Investment <span class="smaller">[PLN]</span></th>
                 <th>Value <span class="smaller">[PLN]</span></th>
+                <th>Total value <span class="smaller">[PLN]</span></th>
                 <th>Share</th>
                 <th>Net P/L</th>
               </tr>
@@ -120,20 +127,18 @@
                   {{- asset.category -}}
                 </td>
                 <td data-title="Region">{{ asset.region }}</td>
-                <td data-title="Holding period" class="text-right">{{ asset._holdingDays }}</td>
-                <td data-title="Quaterly change" data-order="{{ data.quarterValueChange if data.quarterValueChange else 0 }}">
-                  <span id="sparkline-{{ asset.id }}">
-                  </span>
-                  <span class="text-right color-gain float-right">
-                  {%- if data.quarterValueChange -%}
-                  {{ (data.quarterValueChange * 100) | round(2) }}%
-                  {%- endif -%}
-                  </span>
+                <td data-title="Holding period" class="text-right">{{ data.profits.holdingDays }}</td>
+                <td data-title="Quaterly change" data-order="0" id="sparkline-{{ asset.id }}">
+                  <span class="sparkline"></span>
+                  <span class="value text-right color-gain float-right"></span>
                 </td>
                 {%- set netInvestment = data.profits.breakdown[-1].netInvestment %}
                 <td data-title="Investment" class="text-right">{{ netInvestment | asCurrency(config.MAIN_CURRENCY, False) }}</td>
                 {%- if data.netValue %}
                   <td data-title="Value" class="text-right">{{ data.netValue | asCurrency(config.MAIN_CURRENCY, False) }}</td>
+                  <td data-title="Total value" class="text-right">
+                    {{ (data.netValue + data.profits.netProfit - data.profits.provisions) | asCurrency(config.MAIN_CURRENCY, False) }}
+                  </td>
                   <td data-title="Share" class="text-right">{{ (data.netValue / totalNetValue * 100) | roundFixed(1) }}%</td>
                   <td data-title="Net P/L" class="text-right color-gain">
                     {%- if netInvestment > 0 -%}
@@ -146,6 +151,7 @@
                   <td data-title="Value" class="text-right">
                     <i class="fas fa-exclamation-triangle fa-fw" style="{{ config.STYLING.WARNING_EXCLAMATION_TRIANGLE }}" title="Could not determine current value"></i>
                   </td>
+                  <td data-title="Total value" class="text-right"></td>
                   <td data-title="Share" class="text-right">
                     <i class="fas fa-exclamation-triangle fa-fw" style="{{ config.STYLING.WARNING_EXCLAMATION_TRIANGLE }}" title="Could not determine current value"></i>
                   </td>
@@ -167,7 +173,9 @@
                 <th class="text-right">{{ totalStillInvestedNetValue | asCurrency(config.MAIN_CURRENCY, False) }}</th>
                 {%- if hasAllNetValues %}
                   <th class="text-right">{{ totalNetValue | asCurrency(config.MAIN_CURRENCY, False) }}</th>
+                  <th class="text-right">{{ (totalNetValue + totalNetProfit - totalProvisions) | asCurrency(config.MAIN_CURRENCY, False) }}</th>
                 {%- else %}
+                  <th></th>
                   <th></th>
                 {%- endif %}
                 <th class="text-right">100%</th>

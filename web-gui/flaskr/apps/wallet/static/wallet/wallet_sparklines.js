@@ -11,7 +11,8 @@ function updateSparklines(historicalData, months, getter) {
   const fromIdx = historicalData.t.findIndex(t => new Date(t) >= timeRange)
 
   for (let asset of historicalData.assets) {
-    getter(asset).sparkline(
+    const element = getter(asset)
+    element.find(".sparkline").sparkline(
       asset.value.slice(fromIdx)
                  .map(parseFloat)
                  .map(
@@ -21,5 +22,11 @@ function updateSparklines(historicalData, months, getter) {
                      null
                  ), options
     );
+
+    const initialValue = parseFloat(asset.value[fromIdx]) + parseFloat(asset.profit[fromIdx]);
+    const finalValue = parseFloat(asset.value[asset.value.length-1]) + parseFloat(asset.profit[asset.value.length-1]);
+    element.find(".value").html(
+      ((finalValue - initialValue) / initialValue * 100.0).toFixed(2) + "%"
+    ).each(styling.colorGain);
   }
 }

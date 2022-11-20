@@ -17,9 +17,9 @@ $(function(){
     }],
     columnDefs: [
       { type: "string", targets: [0, 1, 2, 3] },
-      { type: "num-fmt", targets: [4, 5, 6, 7, 8, 9] },
+      { type: "num-fmt", targets: [4, 5, 6, 7, 8, 9, 10] },
       { orderable: false, targets: [] },
-      { visible: false, targets: [3, 4, 6] },
+      { visible: false, targets: [3, 4, 6, 7] },
     ],
   });
 
