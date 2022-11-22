@@ -67,7 +67,7 @@ def _receiptGet():
     ]))
 
     suggestedDate = datetime.now()
-    operationDates = list(set([op.date for op in asset.operations]))
+    operationDates = list(set([op.date.time() for op in asset.operations]))
     if len(operationDates) == 1:
         suggestedDate = suggestedDate.replace(hour=operationDates[0].hour, minute=operationDates[0].minute, second=operationDates[0].second)
 

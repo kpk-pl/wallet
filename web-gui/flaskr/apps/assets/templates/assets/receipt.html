@@ -22,8 +22,8 @@ setupForm({
   initQuantity: {{ asset.finalQuantity }},
   currency: '{{ asset.currency.name }}',
   type: '{{ asset.type }}',
-  submitUrl: "{{ url_for('assets.receipt', id=asset._id) }}",
-  nextUrl: "{{ url_for('assets.index', id=asset._id) }}"
+  submitUrl: "{{ url_for('assets.receipt', id=asset.id) }}",
+  nextUrl: "{{ url_for('assets.index', id=asset.id) }}"
 });
 </script>
 {% endblock %}
