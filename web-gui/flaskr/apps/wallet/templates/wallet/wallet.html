@@ -142,7 +142,7 @@
                   <td data-title="Share" class="text-right">{{ (data.netValue / totalNetValue * 100) | roundFixed(1) }}%</td>
                   <td data-title="Net P/L" class="text-right color-gain">
                     {%- if netInvestment > 0 -%}
-                    {{ ((data.netValue - netInvestment) / netInvestment * 100) | asCurrency(config.MAIN_CURRENCY, False) }}
+                    {{ ((data.netValue + data.profits.netProfit - data.profits.provisions - netInvestment) / netInvestment * 100) | asCurrency(config.MAIN_CURRENCY, False) }}
                     {%- else -%}
                     {{ 0 | asCurrency(config.MAIN_CURRENCY, False) }}
                     {%- endif -%}
