@@ -109,7 +109,7 @@
             {%- elif asset.currency.name != currencyMain %}
             <dt class="col-sm-8">Average conversion rate</dt>
             <dd class="col-sm-4">
-              {{ profitInfo.avnNetPrice | round(8) }}
+              {{ profitInfo.avgNetPrice | round(8) }}
             </dd>
             {%- endif %}
           </dl>
