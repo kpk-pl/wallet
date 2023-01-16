@@ -172,11 +172,11 @@ setupForm({
             </div>
             {%- endif %}
 
-            {% if asset.currency.name != currencyMain -%}
+            {% if asset.currency.name != config.MAIN_CURRENCY -%}
             <div class="row">
               <div class="col-12">
                 <div class="form-group" id="g-conversion">
-                  <label for="f-conversion">Currency rate {{ asset.currency.name }}/{{ currencyMain }}</label>
+                  <label for="f-conversion">Currency rate {{ asset.currency.name }}/{{ config.MAIN_CURRENCY }}</label>
                   <input type="number" value="{{ data.lastCurrencyRate if data.lastCurrencyRate else 0 }}" step="any" id="f-conversion" class="form-control" name="currencyConversion" required/>
                 </div>
               </div>
@@ -188,7 +188,7 @@ setupForm({
                   <label for="f-provision">Provision and tax</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
-                      <span class="input-group-text">{{ currencyMain }}</span>
+                      <span class="input-group-text">{{ config.MAIN_CURRENCY }}</span>
                     </div>
                     <input type="number" min="0" step="0.01" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-provision" name="provision" />
                   </div>
@@ -199,7 +199,7 @@ setupForm({
                   <label for="f-cost">{{ 'Deposit value' if asset.type == 'Deposit' else 'Payable amount' }}</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
-                      <span class="input-group-text">{{ currencyMain }}</span>
+                      <span class="input-group-text">{{ config.MAIN_CURRENCY }}</span>
                     </div>
                     <input type="number" class="form-control" id="f-cost" name="cost" disabled="disabled" value="0" />
                   </div>

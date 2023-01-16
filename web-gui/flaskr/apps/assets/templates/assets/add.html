@@ -70,7 +70,7 @@ initialize({
                       <select id="f-price-source" name="priceQuoteId" class="custom-select" required>
                         <option value="" hidden disabled selected></option>
                         {%- for priceSource in quotesList %}
-                        {%- if priceSource.unit in currencySupportedList %}
+                        {%- if priceSource.unit in config.SUPPORTED_CURRENCIES %}
                         <option value="{{ priceSource._id }}" data-price-source-unit="{{ priceSource.unit }}">{{ priceSource.name }} [{{ priceSource.unit }}]</option>
                         {%- endif %}
                         {%- endfor %}
@@ -80,7 +80,7 @@ initialize({
                   <div class="col-2">
                     <div class="form-group">
                       <label for="f-currency">Currency</label>
-                      <input type="text" value="{{ currencyMain }}" id="f-currency" class="form-control" disabled="disabled" data-lpignore="true"/>
+                      <input type="text" value="{{ config.MAIN_CURRENCY }}" id="f-currency" class="form-control" disabled="disabled" data-lpignore="true"/>
                     </div>
                   </div>
                   <div class="col-4">
@@ -88,7 +88,7 @@ initialize({
                       <label for="f-quote">Quote</label>
                       <div class="input-group">
                         <div class="input-group-prepend">
-                          <span class="input-group-text" id="f-quote-currency-prepend">{{ currencyMain }}</span>
+                          <span class="input-group-text" id="f-quote-currency-prepend">{{ config.MAIN_CURRENCY }}</span>
                         </div>
                         <input type="text" id="f-quote" class="form-control" disabled="disabled" data-lpignore="true"/>
                       </div>
@@ -195,10 +195,9 @@ initialize({
                       <label for="c-currency">Currency</label>
                       <select id="c-currency" name="currency" class="custom-select" required>
                         <option value="" hidden disabled selected value></option>
-                        <option value="PLN">PLN</option>
-                        <option value="EUR">EUR</option>
-                        <option value="USD">USD</option>
-                        <option value="GBP">GBP</option>
+                        {%- for currency in config.SUPPORTED_CURRENCIES %}
+                        <option value="{{ currency }}">{{ currency }}</option>
+                        {%- endfor %}
                       </select>
                     </div>
                   </div>

@@ -72,10 +72,10 @@
                 <th>Category</th>
                 <th>Volume change</th>
                 <th title="Profits from all positions closed within the selected timeframe">
-                  Cash profit <span class="smaller">[{{currencyMain}}]</span>
+                  Cash profit <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span>
                 </th>
                 <th title="Asset value change within the selected timeframe with new investments deduced and cash profits added">
-                  Total profit <span class="smaller">[{{currencyMain}}]</span>
+                  Total profit <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span>
                 </th>
               </tr>
             </thead>
@@ -117,14 +117,14 @@
                 <td data-title="Cash profit" class="text-right color-gain">
                   {%- if not data.period.error -%}
                   {%- if (data.period.profits.netProfit - data.period.profits.provisions) != 0 -%}
-                  {{ (data.period.profits.netProfit - data.period.profits.provisions) | asCurrency(currencyMain, false) }}
+                  {{ (data.period.profits.netProfit - data.period.profits.provisions) | asCurrency(config.MAIN_CURRENCY, false) }}
                   {%- endif -%}
                   {%- endif -%}
                 </td>
                 <td data-title="Total profit" class="text-right color-gain">
                   {%- if not data.period.error -%}
                   {%- if (data.period.profits.totalNetProfit - data.period.profits.provisions) != 0 -%}
-                  {{ (data.period.profits.totalNetProfit - data.period.profits.provisions) | asCurrency(currencyMain, false) }}
+                  {{ (data.period.profits.totalNetProfit - data.period.profits.provisions) | asCurrency(config.MAIN_CURRENCY, false) }}
                   {%- endif -%}
                   {%- endif -%}
                 </td>
@@ -139,7 +139,7 @@
                 <th data-title="Category"></th>
                 <th data-title="Volume change"></th>
                 <th data-title="Cash profit" class="text-right color-gain">
-                  {{- (assetData | sum(attribute='period.profits.netProfit') - assetData | sum(attribute='period.profits.provisions')) | asCurrency(currencyMain, false) -}}
+                  {{- (assetData | sum(attribute='period.profits.netProfit') - assetData | sum(attribute='period.profits.provisions')) | asCurrency(config.MAIN_CURRENCY, false) -}}
                 </th>
                 <th data-title="Total profit" class="text-right color-gain">
                 </th>
@@ -196,12 +196,12 @@
                 {%- if element.operation.type != "EARNING" %}
                 <td data-title="Open price" class="text-right"
                     data-order="{{ element.breakdown.avgNetPrice * element.operation.quantity|valueOr(1) }}"
-                    title="{{ (element.breakdown.avgNetPrice * element.operation.quantity|valueOr(1)) | asCurrency(currencyMain) }} @ {{ element.breakdown.avgPrice | asCurrency(element.asset.currency.name) }}"
+                    title="{{ (element.breakdown.avgNetPrice * element.operation.quantity|valueOr(1)) | asCurrency(config.MAIN_CURRENCY) }} @ {{ element.breakdown.avgPrice | asCurrency(element.asset.currency.name) }}"
                   >{{ (element.breakdown.avgPrice * element.operation.quantity|valueOr(1)) | asCurrency(element.asset.currency.name) }}
                 </td>
                 <td data-title="Close price" class="text-right"
                     data-order="{{ element.operation.baseCurrencyPrice }}"
-                    title="{{ element.operation.baseCurrencyPrice | asCurrency(currencyMain) }} @ {{ element.operation.unitPrice | asCurrency(element.asset.currency.name) }}"
+                    title="{{ element.operation.baseCurrencyPrice | asCurrency(config.MAIN_CURRENCY) }} @ {{ element.operation.unitPrice | asCurrency(element.asset.currency.name) }}"
                   >{{ element.operation.price | asCurrency(element.asset.currency.name) }}
                 </td>
                 <td data-title="Earnings" data-order="0"></td>
@@ -214,16 +214,16 @@
                 {%- endif %}
                 <td data-title="Provisions" class="text-right" data-order="{{ element.operation.provision }}">
                   {%- if element.operation.provision > 0 %}
-                    {{ element.operation.provision | asCurrency(currencyMain) }}
+                    {{ element.operation.provision | asCurrency(config.MAIN_CURRENCY) }}
                   {%- endif %}
                 </td>
                 <td data-title="Profit" class="text-right color-gain"
                     data-order="{{ element.breakdown.netProfit }}"
-                    title="{{ element.breakdown.netProfit | asCurrency(currencyMain) }}"
+                    title="{{ element.breakdown.netProfit | asCurrency(config.MAIN_CURRENCY) }}"
                   >{{ element.breakdown.profit | asCurrency(element.asset.currency.name) }}
                 </td>
                 <td data-title="Total Net Profit" class="text-right color-gain" data-order="{{ element.breakdown.netProfit - element.operation.provision|valueOr(0) }}">
-                  {{ (element.breakdown.netProfit - element.operation.provision|valueOr(0)) | asCurrency(currencyMain) }}
+                  {{ (element.breakdown.netProfit - element.operation.provision|valueOr(0)) | asCurrency(config.MAIN_CURRENCY) }}
                 </td>
               </tr>
               {%- endfor %}

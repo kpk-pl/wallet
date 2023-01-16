@@ -16,7 +16,7 @@
 
 <script>
 initialize({
-  currency: "{{ currencyMain }}",
+  currency: "{{ config.MAIN_CURRENCY }}",
   strategyUri: "{{ url_for('.strategy', allocation='true', label=session['label']) | safe }}",
   strategyUriFallback: "{{ url_for('.strategy', label=session['label']) | safe }}",
 });
@@ -44,11 +44,11 @@ initialize({
                 <th>Category</th>
                 <th>Target</th>
                 <th>Constituents</th>
-                <th>Net value <span class="smaller">[{{ currencyMain }}]</span></th>
-                <th>Adjustment <span class="smaller">[{{ currencyMain }}]</span></th>
+                <th>Net value <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
+                <th>Adjustment <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
                 <th>Deviation</th>
-                <th>Required change <span class="smaller">[{{ currencyMain }}]</span></th>
-                <th>Rebalancing change <span class="smaller">[{{ currencyMain }}]</span></th>
+                <th>Required change <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
+                <th>Rebalancing change <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
               </tr>
             </thead>
             <tfoot>

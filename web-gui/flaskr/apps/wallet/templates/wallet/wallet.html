@@ -25,7 +25,7 @@
 <script>
 </script>
 <script type="text/javascript">
-  const defaultCurrency = "{{ currencyMain }}";
+  const defaultCurrency = "{{ config.MAIN_CURRENCY }}";
   const categoryAllocation = JSON.parse({{ allocation | tojson }});
 
   $(function(){
@@ -83,9 +83,9 @@
                 <th>Region</th>
                 <th>Holding period <span class="smaller">[days]</span></th>
                 <th>Quaterly change</th>
-                <th>Investment <span class="smaller">[PLN]</span></th>
-                <th>Value <span class="smaller">[PLN]</span></th>
-                <th>Total value <span class="smaller">[PLN]</span></th>
+                <th>Investment <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
+                <th>Value <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
+                <th>Total value <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
                 <th>Share</th>
                 <th>Net P/L</th>
               </tr>
@@ -219,9 +219,9 @@
               <tr>
                 <th>Category</th>
                 <th>Target</th>
-                <th>Net value <span class="smaller">[PLN]</span></th>
+                <th>Net value <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
                 <th>Deviation</th>
-                <th>Required change <span class="smaller">[PLN]</span></th>
+                <th>Required change <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
               </tr>
             </thead>
           </table>

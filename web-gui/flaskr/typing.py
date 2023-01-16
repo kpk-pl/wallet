@@ -49,12 +49,6 @@ class Operation:
         return op
 
 
-class Currency:
-    main = 'PLN'
-    decimals = 2
-    supported = ['PLN', 'EUR', 'USD', 'GBP', 'GBX']
-
-
 class Results:
     firstYear = 2019
 
@@ -62,7 +56,3 @@ class Results:
     def timeranges():
         import datetime
         return [str(y) for y in range(Results.firstYear, datetime.date.today().year +1)]
-
-
-class Locale:
-    mainLocale = 'pl_PL'

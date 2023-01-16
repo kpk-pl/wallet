@@ -94,9 +94,6 @@ def create_app(test_config=None):
     @app.context_processor
     def constants():
         return dict(
-            currencyMain = typing.Currency.main,
-            currencyMainDecimals = typing.Currency.decimals,
-            currencySupportedList = typing.Currency.supported,
             resultsTimeranges = typing.Results.timeranges,
         )
 

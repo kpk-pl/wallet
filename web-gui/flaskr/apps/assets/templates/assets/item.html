@@ -106,7 +106,7 @@
               {{ profitInfo.avgPrice | round(2) }} {{ asset.currency.name }}
               {%- endif -%}
             </dd>
-            {%- elif asset.currency.name != currencyMain %}
+            {%- elif asset.currency.name != config.MAIN_CURRENCY %}
             <dt class="col-sm-8">Average conversion rate</dt>
             <dd class="col-sm-4">
               {{ profitInfo.avgNetPrice | round(8) }}
@@ -192,10 +192,10 @@
                 <th>Price <span class="smaller">[{{ asset.currency.name }}]</span></th>
                 <th>Unit price <span class="smaller">[{{ asset.currency.name }}]</span></th>
                 {%- endif %}
-                {% if asset.currency.name != currencyMain -%}
+                {% if asset.currency.name != config.MAIN_CURRENCY -%}
                 <th>Conversion rate</th>
                 {%- endif %}
-                <th>Provision &amp; tax <span class="smaller">[PLN]</span></th>
+                <th>Provision &amp; tax <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
                 <th>Final {{ 'value' if asset.type == 'Deposit' else 'volume' }}</th>
                 {% if operationsHaveOrderIds -%}
                 <th>Order ID</th>
@@ -219,7 +219,7 @@
                   {{ operation.unitPrice | asCurrency(asset.currency.name, False) }}
                 </td>
                 {%- endif %}
-                {% if asset.currency.name != currencyMain -%}
+                {% if asset.currency.name != config.MAIN_CURRENCY -%}
                 <td data-title="Conversion rate">{{ operation.currencyConversion | round(4) }}</td>
                 {%- endif %}
                 <td data-title="Provision">{{ operation.provision if operation.provision else 0 }}</td>
