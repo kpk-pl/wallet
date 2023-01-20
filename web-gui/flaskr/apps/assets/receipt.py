@@ -48,7 +48,7 @@ def _receiptGet():
         if quote and 'lastQuote' in quote[0]:
             data['lastQuote'] = quote[0]['lastQuote']
 
-    if asset.currency.name != typing.Currency.main:
+    if asset.currency.name != current_app.config['MAIN_CURRENCY']:
         quote = list(db.get_db().quotes.aggregate([
             {'$match': {'_id': ObjectId(asset.currency.quoteId)}},
             {'$project': {'lastQuote': {'$last': '$quoteHistory.quote'}}}
@@ -62,7 +62,7 @@ def _receiptGet():
             'type': 'Deposit',
             'category': 'Cash',
             '_id': {'$ne': asset.id},
-            'currency.name': {'$in': [asset.currency.name, typing.Currency.main]},
+            'currency.name': {'$in': [asset.currency.name, current_app.config['MAIN_CURRENCY']]},
         }}
     ]))
 
@@ -126,7 +126,7 @@ def _makeOperation(asset):
     else:
         operation['price'] = _parseNumeric(_required("price", 103))
 
-    operation['finalQuantity'] = round(operation['finalQuantity'], typing.Currency.decimals)
+    operation['finalQuantity'] = round(operation['finalQuantity'], current_app.config['MAIN_CURRENCY_DECIMALS'])
 
     provisionSupportTypes = [typing.Operation.Type.buy, typing.Operation.Type.sell, typing.Operation.Type.earning]
     if 'provision' in request.form and operation['type'] in provisionSupportTypes:
@@ -134,7 +134,7 @@ def _makeOperation(asset):
         if provision:
             operation['provision'] = provision
 
-    if asset['currency']['name'] != typing.Currency.main:
+    if asset['currency']['name'] != current_app.config['MAIN_CURRENCY']:
         operation['currencyConversion'] = float(_required('currencyConversion', 104))
 
     if asset['hasOrderIds']:
@@ -181,13 +181,13 @@ def _makeBillingOperation(asset, operation, session):
         'quantity': operation['price']
     }
 
-    if billingAsset['currency']['name'] != typing.Currency.main:
+    if billingAsset['currency']['name'] != current_app.config['MAIN_CURRENCY']:
         assert 'currencyConversion' in operation  # checked already at code(104)
         billingOperation['currencyConversion'] = operation['currencyConversion']
 
     if asset['currency'] != billingAsset['currency']:
         assert 'currencyConversion' in operation  # checked already at code(104)
-        if billingAsset['currency']['name'] != typing.Currency.main:
+        if billingAsset['currency']['name'] != current_app.config['MAIN_CURRENCY']:
             raise ReceiptError(205, "Invalid billing asset currency")
         # if operation was in foreign currency then billing asset currency can only be the same or main
         # and here we know that the operation currency and billing asset currency are different
@@ -199,7 +199,7 @@ def _makeBillingOperation(asset, operation, session):
                                                                        billingOperation['quantity'],
                                                                        operation['provision'])
 
-    billingOperation['quantity'] = round(billingOperation['quantity'], typing.Currency.decimals)
+    billingOperation['quantity'] = round(billingOperation['quantity'], current_app.config['MAIN_CURRENCY_DECIMALS'])
 
     billingOperation['price'] = billingOperation['quantity']
     billingOperation['finalQuantity'] = typing.Operation.adjustQuantity(billingOperation['type'],
@@ -209,7 +209,7 @@ def _makeBillingOperation(asset, operation, session):
     if billingOperation['finalQuantity'] < 0:
         raise ReceiptError(206, "Not enough asset quantity for billing operation")
 
-    billingOperation['finalQuantity'] = round(billingOperation['finalQuantity'], typing.Currency.decimals)
+    billingOperation['finalQuantity'] = round(billingOperation['finalQuantity'], current_app.config['MAIN_CURRENCY_DECIMALS'])
 
     return query, billingOperation
 
