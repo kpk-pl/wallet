@@ -83,8 +83,8 @@
         </div>
         <div class="card-body">
           <dl class="row">
-            <dt class="col-sm-8">Status</dt>
-            <dd class="col-sm-4">
+            <dt class="col-sm-7">Status</dt>
+            <dd class="col-sm-5">
               {%- if asset.trashed -%}
               <span class="text-muted">Trashed</span>
               {%- elif asset.operations and asset.operations[-1].finalQuantity > 0 -%}
@@ -93,24 +93,36 @@
               <span class="text-muted">Inactive</span>
               {%- endif -%}
             </dd>
-            <dt class="col-sm-8">Holding period</dt>
-            <dd class="col-sm-4">
+            <dt class="col-sm-7">Holding period</dt>
+            <dd class="col-sm-5">
               {{ profitInfo.holdingDays if profitInfo.holdingDays else 0 }} days
             </dd>
-            <dt class="col-sm-8">Volume</dt>
-            <dd class="col-sm-4">{{ asset.operations[-1].finalQuantity if asset.operations else 0 }}</dd>
+            <dt class="col-sm-7">Volume</dt>
+            <dd class="col-sm-5">{{ asset.operations[-1].finalQuantity if asset.operations else 0 }}</dd>
             {%- if asset.type != 'Deposit' %}
-            <dt class="col-sm-8">Average open price</dt>
-            <dd class="col-sm-4">
+            <dt class="col-sm-7">Average open price</dt>
+            <dd class="col-sm-5">
               {%- if asset.operations and asset.operations[-1].finalQuantity > 0 -%}
-              {{ profitInfo.avgPrice | round(2) }} {{ asset.currency.name }}
+              {{ profitInfo.avgPrice | asCurrency(asset.currency.name) }}
               {%- endif -%}
             </dd>
-            {%- elif asset.currency.name != config.MAIN_CURRENCY %}
-            <dt class="col-sm-8">Average conversion rate</dt>
-            <dd class="col-sm-4">
-              {{ profitInfo.avgNetPrice | round(8) }}
+            {%- if quoteHistory %}
+            <dt class="col-sm-7">Current price</dt>
+            <dd class="col-sm-5" title="{{ quoteHistory.data[-1].timestamp }}">
+              {{ quoteHistory.data[-1].quote | asCurrency(asset.currency.name) }}
             </dd>
+            {%- endif %}
+            {%- elif asset.currency.name != config.MAIN_CURRENCY %}
+            <dt class="col-sm-7">Average conversion rate</dt>
+            <dd class="col-sm-5">
+              {{ profitInfo.avgNetPrice | round(8) }} {{ config.MAIN_CURRENCY }}
+            </dd>
+            {%- if quoteHistory %}
+            <dt class="col-sm-7">Current rate</dt>
+            <dd class="col-sm-5" title="{{ quoteHistory.data[-1].timestamp }}">
+              {{ quoteHistory.data[-1].quote | asCurrency(config.MAIN_CURRENCY) }}
+            </dd>
+            {%- endif %}
             {%- endif %}
           </dl>
         </div>

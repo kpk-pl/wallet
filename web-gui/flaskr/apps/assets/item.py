@@ -13,12 +13,18 @@ def _getPipelineForAssetDetails(assetId):
     pipeline.append({ "$match" : { "_id" : ObjectId(assetId) } })
     pipeline.append({ "$lookup" : {
         "from": "quotes",
-        "let": { "pricingId" : "$pricing.quoteId" },
+        "let": {
+            "pricingId": "$pricing.quoteId",
+            "currencyId": "$currency.quoteId",
+        },
         "pipeline": [
-            { "$match" : {
-                "$expr": { "$eq": ["$_id", "$$pricingId"] }
+            { "$match": {
+              "$or": [
+                { "$expr": { "$eq": ["$_id", "$$pricingId"] }},
+                { "$expr": { "$eq": ["$_id", "$$currencyId"] }}
+              ]
             }},
-            { "$project" : {
+            { "$project": {
                 "_id": 0,
                 "name": "$name",
                 "data": "$quoteHistory",
