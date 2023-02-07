@@ -1,0 +1,2 @@
+If Mongo does not want to start after reboot, connect to it with Mongo-Compass
+and initialize the replicaset with the command from docker/initdb.d/init-mongo.js

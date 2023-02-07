@@ -1,17 +1,17 @@
 version: "3"
 services:
   mongo:
-    image: mongo:latest
+    image: mongo:4.4.18
     volumes:
       - ./docker/initdb.d/:/docker-entrypoint-initdb.d/
       - ${MONGO_PERSISTENT_STORAGE_DB:-/opt/wallet/data/db}:/data/db/
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password
+            #      MONGO_INITDB_ROOT_USERNAME: admin
+            #      MONGO_INITDB_ROOT_PASSWORD: password
       MONGO_INITDB_DATABASE: admin
     ports:
       - "27017:27017"
-    command: ['--replSet', 'rs', '--bind_ip_all']
+    command: ['--replSet', 'rs', '--bind_ip_all', '--noauth']
   web-gui:
     build: web-gui
     environment:
