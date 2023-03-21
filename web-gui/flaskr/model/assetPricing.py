@@ -43,6 +43,7 @@ class AssetPricingParametrizedInterestItemDerivedSample(BaseModel):
     choose: AssetPricingParametrizedInterestItemDerivedSampleChoose
     multiplier: Decimal = "1"
     clampBelow: Optional[Decimal]
+    usePreviousWhenMissing: bool = False
 
     class Config:
         use_enum_values = True

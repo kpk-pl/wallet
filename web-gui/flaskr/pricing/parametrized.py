@@ -105,7 +105,8 @@ class ParametrizedQuoting:
                 return None
 
             # If retrieved quote is objectively too old (or to new somehow)
-            if timestamp < quoteTimestamp - derivedIntervalDelta or timestamp > quoteTimestamp + derivedIntervalDelta:
+            if (timestamp < quoteTimestamp - derivedIntervalDelta and not thisInterest.sample.usePreviousWhenMissing) \
+                    or timestamp > quoteTimestamp + derivedIntervalDelta:
                 return None
 
             percentage *= thisInterest.sample.multiplier
@@ -117,7 +118,6 @@ class ParametrizedQuoting:
             if not self.interest().derived:
                 return None
 
-            thisInterest = self.interest().derived
             quoteTimestamp = self.derivedQuoteTimestamp()
             percentage = self.derivedPercentageForTimestamp(quoteTimestamp)
             if percentage is None:
