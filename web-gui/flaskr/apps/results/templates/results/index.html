@@ -142,6 +142,7 @@
                   {{- (assetData | sum(attribute='period.profits.netProfit') - assetData | sum(attribute='period.profits.provisions')) | asCurrency(config.MAIN_CURRENCY, false) -}}
                 </th>
                 <th data-title="Total profit" class="text-right color-gain">
+                  {{- (assetData | sum(attribute='period.profits.totalNetProfit') - assetData | sum(attribute='period.profits.provisions')) | asCurrency(config.MAIN_CURRENCY, false) -}}
                 </th>
               </tr>
             </tfoot>
@@ -196,12 +197,12 @@
                 {%- if element.operation.type != "EARNING" %}
                 <td data-title="Open price" class="text-right"
                     data-order="{{ element.breakdown.avgNetPrice * element.operation.quantity|valueOr(1) }}"
-                    title="{{ (element.breakdown.avgNetPrice * element.operation.quantity|valueOr(1)) | asCurrency(config.MAIN_CURRENCY) }} @ {{ element.breakdown.avgPrice | asCurrency(element.asset.currency.name) }}"
+                    title="{{ (element.breakdown.avgNetPrice * element.operation.quantity|valueOr(1)) | asCurrency(config.MAIN_CURRENCY) }} @ {{ element.operation.quantity|valueOr(1) }} x {{ element.breakdown.avgPrice | asCurrency(element.asset.currency.name) }}"
                   >{{ (element.breakdown.avgPrice * element.operation.quantity|valueOr(1)) | asCurrency(element.asset.currency.name) }}
                 </td>
                 <td data-title="Close price" class="text-right"
                     data-order="{{ element.operation.baseCurrencyPrice }}"
-                    title="{{ element.operation.baseCurrencyPrice | asCurrency(config.MAIN_CURRENCY) }} @ {{ element.operation.unitPrice | asCurrency(element.asset.currency.name) }}"
+                    title="{{ element.operation.baseCurrencyPrice | asCurrency(config.MAIN_CURRENCY) }} @ {{ element.operation.quantity|valueOr(1) }} x {{ element.operation.unitPrice | asCurrency(element.asset.currency.name) }}"
                   >{{ element.operation.price | asCurrency(element.asset.currency.name) }}
                 </td>
                 <td data-title="Earnings" data-order="0"></td>
