@@ -1,12 +1,10 @@
 from flask import render_template, request
-from flaskr import db, header, utils
+from flaskr import db, header
 from flaskr.session import Session
 from flaskr.analyzers import Profits, Period
 from flaskr.model import Asset, AssetOperation
-import time
 from datetime import datetime, date
 from bson.objectid import ObjectId
-import itertools
 from dataclasses import dataclass
 
 
@@ -96,7 +94,7 @@ def index():
         operationsBreakdown = []
         for data in assetData:
             for op, bdown in zip(data.asset.operations, data.profits.breakdown):
-                if op.date >= timerange['periodStart'] and op.date <= timerange['periodEnd'] and bdown.profit > 0:
+                if op.date >= timerange['periodStart'] and op.date <= timerange['periodEnd'] and bdown.profit != 0:
                     operationsBreakdown.append(BreakdownElement(data.asset, op, bdown))
 
 
