@@ -3,7 +3,6 @@ from flaskr import db, header
 from flaskr.analyzers import Profits
 from flaskr.model import Asset, QuoteHistoryItem
 from bson.objectid import ObjectId
-from datetime import datetime
 from typing import List
 from dataclasses import dataclass
 

@@ -89,7 +89,7 @@ def test_equity_default_currency():
             avgPrice = D(2),
             avgNetPrice = D(2),
             netInvestment = D(50),
-            quantity = D(25)
+            quantity = D(25),
         ),
         Profits.Result.Breakdown(
             profit = D(0),
@@ -98,7 +98,7 @@ def test_equity_default_currency():
             avgPrice = D(3),
             avgNetPrice = D(3),
             netInvestment = D(150),
-            quantity = D(50)
+            quantity = D(50),
         ),
         Profits.Result.Breakdown(
             profit = D(20),
@@ -107,7 +107,7 @@ def test_equity_default_currency():
             avgPrice = D(3),
             avgNetPrice = D(3),
             netInvestment = D(120),  # sold 20% (10 out of 50) of everything out of 150 previous netInvestment
-            quantity = D(40)
+            quantity = D(40),
         ),
         Profits.Result.Breakdown(
             profit = D("5.5"),
@@ -116,7 +116,7 @@ def test_equity_default_currency():
             avgPrice = D(3),
             avgNetPrice = D(3),
             netInvestment = D(120),
-            quantity = D(40)
+            quantity = D(40),
         ),
         Profits.Result.Breakdown(
             profit = D(0),
@@ -125,7 +125,7 @@ def test_equity_default_currency():
             avgPrice = D("1.5"),
             avgNetPrice = D("1.5"),
             netInvestment = D(120),
-            quantity = D(80)
+            quantity = D(80),
         ),
         Profits.Result.Breakdown(
             profit = D(26),  # average price was 1.5 (1.5*20 = 30) and selling for 56
@@ -134,7 +134,7 @@ def test_equity_default_currency():
             avgPrice = D("1.5"),
             avgNetPrice = D("1.5"),
             netInvestment = D(90),  # sold 20 out of 80 which is 25% (25% of 120 is 30)
-            quantity = D(60)
+            quantity = D(60),
         )
     ]
     analyzer = Profits(currentDate = datetime(2020, 12, 31))
@@ -149,10 +149,18 @@ def test_equity_default_currency():
         assert result.netProfit == profit
         assert result.provisions == provisions
         assert result.avgPrice == avgPrice
+        assert result.avgNetPrice is not None
         assert result.avgNetPrice == avgPrice
         assert result.quantity == quantity
-        assert result.breakdown == breakdowns[:opNumber+1]
         assert result.breakdown[-1].netInvestment == result.quantity * result.avgNetPrice
+        assert len(result.breakdown) == opNumber + 1
+
+        # don't compare remainingOpenQuantity and matchingOpenPositions
+        for resultBreakdown, breakdown in zip(result.breakdown, breakdowns[:opNumber+1]):
+            resultBreakdown.remainingOpenQuantity = breakdown.remainingOpenQuantity
+            resultBreakdown.matchingOpenPositions = []
+
+        assert result.breakdown == breakdowns[:opNumber+1]
 
     checkToOperation(0, D(0), D(0), D(2), D(25))
     checkToOperation(1, D(0), D(1), D(3), D(50))
@@ -255,10 +263,18 @@ def test_equity_with_conversion_rate():
         assert result.netProfit == netProfit
         assert result.provisions == provisions
         assert result.avgPrice == avgPrice
+        assert result.avgNetPrice is not None
         assert result.avgNetPrice == avgNetPrice
         assert result.quantity == quantity
-        assert result.breakdown == breakdowns[:opNumber+1]
         assert result.breakdown[-1].netInvestment == result.quantity * result.avgNetPrice
+        assert len(result.breakdown) == opNumber + 1
+
+        # don't compare remainingOpenQuantity and matchingOpenPositions
+        for resultBreakdown, breakdown in zip(result.breakdown, breakdowns[:opNumber+1]):
+            resultBreakdown.remainingOpenQuantity = breakdown.remainingOpenQuantity
+            resultBreakdown.matchingOpenPositions = []
+
+        assert result.breakdown == breakdowns[:opNumber+1]
 
     checkToOperation(0, D(0), D(0), D(0), D("1.25"), D("2.5"), D(10))
     checkToOperation(1, D("7.5"), D("13.5"), D("0.2"), D("1.25"), D("2.5"), D(10))
@@ -368,10 +384,18 @@ def test_deposit_default_currency():
         assert result.netProfit == profit
         assert result.provisions == provisions
         assert result.avgPrice == D(1)
+        assert result.avgNetPrice is not None
         assert result.avgNetPrice == D(1)
         assert result.quantity == quantity
-        assert result.breakdown == breakdowns[:opNumber+1]
         assert result.breakdown[-1].netInvestment == result.quantity * result.avgNetPrice
+        assert len(result.breakdown) == opNumber + 1
+
+        # don't compare remainingOpenQuantity and matchingOpenPositions
+        for resultBreakdown, breakdown in zip(result.breakdown, breakdowns[:opNumber+1]):
+            resultBreakdown.remainingOpenQuantity = breakdown.remainingOpenQuantity
+            resultBreakdown.matchingOpenPositions = []
+
+        assert result.breakdown == breakdowns[:opNumber+1]
 
     checkToOperation(0, D(0), D(0), D(100))
     checkToOperation(1, D(0), D(1), D(250))
@@ -448,10 +472,18 @@ def test_deposit_foreign_currency():
         assert result.netProfit == netProfit
         assert result.provisions == D(0)
         assert result.avgPrice == D(1)
+        assert result.avgNetPrice is not None
         assert result.avgNetPrice == avgNetPrice
         assert result.quantity == quantity
-        assert result.breakdown == breakdowns[:opNumber+1]
         assert result.breakdown[-1].netInvestment == result.quantity * result.avgNetPrice
+        assert len(result.breakdown) == opNumber + 1
+
+        # don't compare remainingOpenQuantity and matchingOpenPositions
+        for resultBreakdown, breakdown in zip(result.breakdown, breakdowns[:opNumber+1]):
+            resultBreakdown.remainingOpenQuantity = breakdown.remainingOpenQuantity
+            resultBreakdown.matchingOpenPositions = []
+
+        assert result.breakdown == breakdowns[:opNumber+1]
 
     checkToOperation(0, D(0), D(0), D(2), D("12.5"))
     checkToOperation(1, D("7.5"), D("13.5"), D("1.925"), D(20))
@@ -483,7 +515,8 @@ def test_equity_selling_out_everything():
             avgPrice = D(10),
             avgNetPrice = D(10),
             netInvestment = D(100),
-            quantity = D(10)
+            quantity = D(10),
+            remainingOpenQuantity = D(0),
         ),
         Profits.Result.Breakdown(
             profit = D(-10),
@@ -492,7 +525,14 @@ def test_equity_selling_out_everything():
             avgPrice = D(0),
             avgNetPrice = D(0),
             netInvestment = D(0),
-            quantity = D(0)
+            quantity = D(0),
+            remainingOpenQuantity = None,
+            matchingOpenPositions = [
+                Profits.Result.Breakdown.MatchingOpenPosition(
+                    operation = operations[0],
+                    quantity = D(10),
+                )
+            ]
         )
     ]
     analyzer = Profits(currentDate = datetime(2020, 12, 31))
@@ -530,7 +570,8 @@ def test_single_receive():
             avgPrice = D(0),
             avgNetPrice = D(0),
             netInvestment = D(0),
-            quantity = D(10)
+            quantity = D(10),
+            remainingOpenQuantity = D(10),
         )
     ]
     analyzer = Profits(currentDate = datetime(2020, 12, 31))

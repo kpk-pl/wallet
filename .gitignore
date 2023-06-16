@@ -1,5 +1,5 @@
 web-gui/venv/
-web-gui/flaskr/__pycache__/
+__pycache__
 *.pyc
 data/
 .env

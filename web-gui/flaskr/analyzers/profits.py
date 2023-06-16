@@ -18,28 +18,28 @@ def _valueOr(value, default):
 
 @dataclass
 class RunningTotals:
-    quantity: float = 0
-    price: float = 0
-    netPrice: float = 0
-    investment: float = 0
-    provision: float = 0
+    quantity: Decimal = Decimal(0)
+    price: Decimal = Decimal(0)
+    netPrice: Decimal = Decimal(0)
+    investment: Decimal = Decimal(0)
+    provision: Decimal = Decimal(0)
 
-    def avgPrice(self):
-        return self.price / self.quantity if self.quantity else 0
+    def avgPrice(self) -> Decimal:
+        return self.price / self.quantity if self.quantity else Decimal(0)
 
-    def avgNetPrice(self):
-        return self.netPrice / self.quantity if self.quantity else 0
+    def avgNetPrice(self) -> Decimal:
+        return self.netPrice / self.quantity if self.quantity else Decimal(0)
 
-    def avgProvision(self):
-        return self.provision / self.quantity if self.quantity else 0
+    def avgProvision(self) -> Decimal:
+        return self.provision / self.quantity if self.quantity else Decimal(0)
 
-    def partPrice(self, quantity):
+    def partPrice(self, quantity) -> Decimal:
         return self.price * quantity / self.quantity
 
-    def partNetPrice(self, quantity):
+    def partNetPrice(self, quantity) -> Decimal:
         return self.netPrice * quantity / self.quantity
 
-    def partProvision(self, quantity):
+    def partProvision(self, quantity) -> Decimal:
         return self.provision * quantity / self.quantity
 
     def scaleTo(self, quantity):
@@ -55,6 +55,11 @@ class Profits:
     class Result:
         @dataclass
         class Breakdown:
+            @dataclass
+            class MatchingOpenPosition:
+                operation: model.AssetOperation = field()
+                quantity: Decimal = field(default_factory=Decimal)
+
             # Profit taken on a single operation, in native currency
             profit: Decimal = field(default_factory=Decimal)
             # Profit taken on a single operation adjusted with currency conversion rate, in default currency
@@ -67,8 +72,13 @@ class Profits:
             avgNetPrice: Decimal = field(default_factory=Decimal)
             # Current investment up to this operation, in default currency
             netInvestment: Decimal = field(default_factory=Decimal)
-            # Current quantity
+            # Current quantity up to this operation
             quantity: Decimal = field(default_factory=Decimal)
+            # Remaining open quantity, for this operation only. If a BUY was completely matched by SELL, this will be 0
+            # For some types of operation there is no remaining open quantity, in which case this is None
+            remainingOpenQuantity: Optional[Decimal] = None
+            # Matching open positions. For SELL operations this will list all open positions that were closed due to this operation
+            matchingOpenPositions: List[MatchingOpenPosition] = field(default_factory=list)
 
         # Datetime when last time quantity increased from 0 to some value
         # Is None when the current quantity is 0
@@ -98,6 +108,7 @@ class Profits:
     def __call__(self, asset:model.Asset, debug=None):
         self._result = self.Result()
         self._running = RunningTotals()
+        self._operations = asset.operations
         self._debug = debug if isinstance(debug, dict) else None
         # if isinstance(debug, dict):
             # debug.update(asdict(self._data))
@@ -146,6 +157,7 @@ class Profits:
     def _buy(self, operation:model.AssetOperation, assetType:model.AssetType):
         breakdown = self.Result.Breakdown()
 
+        assert isinstance(operation.quantity, Decimal)
         assert self._running.quantity + operation.quantity == operation.finalQuantity
 
         self._running.quantity = operation.finalQuantity
@@ -158,6 +170,8 @@ class Profits:
         else:
             self._running.provision += _valueOr(operation.provision, Decimal(0))
 
+        breakdown.remainingOpenQuantity = operation.quantity
+
         if self._result.investmentStart is None:
             self._result.investmentStart = operation.date
 
@@ -168,10 +182,13 @@ class Profits:
         breakdown = self.Result.Breakdown()
 
         assert assetType != model.AssetType.deposit
+        assert isinstance(operation.quantity, Decimal)
         assert self._running.quantity + operation.quantity == operation.finalQuantity
 
         self._running.quantity = operation.finalQuantity
         self._running.provision += _valueOr(operation.provision, Decimal(0))
+
+        breakdown.remainingOpenQuantity = operation.quantity
 
         if self._result.investmentStart is None:
             self._result.investmentStart = operation.date
@@ -182,13 +199,26 @@ class Profits:
         breakdown = self.Result.Breakdown()
         quantity = operation.quantity
 
-        assert self._running.quantity - operation.quantity == operation.finalQuantity
+        assert isinstance(quantity, Decimal)
+        assert self._running.quantity - quantity == operation.finalQuantity
 
         breakdown.profit = operation.price - self._running.partPrice(quantity)
         breakdown.netProfit =  operation.price * _valueOr(operation.currencyConversion, Decimal(1)) - self._running.partNetPrice(quantity)
         breakdown.provisions = _valueOr(operation.provision, Decimal(0)) + self._running.partProvision(quantity)
 
         self._running.scaleTo(operation.finalQuantity)
+
+        for precedingBreakdown, precedingOperation in zip(self._result.breakdown, self._operations):
+            if precedingBreakdown.remainingOpenQuantity is not None:
+                closingQuantity = min(precedingBreakdown.remainingOpenQuantity, quantity)
+                if closingQuantity > 0:
+                    breakdown.matchingOpenPositions.append(self.Result.Breakdown.MatchingOpenPosition(operation=precedingOperation, quantity=closingQuantity))
+                    precedingBreakdown.remainingOpenQuantity -= closingQuantity
+                    quantity -= closingQuantity
+                    if quantity == Decimal(0):
+                        break
+
+        assert quantity == Decimal(0)
 
         if operation.finalQuantity == 0:
             self._result.investmentStart = None
@@ -199,12 +229,15 @@ class Profits:
         breakdown = self.Result.Breakdown()
 
         if assetType == model.AssetType.deposit:
+            assert isinstance(operation.quantity, Decimal)
             assert self._running.quantity + operation.quantity == operation.finalQuantity
 
             self._running.quantity = operation.finalQuantity
             self._running.price += operation.price
             self._running.netPrice += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
             self._running.investment += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
+
+            breakdown.remainingOpenQuantity = operation.price
         else:
             assert self._running.quantity == operation.finalQuantity
 

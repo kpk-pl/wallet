@@ -1,7 +1,5 @@
 from flaskr.pricing import Pricing, Context
 from flaskr.model import Asset, AssetOperation
-from flaskr import typing
-from dateutil.relativedelta import relativedelta
 from dataclasses import dataclass, field
 from typing import Optional
 from decimal import Decimal

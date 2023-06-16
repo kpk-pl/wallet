@@ -81,6 +81,10 @@ def create_app(test_config=None):
             return optValue
         return default
 
+    @app.template_filter('zip')
+    def zipFilter(a, b):
+        return zip(a, b)
+
     @app.context_processor
     def urlProcessor():
         def url_for_self(**args):

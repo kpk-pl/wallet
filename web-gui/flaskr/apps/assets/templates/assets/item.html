@@ -31,7 +31,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-sm">
+<div class="container-fluid">
   <div class="row">
     <div class="col-5">
       <div class="card card-primary">
@@ -161,7 +161,7 @@
   </div>
 </div>
 {% if quoteHistory -%}
-<div class="container-sm">
+<div class="container-fluid">
   <div class="row">
     <div class="col-12">
       <div class="card card-primary">
@@ -180,7 +180,7 @@
   </div>
 </div>
 {%- endif %}
-<div class="container-sm">
+<div class="container-fluid">
   <div class="row">
     <div class="col-12">
       <div class="card card-primary">
@@ -208,14 +208,15 @@
                 <th>Conversion rate</th>
                 {%- endif %}
                 <th>Provision &amp; tax <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
-                <th>Final {{ 'value' if asset.type == 'Deposit' else 'volume' }}</th>
+                <th>{{ 'Value' if asset.type == 'Deposit' else 'Volume' }} after operation</th>
                 {% if operationsHaveOrderIds -%}
                 <th>Order ID</th>
                 {%- endif %}
+                <th>Info</th>
               </tr>
             </thead>
             <tbody>
-              {% for operation in asset.operations | reverse -%}
+              {% for operation, breakdown in asset.operations | zip(profitInfo.breakdown) | reverse -%}
               <tr>
                 <td data-title="#">{{ asset.operations|length - loop.index + 1 }}</td>
                 <td data-title="Date">{{ operation.date }}</td>
@@ -239,6 +240,21 @@
                 {% if operationsHaveOrderIds -%}
                 <td data-title="Order ID">{{ operation.orderId }}</td>
                 {%- endif %}
+                <td>
+                  <a href="#modalBreakdown_{{ loop.index }}" class="imagelink" data-toggle="modal" data-target="#modalBreakdown_{{ loop.index }}">
+                  {%- if breakdown.remainingOpenQuantity is not none %}
+                    {%- if breakdown.remainingOpenQuantity == 0 %}
+                    <i class="fa-solid fa-circle-check fa-fw" title="Remaining open quantity: {{ breakdown.remainingOpenQuantity }}"></i>
+                    {%- elif breakdown.remainingOpenQuantity == operation.quantity %}
+                    <i class="fa-regular fa-circle fa-fw" title="Remaining open quantity: {{ breakdown.remainingOpenQuantity }}"></i>
+                    {%- else %}
+                    <i class="fa-solid fa-circle-half-stroke fa-fw" title="Remaining open quantity: {{ breakdown.remainingOpenQuantity }}"></i>
+                    {%- endif %}
+                  {%- else %}
+                    <i class="fa-solid fa-dollar-sign fa-fw"></i>
+                  {%- endif %}
+                  </a>
+                </td>
               </tr>
               {%- endfor %}
             </tbody>
@@ -248,4 +264,116 @@
     </div>
   </div>
 </div>
+{% for operation, breakdown in asset.operations | zip(profitInfo.breakdown) | reverse -%}
+<div class="modal fade" id="modalBreakdown_{{ loop.index }}">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">
+          <span class="badge badge-info badge-op-{{ operation.type.value }}">
+            {{ operation.type | operationDisplayString(asset.type) }}
+          </span>
+          {{ operation.date }}
+        </h4>
+	<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+	  <span aria-hidden="true">&times;</span>
+	</button>
+      </div>
+      <div class="modal-body">
+        <dl class="row">
+          {%- if operation.quantity is not none %}
+          <dt class="col-sm-4">{{ 'Value' if asset.type == 'Deposit' else 'Volume' }}</dt>
+          <dd class="col-sm-8">
+            {{ operation.quantity }}
+            {%- if asset.type == 'Deposit' %}
+              {{ asset.currency.name }}
+            {%- endif %}
+          </dd>
+          <dt class="col-sm-4">{{ 'Value' if asset.type == 'Deposit' else 'Volume' }} after operation</dt>
+          <dd class="col-sm-8">
+            {{ operation.finalQuantity }}
+            {%- if asset.type == 'Deposit' %}
+              {{ asset.currency.name }}
+            {%- endif %}
+          </dd>
+          {%- endif %}
+          {%- if asset.type != 'Deposit' %}
+          <dt class="col-sm-4">{{ 'Price' if operation.type != 'Earning' else 'Profit' }}</dt>
+          <dd class="col-sm-8">{{ operation.price }} {{ asset.currency.name }}</dd>
+          {%- endif %}
+          {% if asset.currency.name != config.MAIN_CURRENCY -%}
+          <dt class="col-sm-4">Conversion rate</dt>
+          <dd class="col-sm-8">{{ operation.currencyConversion | round(4) }}</dd>
+          {%- endif %}
+          <dt class="col-sm-4">Provision &amp; tax</dt>
+          <dd class="col-sm-8">{{ operation.provision if operation.provision else 0 }} {{ config.MAIN_CURRENCY }}</dd>
+          {%- if breakdown.remainingOpenQuantity is not none %}
+          <dt class="col-sm-4">Remaining open {{ 'value' if asset.type == 'Deposit' else 'volume' }}</dt>
+          <dd class="col-sm-8">
+            {{ breakdown.remainingOpenQuantity }}
+            {%- if asset.type == 'Deposit' %}
+              {{ asset.currency.name }}
+            {%- endif %}
+          </dd>
+          {%- endif %}
+        </dl>
+        {%- if breakdown.matchingOpenPositions %}
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Operation</th>
+              <th>Matched {{ 'value' if asset.type == 'Deposit' else 'volume' }}</th>
+              <th>
+                Open price
+              </th>
+              <th>
+                Close price
+              </th>
+              <th>
+                Profit</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <h5>Matching open positions</h5>
+            {% for matchingPosition in breakdown.matchingOpenPositions -%}
+            <tr>
+              <td>
+                <span class="badge badge-info badge-op-{{ matchingPosition.operation.type.value }}">
+                  {{ matchingPosition.operation.type | operationDisplayString(asset.type) }}
+                </span>
+                {{ matchingPosition.operation.date }}
+              </td>
+              <td>{{ matchingPosition.quantity }} / {{ matchingPosition.operation.quantity }}</td>
+              <td>
+                {{ (matchingPosition.operation.unitPrice * matchingPosition.quantity) | asCurrency(asset.currency.name) }}
+                {% if asset.currency.name != config.MAIN_CURRENCY -%}
+                / {{ (matchingPosition.operation.unitPrice * matchingPosition.quantity * matchingPosition.operation.currencyConversion) | asCurrency(config.MAIN_CURRENCY) }}
+                {%- endif %}
+              </td>
+              <td>
+                {{ (operation.unitPrice * matchingPosition.quantity) | asCurrency(asset.currency.name) }}
+                {% if asset.currency.name != config.MAIN_CURRENCY -%}
+                / {{ (operation.unitPrice * matchingPosition.quantity * operation.currencyConversion) | asCurrency(config.MAIN_CURRENCY) }}
+                {%- endif %}
+              </td>
+              <td>
+                {{ ((operation.unitPrice - matchingPosition.operation.unitPrice) * matchingPosition.quantity) | asCurrency(asset.currency.name) }}
+                {% if asset.currency.name != config.MAIN_CURRENCY -%}
+                / {{ ((operation.unitPrice * operation.currencyConversion - matchingPosition.operation.unitPrice * matchingPosition.operation.currencyConversion) * matchingPosition.quantity) | asCurrency(config.MAIN_CURRENCY) }}
+                {%- endif %}
+              </td>
+            </tr>
+            {%- endfor %}
+          </tbody>
+        </table>
+        {%- endif %}
+      </div>
+      <div class="modal-footer justify-content-between">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{%- endfor %}
 {% endblock %}

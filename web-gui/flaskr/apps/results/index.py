@@ -57,6 +57,7 @@ class AssetData:
 class BreakdownElement:
     asset: Asset
     operation: AssetOperation
+    operationIdx: int
     breakdown: Profits.Result.Breakdown
 
 
@@ -93,9 +94,9 @@ def index():
 
         operationsBreakdown = []
         for data in assetData:
-            for op, bdown in zip(data.asset.operations, data.profits.breakdown):
+            for op, bdown, idx in zip(data.asset.operations, data.profits.breakdown, range(len(data.asset.operations))):
                 if op.date >= timerange['periodStart'] and op.date <= timerange['periodEnd'] and bdown.profit != 0:
-                    operationsBreakdown.append(BreakdownElement(data.asset, op, bdown))
+                    operationsBreakdown.append(BreakdownElement(data.asset, op, idx, bdown))
 
 
         return render_template("results/index.html",

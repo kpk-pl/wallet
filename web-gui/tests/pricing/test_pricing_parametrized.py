@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 from tests import mocks
 from flaskr import model
 from flaskr.pricing import Pricing, Context, ParametrizedQuoting
-from decimal import Decimal, localcontext
+from decimal import Decimal as D, localcontext
 from bson import Decimal128, ObjectId
 
 
@@ -46,10 +46,10 @@ def setup_cpi():
     return source.commit()
 
 
-ASSET_INITIAL_PRICE = Decimal("1000")
-ASSET_INITIAL_FIXED_INTEREST = Decimal("0.017")
-ASSET_COMPOUND_FIXED_INTEREST = Decimal("0.01")
-ASSET_COMPOUND_DERIVED_INTEREST = Decimal("0.052") # from 2021-10-05
+ASSET_INITIAL_PRICE = D("1000")
+ASSET_INITIAL_FIXED_INTEREST = D("0.017")
+ASSET_COMPOUND_FIXED_INTEREST = D("0.01")
+ASSET_COMPOUND_DERIVED_INTEREST = D("0.052") # from 2021-10-05
 ASSET_OPERATION_DATE = datetime(2020, 11, 1)
 
 
@@ -81,37 +81,37 @@ def setup_asset(operationDate = ASSET_OPERATION_DATE):
     )
 
     asset.operation('BUY', operationDate, 10, 10, float(ASSET_INITIAL_PRICE))
-    return asset.commit()
+    return asset
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_price_before_first_operation():
-    assetId = setup_asset()
+    assetId = setup_asset().commit()
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
         dbAsset = db.wallet.assets.find_one({'_id': assetId})
         asset = model.Asset(**dbAsset)
 
         pricing = Pricing(ctx=Context(ASSET_OPERATION_DATE - timedelta(days=1), db=db.wallet))
-        assert (Decimal(0), Decimal(0)) == pricing(asset)
+        assert (D(0), D(0)) == pricing(asset)
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_price_first_day():
-    assetId = setup_asset()
+    assetId = setup_asset().commit()
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
         dbAsset = db.wallet.assets.find_one({'_id': assetId})
         asset = model.Asset(**dbAsset)
 
         pricing = Pricing(ctx=Context(ASSET_OPERATION_DATE, db=db.wallet))
-        assert (ASSET_INITIAL_PRICE, Decimal(10)) == pricing(asset)
+        assert (ASSET_INITIAL_PRICE, D(10)) == pricing(asset)
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 @pytest.mark.parametrize("daysIn", [1, 30, 365])
 def test_price_fixed_pricing_linearly(daysIn):
-    assetId = setup_asset()
+    assetId = setup_asset().commit()
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
         dbAsset = db.wallet.assets.find_one({'_id': assetId})
@@ -119,14 +119,47 @@ def test_price_fixed_pricing_linearly(daysIn):
 
         pricing = Pricing(ctx=Context(ASSET_OPERATION_DATE + timedelta(days=daysIn), db=db.wallet))
         value, quantity = pricing(asset)
-        expectedPrice = ASSET_INITIAL_PRICE * (Decimal(1) + Decimal(daysIn) / Decimal(365) * ASSET_INITIAL_FIXED_INTEREST)
+        expectedPrice = ASSET_INITIAL_PRICE * (D(1) + D(daysIn) / D(365) * ASSET_INITIAL_FIXED_INTEREST)
         assert value == expectedPrice
-        assert quantity == Decimal(10)
+        assert quantity == D(10)
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_price_fixed_future_sell_does_not_influence_current_price():
+    sellDate = ASSET_OPERATION_DATE + timedelta(days=31)
+    assetId = setup_asset().operation('SELL', sellDate, 10, 10, float(ASSET_INITIAL_PRICE)).commit()
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        asset = model.Asset(**dbAsset)
+
+        pricing = Pricing(ctx=Context(ASSET_OPERATION_DATE + timedelta(days=30), db=db.wallet))
+        value, quantity = pricing(asset)
+        expectedPrice = ASSET_INITIAL_PRICE * (D(1) + D(30) / D(365) * ASSET_INITIAL_FIXED_INTEREST)
+        assert value == expectedPrice
+        assert quantity == D(10)
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+@pytest.mark.parametrize("sellQuantity", [1, 5, 10])
+def test_price_fixed_after_sell_operation(sellQuantity):
+    sellDate = ASSET_OPERATION_DATE + timedelta(days=15)
+    assetId = setup_asset().operation('SELL', sellDate, sellQuantity, 10-sellQuantity, float(ASSET_INITIAL_PRICE)).commit()
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        asset = model.Asset(**dbAsset)
+
+        pricing = Pricing(ctx=Context(ASSET_OPERATION_DATE + timedelta(days=30), db=db.wallet))
+        value, quantity = pricing(asset)
+        expectedPrice = ASSET_INITIAL_PRICE * (D(1) + D(30) / D(365) * ASSET_INITIAL_FIXED_INTEREST) * D(10 - sellQuantity) / D(10)
+        assert value == expectedPrice
+        assert quantity == D(10 - sellQuantity)
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_parametrized_quoting_context_logic():
-    assetId = setup_asset()
+    assetId = setup_asset().commit()
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
         dbAsset = db.wallet.assets.find_one({'_id': assetId})
@@ -141,7 +174,7 @@ def test_parametrized_quoting_context_logic():
         pctx = ParametrizedQuoting.Context(quoting)
 
         assert not pctx.isPartial()
-        assert pctx.partialMultiplier() == Decimal(1)
+        assert pctx.partialMultiplier() == D(1)
         assert pctx.timePoint == ASSET_OPERATION_DATE
         assert pctx.nextTimePoint == ASSET_OPERATION_DATE + relativedelta(years=1)
         assert pctx.interestIdx == 0
@@ -151,18 +184,18 @@ def test_parametrized_quoting_context_logic():
         pctx.advance()
 
         assert pctx.isPartial()
-        assert pctx.partialMultiplier() == Decimal(1) / Decimal(365)
+        assert pctx.partialMultiplier() == D(1) / D(365)
         assert pctx.timePoint == ASSET_OPERATION_DATE + relativedelta(years=1)
         assert pctx.interestIdx == 1
-        assert pctx.fixedGrowth() == ASSET_COMPOUND_FIXED_INTEREST * Decimal(1) / Decimal(365)
+        assert pctx.fixedGrowth() == ASSET_COMPOUND_FIXED_INTEREST * D(1) / D(365)
         assert pctx.derivedQuoteTimestamp() == datetime(2021, 10, 1)
         assert pctx.derivedPercentageForTimestamp(datetime(2021, 10, 1)) == ASSET_COMPOUND_DERIVED_INTEREST
-        assert pctx.derivedGrowth() == ASSET_COMPOUND_DERIVED_INTEREST * Decimal(1) / Decimal(365)
+        assert pctx.derivedGrowth() == ASSET_COMPOUND_DERIVED_INTEREST * D(1) / D(365)
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_parametrized_quoting_key_points_beginning_of_next_period():
-    assetId = setup_asset()
+    assetId = setup_asset().commit()
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
         dbAsset = db.wallet.assets.find_one({'_id': assetId})
@@ -177,20 +210,20 @@ def test_parametrized_quoting_key_points_beginning_of_next_period():
         keyPoints = quoting.getKeyPoints()
         assert len(keyPoints) == 3
 
-        totalGrowth = Decimal(1)
+        totalGrowth = D(1)
         assert keyPoints[0] == ParametrizedQuoting.KeyPoint(ASSET_OPERATION_DATE, totalGrowth)
 
-        totalGrowth *= (Decimal(1) + ASSET_INITIAL_FIXED_INTEREST)
+        totalGrowth *= (D(1) + ASSET_INITIAL_FIXED_INTEREST)
         assert keyPoints[1] == ParametrizedQuoting.KeyPoint(ASSET_OPERATION_DATE + relativedelta(years=1), totalGrowth)
 
-        totalGrowth *= (Decimal(1) + (ASSET_COMPOUND_FIXED_INTEREST + ASSET_COMPOUND_DERIVED_INTEREST) / Decimal(365))
+        totalGrowth *= (D(1) + (ASSET_COMPOUND_FIXED_INTEREST + ASSET_COMPOUND_DERIVED_INTEREST) / D(365))
         assert keyPoints[2] == ParametrizedQuoting.KeyPoint(ASSET_OPERATION_DATE + relativedelta(years=1, days=1), totalGrowth)
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 @pytest.mark.parametrize("daysInCompound", [1, 30, 365])
 def test_price_derived_pricing_linearily(daysInCompound):
-    assetId = setup_asset()
+    assetId = setup_asset().commit()
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
         dbAsset = db.wallet.assets.find_one({'_id': assetId})
@@ -199,17 +232,17 @@ def test_price_derived_pricing_linearily(daysInCompound):
         pricing = Pricing(ctx=Context(ASSET_OPERATION_DATE + relativedelta(years=1, days=daysInCompound), db=db.wallet))
         value, quantity = pricing(asset)
 
-        priceAfterFirstYear = ASSET_INITIAL_PRICE * (Decimal(1) + ASSET_INITIAL_FIXED_INTEREST)
-        periodPercent = (ASSET_COMPOUND_FIXED_INTEREST + ASSET_COMPOUND_DERIVED_INTEREST) * Decimal(daysInCompound) / Decimal(365)
-        expectedPrice = priceAfterFirstYear * (Decimal(1) + periodPercent)
+        priceAfterFirstYear = ASSET_INITIAL_PRICE * (D(1) + ASSET_INITIAL_FIXED_INTEREST)
+        periodPercent = (ASSET_COMPOUND_FIXED_INTEREST + ASSET_COMPOUND_DERIVED_INTEREST) * D(daysInCompound) / D(365)
+        expectedPrice = priceAfterFirstYear * (D(1) + periodPercent)
 
         assert value == expectedPrice
-        assert quantity == Decimal(10)
+        assert quantity == D(10)
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_parametrized_quoting_context_logic_when_missing_quoting_data():
-    assetId = setup_asset()
+    assetId = setup_asset().commit()
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
         dbAsset = db.wallet.assets.find_one({'_id': assetId})
@@ -228,7 +261,7 @@ def test_parametrized_quoting_context_logic_when_missing_quoting_data():
         pctx.advance()
 
         assert pctx.isPartial()
-        assert pctx.partialMultiplier() == Decimal(1) / Decimal(365)
+        assert pctx.partialMultiplier() == D(1) / D(365)
         assert pctx.timePoint == ASSET_OPERATION_DATE + relativedelta(years=2)
         assert pctx.interestIdx == 1  # This does not increase because it's the last one
         assert pctx.derivedQuoteTimestamp() == datetime(2022, 10, 1)
@@ -240,7 +273,7 @@ def test_parametrized_quoting_context_logic_when_missing_quoting_data():
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_parametrized_quoting_context_logic_when_quoting_data_was_not_updated_very_recently():
     operationDate = datetime(2021, 6, 1)
-    assetId = setup_asset(operationDate)
+    assetId = setup_asset(operationDate).commit()
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
         dbAsset = db.wallet.assets.find_one({'_id': assetId})
@@ -258,13 +291,13 @@ def test_parametrized_quoting_context_logic_when_quoting_data_was_not_updated_ve
         pctx.advance()
 
         assert pctx.isPartial()
-        assert pctx.partialMultiplier() == Decimal(1) / Decimal(365)
+        assert pctx.partialMultiplier() == D(1) / D(365)
         assert pctx.timePoint == operationDate + relativedelta(years=1)
         assert pctx.interestIdx == 1
         assert pctx.derivedQuoteTimestamp() == datetime(2022, 5, 1)
 
         # There is not quote data for 2022-05-01 but 2022-04-05 is close enough to be considered
-        assert pctx.derivedPercentageForTimestamp(datetime(2022, 5, 1)) == Decimal("0.052")
+        assert pctx.derivedPercentageForTimestamp(datetime(2022, 5, 1)) == D("0.052")
 
 
 def setup_distributing_asset(operationDate = ASSET_OPERATION_DATE):
@@ -295,12 +328,12 @@ def setup_distributing_asset(operationDate = ASSET_OPERATION_DATE):
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 @pytest.mark.parametrize("params", [
-    (0, Decimal(0)), # The day of creation there is no profit
-    (1, Decimal("0.02") / 100 / 365), # First day, 1/365 of yield, CPI date 2020-10-05, yield 0.02
-    (29, Decimal("0.02") * 29 / 100 / 365), # 29th day, still should be the same month so the same yield 0.02, last day of the month in the first period
-    (30, Decimal(0)), # 30th day which is the end of the month. Profit should be distributed and not reflected with the price
-    (45, Decimal("0.04") * 15 / 100 / 365), # 15 days of December at 0.04 yield from 2020-11-05 in the current period
-    (70, Decimal("0.05") * 9 / 100 / 365), # January yield is 0.05 from 2020-12-05 and this is third pricing period
+    (0, D(0)), # The day of creation there is no profit
+    (1, D("0.02") / 100 / 365), # First day, 1/365 of yield, CPI date 2020-10-05, yield 0.02
+    (29, D("0.02") * 29 / 100 / 365), # 29th day, still should be the same month so the same yield 0.02, last day of the month in the first period
+    (30, D(0)), # 30th day which is the end of the month. Profit should be distributed and not reflected with the price
+    (45, D("0.04") * 15 / 100 / 365), # 15 days of December at 0.04 yield from 2020-11-05 in the current period
+    (70, D("0.05") * 9 / 100 / 365), # January yield is 0.05 from 2020-12-05 and this is third pricing period
 ])
 def test_price_distributing(params):
     daysIn, expectedMultiplier = params
@@ -312,17 +345,18 @@ def test_price_distributing(params):
 
         pricing = Pricing(ctx=Context(ASSET_OPERATION_DATE + timedelta(days=daysIn), db=db.wallet))
         value, quantity = pricing(asset)
-        expectedPrice = ASSET_INITIAL_PRICE * (Decimal(1) + expectedMultiplier)
+        expectedPrice = ASSET_INITIAL_PRICE * (D(1) + expectedMultiplier)
 
         with localcontext() as ctx:
+            assert value is not None
             ctx.prec = 20
             assert +value == +expectedPrice
 
-        assert quantity == Decimal(10)
+        assert quantity == D(10)
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
-def test_priceing_stops_after_investment_period():
+def test_pricing_stops_after_investment_period():
     assetId = setup_distributing_asset()
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
