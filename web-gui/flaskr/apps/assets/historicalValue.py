@@ -51,6 +51,7 @@ class ResultAsset:
     quantity: List[Decimal]
     investedValue: Optional[List[Decimal]]
     profit: List[Decimal]
+    provision: List[Decimal]
 
     def __init__(self, id, name, category, subcategory):
         self.id = str(id)
@@ -73,7 +74,7 @@ def historicalValue():
     if request.method == 'GET':
         ids = list(set(request.args.getlist('id')))
 
-        daysBack = None
+        daysBack = 180
         if 'daysBack' in request.args:
             daysBack = int(request.args.get('daysBack'))
 
@@ -110,6 +111,7 @@ def historicalValue():
 
             dataAsset.value = priced.value
             dataAsset.quantity = priced.quantity
+            dataAsset.provision = priced.provision
             dataAsset.profit = priced.profit
 
             result.assets.append(dataAsset)

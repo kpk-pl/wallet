@@ -209,6 +209,7 @@ class Pricing(_PricingBase):
 class HistoryResult:
     timescale : List[datetime]
     value : List[Decimal] = field(default_factory=list)
+    provision : List[Decimal] = field(default_factory=list)
     investedValue : List[Decimal]|None = None
     quantity : List[Decimal] = field(default_factory=list)
     profit : List[Decimal]|None = None
@@ -220,6 +221,7 @@ class HistoryResult:
     def null(cls, timescale, features):
         result = cls(timescale)
         result.value = [Decimal(0)] * len(result.timescale)
+        result.provision = [Decimal(0)] * len(result.timescale)
         result.quantity = [Decimal(0)] * len(result.timescale)
         result.profit = [Decimal(0)] * len(result.timescale) if features['profit'] else None
         result.investedValue = [Decimal(0)] * len(result.timescale) if features['investedValue'] else None
@@ -259,6 +261,8 @@ class HistoryPricing(_PricingBase):
                 self._data.result.value = self._priceAssetByQuote(asset, self._data.result)
             elif self._data.type is _PricingType.Interest:
                 self._data.result.value = self._priceAssetByInterest(asset, self._data.result)
+
+            self._data.result.provision = self._getProvision(asset.operations)
 
             if self._features['investedValue']:
                 if profitsInfo is None:
@@ -321,6 +325,21 @@ class HistoryPricing(_PricingBase):
                 operationIdx += 1
 
             result.append(profit)
+
+        return result
+
+    def _getProvision(self, operations):
+        operationIdx = 0
+        provision = 0
+        result = []
+
+        for dateIdx in self._ctx.timeScale:
+            # If this is the day the next operation happened, take new values
+            while operationIdx < len(operations) and operations[operationIdx].date <= dateIdx:
+                provision += operations[operationIdx].provision
+                operationIdx += 1
+
+            result.append(provision)
 
         return result
 

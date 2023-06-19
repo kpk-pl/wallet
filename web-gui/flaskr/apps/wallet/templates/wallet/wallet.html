@@ -88,6 +88,7 @@
                 <th>Total value <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
                 <th>Share</th>
                 <th>Net P/L</th>
+                <th>Profit <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
               </tr>
             </thead>
             <tbody>
@@ -147,6 +148,9 @@
                     {{ 0 | asCurrency(config.MAIN_CURRENCY, False) }}
                     {%- endif -%}
                   %</td>
+                  <td data-title="Profit" class="text-right color-gain">
+                    {{ (data.netValue + data.profits.netProfit - data.profits.provisions - netInvestment) | asCurrency(config.MAIN_CURRENCY, False) }}
+                  </td>
                 {%- else %}
                   <td data-title="Value" class="text-right">
                     <i class="fas fa-exclamation-triangle fa-fw" style="{{ config.STYLING.WARNING_EXCLAMATION_TRIANGLE }}" title="Could not determine current value"></i>
@@ -156,6 +160,9 @@
                     <i class="fas fa-exclamation-triangle fa-fw" style="{{ config.STYLING.WARNING_EXCLAMATION_TRIANGLE }}" title="Could not determine current value"></i>
                   </td>
                   <td data-title="Net P/L" class="text-right color-gain">
+                    {{ 0 | asCurrency(config.MAIN_CURRENCY, False) }}%
+                  </td>
+                  <td data-title="Profit" class="text-right color-gain">
                     {{ 0 | asCurrency(config.MAIN_CURRENCY, False) }}%
                   </td>
                 {%- endif %}
@@ -182,12 +189,16 @@
                 {%- if hasAllNetValues %}
                   <th class="text-right color-gain">
                     {%- if totalStillInvestedNetValue > 0 -%}
-                    {{ ((totalNetValue - totalStillInvestedNetValue) / totalStillInvestedNetValue * 100) | asCurrency(config.MAIN_CURRENCY, False) }}
+                    {{ ((totalNetValue + totalNetProfit - totalProvisions - totalStillInvestedNetValue) / totalStillInvestedNetValue * 100) | asCurrency(config.MAIN_CURRENCY, False) }}
                     {%- else -%}
                     {{ 0 | asCurrency(config.MAIN_CURRENCY, False) }}
                     {%- endif -%}
                   %</th>
+                  <th class="text-right color-gain">
+                    {{ (totalNetValue + totalNetProfit - totalProvisions - totalStillInvestedNetValue) | asCurrency(config.MAIN_CURRENCY, False) }}
+                  </th>
                 {%- else %}
+                  <th></th>
                   <th></th>
                 {%- endif %}
               </tr>
