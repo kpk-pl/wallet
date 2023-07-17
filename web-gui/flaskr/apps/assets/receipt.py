@@ -51,10 +51,14 @@ def _receiptGet():
     if asset.currency.name != current_app.config['MAIN_CURRENCY']:
         quote = list(db.get_db().quotes.aggregate([
             {'$match': {'_id': ObjectId(asset.currency.quoteId)}},
-            {'$project': {'lastQuote': {'$last': '$quoteHistory.quote'}}}
+            {'$project': {'lastQuote': {'$last': '$quoteHistory.quote'}, 'currencyPair': 1}}
         ]))
         if quote:
-            data['lastCurrencyRate'] = quote[0]['lastQuote']
+            lastQuote = quote[0]['lastQuote']
+            if quote[0]['currencyPair']['to'] != asset.currency.name:
+                lastQuote = typing.CurrencyConversion.staticConvert(asset.currency.name, quote[0]['currencyPair']['to'], lastQuote)
+            data['lastCurrencyRate'] = lastQuote
+
 
     data['depositAccounts'] = list(db.get_db().assets.aggregate([
         {'$match': {

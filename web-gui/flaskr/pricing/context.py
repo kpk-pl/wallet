@@ -1,9 +1,8 @@
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 from pydantic import BaseModel, Field
 from decimal import Decimal
 from typing import List, Optional
-from flaskr import model
-from bson.objectid import ObjectId
+from flaskr import model, typing
 from .interp import interp
 
 
@@ -106,13 +105,7 @@ class Context(object):
     def _getCurrencyConversion(quoteEntry, required:str):
         if not quoteEntry.currencyPair or not required:
             return None
-
-        if required == "GBP" and quoteEntry.currencyPair.destination == "GBX":
-            return Decimal(100)
-        if required == "GBX" and quoteEntry.currencyPair.destination == "GBP":
-            return Decimal("0.01")
-
-        return None
+        return typing.CurrencyConversion.staticRate(required, quoteEntry.currencyPair.destination)
 
     @staticmethod
     def _returnSingle(quote, entry, currency):
