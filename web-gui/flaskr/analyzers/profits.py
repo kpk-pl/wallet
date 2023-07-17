@@ -102,8 +102,8 @@ class Profits:
         # Last quantity
         quantity: Decimal = field(default_factory=Decimal)
 
-    def __init__(self, currentDate = datetime.now()):
-        self._currentDate = currentDate
+    def __init__(self, currentDate = None):
+        self._currentDate = currentDate if currentDate is not None else datetime.now()
 
     def __call__(self, asset:model.Asset, debug=None):
         self._result = self.Result()
