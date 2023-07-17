@@ -149,7 +149,7 @@ setupForm({
             <div class="row">
               <div class="col" id="c-unit-price">
                 <div class="form-group" id="g-unit-price">
-                  <label for="f-unit-price">Unit price</label>
+                  <label for="f-unit-price" id="l-unit-price">Unit price</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
                       <span class="input-group-text">{{ asset.currency.name }}</span>
@@ -160,7 +160,7 @@ setupForm({
               </div>
               <div class="col" id="c-price">
                 <div class="form-group" id="g-price">
-                  <label for="f-price" id="l-price">Assets value</label>
+                  <label for="f-price" id="l-price">Total price</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
                       <span class="input-group-text">{{ asset.currency.name }}</span>
@@ -174,29 +174,40 @@ setupForm({
 
             {% if asset.currency.name != config.MAIN_CURRENCY -%}
             <div class="row">
-              <div class="col-12">
+              <div class="col">
                 <div class="form-group" id="g-conversion">
                   <label for="f-conversion">Currency rate {{ asset.currency.name }}/{{ config.MAIN_CURRENCY }}</label>
                   <input type="number" value="{{ data.lastCurrencyRate if data.lastCurrencyRate else 0 }}" step="any" id="f-conversion" class="form-control" name="currencyConversion" required/>
                 </div>
               </div>
+              <div class="col" id="c-value">
+                <div class="form-group" id="g-value">
+                  <label for="f-value" id="l-value">Assets value</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">{{ config.MAIN_CURRENCY }}</span>
+                    </div>
+                    <input type="number" class="form-control" id="f-value" name="value" disabled="disabled" value="0"/>
+                  </div>
+                </div>
+              </div>
             </div>
             {%- endif %}
             <div class="row">
-              <div class="col-6">
+              <div class="col">
                 <div class="form-group" id="g-provision">
                   <label for="f-provision">Provision and tax</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
                       <span class="input-group-text">{{ config.MAIN_CURRENCY }}</span>
                     </div>
-                    <input type="number" min="0" step="0.01" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-provision" name="provision" />
+                    <input type="number" min="0" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-provision" name="provision" />
                   </div>
                 </div>
               </div>
-              <div class="col-6">
+              <div class="col">
                 <div class="form-group" id="g-cost">
-                  <label for="f-cost">{{ 'Deposit value' if asset.type == 'Deposit' else 'Payable amount' }}</label>
+                  <label for="f-cost">{{ 'Deposit value' if asset.type == 'Deposit' else 'Transaction value' }}</label>
                   <div class="input-group">
                     <div class="input-group-prepend">
                       <span class="input-group-text">{{ config.MAIN_CURRENCY }}</span>
@@ -205,7 +216,9 @@ setupForm({
                   </div>
                 </div>
               </div>
-              <div class="col-12">
+            </div>
+            <div class="row">
+              <div class="col">
                 <div class="form-group" id="g-billing-asset">
                   <label for="f-billing-asset">Billing asset acount</label>
                   <select id="f-billing-asset" name="billingAsset" class="custom-select">
