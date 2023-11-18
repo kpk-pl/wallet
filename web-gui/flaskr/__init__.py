@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, url_for
+from flask import Flask, request, url_for, json
 
 
 def create_app(test_config=None):
@@ -16,7 +16,7 @@ def create_app(test_config=None):
         MONGO_SESSIONS = True,
     )
 
-    app.config.from_json('config.json')
+    app.config.from_file('config.json', load=json.load)
     if test_config is not None:
         app.config.from_mapping(test_config)
 
