@@ -7,6 +7,44 @@ function initialize(s) {
 
 $(function () {
   $.fn.dataTable.Buttons.defaults.dom.collection.className += " dropdown-menu-right";
+
+  function makeAdjustmentInput(step, cls) {
+    return '<input type="number" step="' + step.toString() + '" class="' + cls + ' form-control form-control-sm"></input>';
+  }
+
+  let assetAdjustmentTableElement = $('#assetAdjustmentTable').DataTable({
+    paging: false,
+    searching: false,
+    ordering: true,
+    order: [[2, "asc"]],
+    info: false,
+    autoWidth: false,
+    responsive: true,
+    columns: [
+      {"data": "name"},
+      {"data": "institution"},
+      {"data": "category"},
+      {"data": "quantity"},
+      {"data": function(row){
+        return parseFloat(row.unitPrice).toFixed(2) + " " + row.currency;
+      }},
+      {"defaultContent": makeAdjustmentInput(1, "assetAdjustmentTableAdjustmentInput")},
+      {"defaultContent": "0"}
+    ],
+    columnDefs: [
+      { type: "string", targets: [0, 1, 2] },
+      { type: "num-fmt", className: "text-right", targets: [3, 4] },
+      { type: "num-fmt", className: "text-right color-gain", targets: [6] },
+      { orderable: false, targets: [5] },
+      { visible: false, targets: [] },
+    ],
+  });
+
+  let assetAdjustmentTable = new StrategyAssetAdjustmentTable(assetAdjustmentTableElement, {
+    adjustment: 5,
+    adjustedValue: {column: 6, format: x => x.toFixed(2)},
+  });
+
   let strategyTableElement = $('#strategyTable').DataTable({
     paging: false,
     searching: false,
@@ -16,7 +54,7 @@ $(function () {
     autoWidth: false,
     responsive: true,
     buttons: [
-			{ extend: "colvis", className: "btn-sm py-0" },
+      { extend: "colvis", className: "btn-sm py-0" },
     ],
     columnDefs: [
       { type: "readonly", targets: [3, 4, 5, 6, 7] },
@@ -30,7 +68,7 @@ $(function () {
   });
   strategyTableElement.buttons().container().appendTo("#tableElements");
 
-  let strategyTable = new StrategyTable(strategyTableElement, {
+  let strategyTable = new StrategyTable(strategyTableElement, assetAdjustmentTable, {
     name: 0,
     share: 1,
     netAdjust: 4,
@@ -95,33 +133,43 @@ $(function () {
       return result;
     }
 
-    function makeAdjustmentInput() {
-      return '<input type="number" step="100" class="strategyTableDeviationInput form-control form-control-sm"></input>';
-    }
-
     strategyTable.fillStrategy(data, function(assetType){
       let constituents = []
       for (let category of assetType.categories)
+      {
         constituents.push(typeof category == "string" ? category : `${category.name} [${category.percentage}%]`)
+      }
 
       return [assetType.name,
               String(assetType.percentage) + '%',
               makeList(constituents, 'ul', ['list-unstyled', 'm-0']),
               null,
-              simplified ? null : makeAdjustmentInput(),
+              simplified ? null : makeAdjustmentInput(100, 'strategyTableDeviationInput'),
               null,
               null,
               null]
     });
 
-    function updateTable(){
+    assetAdjustmentTable.fillAssets(data);
+    strategyTable.fillAllocation(data);
+
+    function updateStrategyTable(){
       strategyTable.updateDeviation(data);
       $('#strategyTable td.color-gain').each(styling.colorGain)
     }
 
-    strategyTable.fillAllocation(data);
-    updateTable();
+    function updateAssetAdjustmentTable(){
+      assetAdjustmentTable.updateAdjustedValues();
+      $('#assetAdjustmentTable td.color-gain').each(styling.colorGain)
+    }
 
-    $(".strategyTableDeviationInput").change(updateTable);
+    updateStrategyTable();
+    updateAssetAdjustmentTable();
+
+    $(".strategyTableDeviationInput").change(updateStrategyTable);
+    $(".assetAdjustmentTableAdjustmentInput").change(function(){
+      updateAssetAdjustmentTable();
+      updateStrategyTable();
+    });
   }
 });

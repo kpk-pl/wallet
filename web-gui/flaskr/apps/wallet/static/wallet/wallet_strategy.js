@@ -17,7 +17,7 @@ $(function(){
     ]
   });
 
-  strategyTable = new StrategyTable(strategyTableElement, {
+  strategyTable = new StrategyTable(strategyTableElement, null, {
     name: 0, share: 1,
     netValue: {
       column: 2,

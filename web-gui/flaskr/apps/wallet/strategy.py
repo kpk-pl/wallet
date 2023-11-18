@@ -5,8 +5,11 @@ from flaskr import db, header
 from flaskr.session import Session
 from flaskr.pricing import Pricing
 from flaskr.analyzers.categories import Categories
-from flaskr.model import Asset
+from flaskr.model import Asset, AssetPricingQuotes
 from flaskr.utils import jsonify
+from decimal import Decimal
+from dataclasses import dataclass
+from typing import Optional
 
 
 def _getPipelineFilters(label = None):
@@ -51,6 +54,18 @@ def _lastStrategyPipeline(label = None):
     ]
 
 
+@dataclass
+class StrategyAssetData:
+    id: str
+    name: str
+    institution: str
+    category: str
+    quantity: Decimal
+    unitPrice: Decimal
+    currency: str
+    currencyConversion: Decimal
+
+
 def _response(shouldAllocate=False, label=None):
     response = {'label': label}
 
@@ -58,13 +73,32 @@ def _response(shouldAllocate=False, label=None):
     if strategy:
         response['strategy'] = strategy[0]
 
+    assetData = []
     if shouldAllocate:
         pricing = Pricing()
         assets = list(db.get_db().assets.aggregate(_getPipeline(label)))
-        for asset in assets:
-            asset['_netValue'], _ = pricing(Asset(**asset))
+        for rawAsset in assets:
+            asset = Asset(**rawAsset)
+            netValue, quantity = pricing(asset)
+            rawAsset['_netValue'] = netValue 
+
+            if asset.pricing is not None and isinstance(asset.pricing, AssetPricingQuotes):
+                currencyConversion = pricing.getLastPrice(asset.currency.quoteId, asset.currency.name)
+                unitPrice = pricing.getLastPrice(asset.pricing.quoteId)
+                if unitPrice is not None:
+                    assetData.append(StrategyAssetData(
+                        id=str(asset.id),
+                        name=asset.name,
+                        institution=asset.institution,
+                        category=f"{asset.subcategory} {asset.category}" if asset.subcategory else asset.category,
+                        quantity=quantity if quantity is not None else Decimal(0),
+                        currency=asset.currency.name,
+                        currencyConversion=currencyConversion if currencyConversion else Decimal(1),
+                        unitPrice=unitPrice
+                    ))
 
         response['allocation'] = Categories()(assets)
+        response['assets'] = assetData
 
     return response
 

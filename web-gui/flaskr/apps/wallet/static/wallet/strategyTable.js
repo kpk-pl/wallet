@@ -1,6 +1,62 @@
-class StrategyTable {
+class StrategyAssetAdjustmentTable {
   constructor(datatable, colMap) {
     this.datatable = datatable
+
+    this.colMap = {}
+    for (let key in colMap) {
+      if (typeof colMap[key] == 'number')
+        this.colMap[key] = {column: colMap[key], format: x => x}
+      else
+        this.colMap[key] = colMap[key]
+    }
+  }
+
+  fillAssets(data) {
+    if (data.assets == undefined)
+      return;
+
+    this.datatable.rows.add(data.assets)
+    this.datatable.draw()
+  }
+
+  _adjustmentInRow(rowIdx) {
+      const inputElement = this.datatable.cell(rowIdx, this.colMap.adjustment.column).node().getElementsByTagName('input')[0];
+      return inputElement !== undefined ? Number(inputElement.value) : 0;
+  }
+
+  updateAdjustedValues() {
+    let self = this;
+    this.datatable.rows().every(function(rowIdx){
+      const adjustment = self._adjustmentInRow(rowIdx);
+      const unitValue = this.data().unitPrice * this.data().currencyConversion;
+      self.datatable.cell(rowIdx, self.colMap.adjustedValue.column).data(self.colMap.adjustedValue.format(adjustment * unitValue));
+    });
+
+    this.datatable.draw();
+  }
+
+  collectAdjustments() {
+    let adjustments = Object.create(null);
+    
+    let self = this;
+    this.datatable.rows().every(function(rowIdx){
+      const adjustment = self._adjustmentInRow(rowIdx);
+      const unitValue = this.data().unitPrice * this.data().currencyConversion;
+
+      if (!(this.data().category in adjustments))
+        adjustments[this.data().category] = 0;
+
+      adjustments[this.data().category] += adjustment * unitValue;
+    });
+
+    return adjustments;
+  }
+}
+
+class StrategyTable {
+  constructor(datatable, assetAdjustmentTable, colMap) {
+    this.datatable = datatable
+    this.assetAdjustmentTable = assetAdjustmentTable
 
     this.colMap = {}
     for (let key in colMap) {
@@ -72,12 +128,36 @@ class StrategyTable {
     this.datatable.draw()
   }
 
+  _collectAssetAdjustments(strategy) {
+    let adjustments = Object.create(null);
+    for (const assetType of strategy.assetTypes) {
+      adjustments[assetType.name] = 0;
+    }
+
+    if (this.assetAdjustmentTable === null)
+      return adjustments;
+
+    const assetAdjustments = this.assetAdjustmentTable.collectAdjustments();
+
+    for (const assetType of strategy.assetTypes) {
+      for (let category of assetType.categories) {
+          let percentage = (typeof category == "string" ? 100 : category.percentage)
+          let name = (typeof category == "string" ? category : category.name)
+          if (name in assetAdjustments)
+            adjustments[assetType.name] += assetAdjustments[name] * percentage / 100
+      }
+    }
+
+    return adjustments
+  }
+
   updateDeviation(data) {
     if (data.strategy === undefined || data.allocation === undefined)
       return;
 
     let self = this;
     const netValueSum = data.strategy.assetTypes.map(t=>t.netValue).reduce((a,b)=>a+b);
+    const assetAdjustments = this._collectAssetAdjustments(data.strategy)
 
     function adjustValue(rowIdx) {
       if (self.colMap.netAdjust) {
@@ -87,13 +167,13 @@ class StrategyTable {
       return 0;
     }
 
-    let netAdjustSum = 0;
+    let netAdjustSum = Object.values(assetAdjustments).reduce((a, b) => a + b, 0);
     this.datatable.rows().every(rowIdx => netAdjustSum += adjustValue(rowIdx));
 
     this.datatable.rows().every(function(rowIdx){
       const category = self.datatable.cell(rowIdx, self.colMap.name.column).data();
       const assetType = data.strategy.assetTypes.find(type => type.name == category);
-      const value = assetType.netValue + adjustValue(rowIdx);
+      const value = assetType.netValue + adjustValue(rowIdx) + assetAdjustments[category];
       const percent = value / (netValueSum + netAdjustSum) * 100;
       const deviation = percent - assetType.percentage;
       self.datatable.cell(rowIdx, self.colMap.deviation.column).data(self.colMap.deviation.format(deviation) + '%');

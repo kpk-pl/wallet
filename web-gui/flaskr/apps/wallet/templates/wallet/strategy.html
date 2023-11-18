@@ -68,5 +68,33 @@ initialize({
       </div>
     </div>
   </div>
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary collapsed-card">
+        <div class="card-header">
+          <h3 class="card-title">Asset adjustments</h3>
+          <div class="card-tools">
+            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <table class="table table-bordered table-striped table-hover" id="assetAdjustmentTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Institution</th>
+                <th>Category</th>
+                <th>Volume</th>
+                <th>Current price</th>
+                <th>Adjustment</th>
+                <th>Adjusted value <span class="smaller">[{{ config.MAIN_CURRENCY }}]</span></th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

@@ -122,6 +122,9 @@ class Pricing(_PricingBase):
 
         return (self._data.netValue, self._data.quantity)
 
+    def getLastPrice(self, quoteId:Optional[model.PyObjectId], currencyName:Optional[str] = None):
+        return self._ctx.getFinalById(quoteId, currencyName) if quoteId is not None else None
+
     def _prepare(self, asset):
         self._data.quotes = {}
 
