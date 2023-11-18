@@ -19,6 +19,7 @@ initialize({
   currency: "{{ config.MAIN_CURRENCY }}",
   strategyUri: "{{ url_for('.strategy', allocation='true', label=session['label']) | safe }}",
   strategyUriFallback: "{{ url_for('.strategy', label=session['label']) | safe }}",
+  assetUri: "{{ url_for('assets.index', id='ASSET_ID') | safe }}",
 });
 </script>
 {% endblock %}

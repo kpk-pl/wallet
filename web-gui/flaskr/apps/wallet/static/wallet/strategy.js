@@ -21,7 +21,9 @@ $(function () {
     autoWidth: false,
     responsive: true,
     columns: [
-      {"data": "name"},
+      {"data": function(row){
+        return '<a href="' + settings.assetUri.replace('ASSET_ID', row.id) + '">' + row.name + "</a>";
+      }},
       {"data": "institution"},
       {"data": "category"},
       {"data": "quantity"},
