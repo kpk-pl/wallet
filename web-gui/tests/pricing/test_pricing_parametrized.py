@@ -127,7 +127,7 @@ def test_price_fixed_pricing_linearly(daysIn):
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_price_fixed_future_sell_does_not_influence_current_price():
     sellDate = ASSET_OPERATION_DATE + timedelta(days=31)
-    assetId = setup_asset().operation('SELL', sellDate, 10, 10, float(ASSET_INITIAL_PRICE)).commit()
+    assetId = setup_asset().operation('SELL', sellDate, 10, 0, float(ASSET_INITIAL_PRICE)).commit()
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
         dbAsset = db.wallet.assets.find_one({'_id': assetId})

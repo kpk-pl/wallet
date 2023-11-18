@@ -157,9 +157,6 @@ class Profits:
     def _buy(self, operation:model.AssetOperation, assetType:model.AssetType):
         breakdown = self.Result.Breakdown()
 
-        assert isinstance(operation.quantity, Decimal)
-        assert self._running.quantity + operation.quantity == operation.finalQuantity
-
         self._running.quantity = operation.finalQuantity
         self._running.price += operation.price
         self._running.netPrice += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
@@ -181,10 +178,6 @@ class Profits:
     def _receive(self, operation:model.AssetOperation, assetType:model.AssetType):
         breakdown = self.Result.Breakdown()
 
-        assert assetType != model.AssetType.deposit
-        assert isinstance(operation.quantity, Decimal)
-        assert self._running.quantity + operation.quantity == operation.finalQuantity
-
         self._running.quantity = operation.finalQuantity
         self._running.provision += _valueOr(operation.provision, Decimal(0))
 
@@ -198,9 +191,6 @@ class Profits:
     def _sell(self, operation:model.AssetOperation, assetType:model.AssetType):
         breakdown = self.Result.Breakdown()
         quantity = operation.quantity
-
-        assert isinstance(quantity, Decimal)
-        assert self._running.quantity - quantity == operation.finalQuantity
 
         breakdown.profit = operation.price - self._running.partPrice(quantity)
         breakdown.netProfit =  operation.price * _valueOr(operation.currencyConversion, Decimal(1)) - self._running.partNetPrice(quantity)
@@ -229,17 +219,12 @@ class Profits:
         breakdown = self.Result.Breakdown()
 
         if assetType == model.AssetType.deposit:
-            assert isinstance(operation.quantity, Decimal)
-            assert self._running.quantity + operation.quantity == operation.finalQuantity
-
             self._running.quantity = operation.finalQuantity
             self._running.price += operation.price
             self._running.netPrice += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
             self._running.investment += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
 
             breakdown.remainingOpenQuantity = operation.price
-        else:
-            assert self._running.quantity == operation.finalQuantity
 
         breakdown.profit = operation.price
         breakdown.netProfit =  operation.price * _valueOr(operation.currencyConversion, Decimal(1))

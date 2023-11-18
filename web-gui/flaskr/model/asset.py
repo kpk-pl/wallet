@@ -1,9 +1,10 @@
 from pydantic import BaseModel, Field, HttpUrl, validator
 from typing import Optional, List
 from enum import Enum
+from decimal import Decimal
 from .types import PyObjectId
 from .assetOperation import AssetOperation, AssetOperationType
-from .assetPricing import AssetPricing, AssetPricingQuotes
+from .assetPricing import AssetPricing
 
 
 class AssetCurrency(BaseModel):
@@ -71,6 +72,33 @@ class Asset(BaseModel):
             if op.currencyConversion is None:
                 raise ValueError("Operation must have currency conversion specified for assets in foreign currency")
         return op
+
+    @validator('operations')
+    def check_quantity_and_final_quantity_is_consistent(cls, operations, values):
+        if 'type' not in values:
+            raise ValueError("Cannot check quantity consistency because asset type is unknown")
+
+        expectedFinalQuantity = Decimal(0)
+        for op in operations:
+            if op.type == AssetOperationType.buy:
+                expectedFinalQuantity += op.quantity
+            elif op.type == AssetOperationType.sell:
+                expectedFinalQuantity -= op.quantity
+            elif op.type == AssetOperationType.receive:
+                # a RECEIVE is essentially a BUY with a price 0
+                expectedFinalQuantity += op.quantity
+            elif op.type == AssetOperationType.earning:
+                # EARNING changes quantity only for deposits
+                if values['type'] == AssetType.deposit:
+                    expectedFinalQuantity += op.quantity
+
+            if expectedFinalQuantity < 0:
+                raise ValueError("Operation resulted in expected final quantity less than zero")
+            if op.finalQuantity != expectedFinalQuantity:
+                raise ValueError("Inconsistency between operation quantity and expected final quantity")
+
+        return operations
+
 
     @validator('hasOrderIds')
     def check_each_operation_has_orderId_when_required(cls, hasOrderIds, values):
