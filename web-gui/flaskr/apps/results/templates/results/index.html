@@ -171,7 +171,7 @@
                 <th>Asset</th>
                 <th style="width: 30px">Type</th>
                 <th>Institution</th>
-                <th>Open price</th>
+                <th title="Average open price">Open price</th>
                 <th>Close price</th>
                 <th>Earnings</th>
                 <th>Provisions</th>
@@ -281,7 +281,7 @@
           <dt class="col-sm-4">Remaining open {{ 'value' if e.asset.type == 'Deposit' else 'volume' }}</dt>
           <dd class="col-sm-8">
             {{ e.breakdown.remainingOpenQuantity }}
-            {%- if asset.type == 'Deposit' %}
+            {%- if e.asset.type == 'Deposit' %}
               {{ e.asset.currency.name }}
             {%- endif %}
           </dd>
