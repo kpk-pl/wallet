@@ -18,8 +18,12 @@
 <script type="text/javascript">
   init({
     chart: {
+      {%- if quote.quoteHistory %}
       existingQuotes: {{ quote.quoteHistory | tojson }}
         .map(function(e){ return {x: Date.parse(e.timestamp), y: e.quote}; }),
+      {%- else %}
+      existingQuotes: [],
+      {%- endif %}
       name: '{{ quote.name | safe }}',
       unit: '{{ quote.unit }}'
     },

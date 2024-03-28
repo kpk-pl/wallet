@@ -34,13 +34,15 @@ def importQuotes():
     elif request.method == 'POST':
         quoteId = request.form.get('id')
         method = request.form.get('method')
-        data = json.loads(request.form.get('data'))
+        rawData = json.loads(request.form.get('data'))
 
-        if not data:
+        if not rawData:
             return ({"error": "The request has empty data"}, 500)
 
-        for entry in data:
-            entry['timestamp'] = datetime.utcfromtimestamp(entry['timestamp'] / 1e3)
+        data = [dict(
+            timestamp = datetime.utcfromtimestamp(entry['x'] / 1e3),
+            quote = entry['y'],
+        ) for entry in rawData]
 
         data.sort(key=lambda e: e['timestamp'])
 
@@ -79,8 +81,9 @@ def csvUpload():
         if len(fields) < 2:
             return ({}, 500)
 
+        timestamp = datetime.utcfromtimestamp(int(fields[0])) if fields[0].isdigit() else dateutil.parser.parse(fields[0])
         result.append({
-            'timestamp': dateutil.parser.parse(fields[0]),
+            'timestamp': timestamp,
             'quote': float(fields[1])
         })
 

@@ -20,7 +20,8 @@ class ChartUi {
         data: []
       }],
       yaxis: {
-        title: { text: unit }
+        title: { text: unit },
+        min: (min) => min < 0 ? 0 : min * 0.8
       },
       markers: { size: 3 }
     });

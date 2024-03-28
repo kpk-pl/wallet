@@ -21,8 +21,8 @@ function setupForm(settings) {
     rules: {
       date: { isDate: true },
       currencyConversion: { greaterThan: 0 },
-      price: { greaterThan: 0 },
-      quantity: { greaterThan: 0 },
+      // price: { greaterThan: 0 },
+      // quantity: { greaterThan: 0 },
       finalQuantity: { greaterThanOrEqual: 0 },
     },
     errorElement: 'span',
