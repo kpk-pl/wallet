@@ -106,7 +106,7 @@
               {{ profitInfo.avgPrice | asCurrency(asset.currency.name) }}
               {%- endif -%}
             </dd>
-            {%- if quoteHistory %}
+            {%- if quoteHistory and quoteHistory.data | length > 0 %}
             <dt class="col-sm-7">Current price</dt>
             <dd class="col-sm-5" title="{{ quoteHistory.data[-1].timestamp }}">
               {{ quoteHistory.data[-1].quote | asCurrency(asset.currency.name) }}

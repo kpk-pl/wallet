@@ -1,0 +1,67 @@
+Unit Tests for profit analyzer, especially for historical pricing
+----------------------------------------------------------------------------------------------------------------------
+
+The results page can have a chart like on wallet too
+----------------------------------------------------------------------------------------------------------------------
+
+Adding a pricing source -> support tags
+----------------------------------------------------------------------------------------------------------------------
+
+Update the ApexChart on the wallet page so that there is a button to zoom out. This will mean additional pricing
+data needs to be pulled from backend and series modified accordingly.
+https://apexcharts.com/javascript-chart-demos/area-charts/datetime-x-axis/
+----------------------------------------------------------------------------------------------------------------------
+
+Strategy edit page -> when a submit button is clicked the currently edited row changed data does not get reflected in
+the fancytree model and then not saved to database
+----------------------------------------------------------------------------------------------------------------------
+
+Change handling of the "coded" field. Rename it to "Transaction ID". Allow setting this on the asset creation page as
+a checkbox.
+----------------------------------------------------------------------------------------------------------------------
+
+Stretegy -> button to rebalance all and populate inputs
+----------------------------------------------------------------------------------------------------------------------
+
+Wallet aggregated -> display sparklines for the merged items
+----------------------------------------------------------------------------------------------------------------------
+
+Strategy -> Chart with allocation dynamically updated
+----------------------------------------------------------------------------------------------------------------------
+
+Each asset should have an additional settings fields 'taxes'. If the field is not present then no taxes should apply.
+Format of the field:
+taxes: {
+  type: "automatic" | "profit",
+  percentage: 19
+}
+Automatic means that the taxes are already included in the 'provisions' fields. The 'profit' means that taxes can be
+estimated from the netProfit field.
+
+Use gather NBP course of currency pairs. There needs to be another list field in the 'currencyPair' field in the
+quoteId with a list of labels. Then a specific currency pair quote can be selected for calculations of taxes.
+
+Use the NBP course to sum up all taxes that need to be applied. For SELL operations with the matched ones this should
+include Belka tax. For the DIVIDEND, also Belka tax. For the RECEIVE I need to research.
+
+----------------------------------------------------------------------------------------------------------------------
+In receipt.py there are 3 round(). They should round just like JS to the closest float, not to 2 places
+This is a bigger problem that I tried to aviod for a long time now. The proper solution would be to
+convert all prices, quantities, finalQuantities, provisions and currencyConversions as well as quotes to
+be using decimal.Decimal. In this way calculations would be much simpler.
+Adding two decimals does not change precision. Multiplying a decimal changes precision accordingly, but this can be
+easily rounded as in
+v = decimal.Decimal("2.5")
+x = decimal.Decimal("2.0")
+precision = abs(v.as_tuple().exponent)
+result = round(v*x, precision)
+
+----------------------------------------------------------------------------------------------------------------------
+A pricing source should have a possibility to have multiple URIs and/or symbols as well as a possibility to pick
+  up a priority of source for pricing. In general we could have a configurable master priority ladder for all pricing
+  sources and then a particular pricing source could define a preffered one as well.
+
+----------------------------------------------------------------------------------------------------------------------
+Quotes from https://www.alphavantage.co/ APIKEY=G8APPXPVB3YNTPEM
+Quotes from https://marketstack.com/
+Quotes from quandl https://stackoverflow.com/questions/55658446/stooq-api-for-non-us-stock-market-data

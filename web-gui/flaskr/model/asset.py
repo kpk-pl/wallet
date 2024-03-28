@@ -19,6 +19,7 @@ class AssetType(str, Enum):
     investmentFund = "Investment Fund"
     bond = "Bond"
     polishIndividualBonds = "Polish Individual Bonds"
+    cryptocurrency = "Cryptocurrency"
 
 
 class Asset(BaseModel):

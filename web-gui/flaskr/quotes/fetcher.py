@@ -14,4 +14,5 @@ class Fetcher:
             Investing.tryCreate(url) or \
             BiznesRadar.tryCreate(url) or \
             MarketWatch.tryCreate(url) or \
+            Kraken.tryCreate(url) or \
             Mock.tryCreate(url)

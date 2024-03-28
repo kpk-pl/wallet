@@ -1,30 +1,25 @@
 from flask import request, render_template, jsonify
 from flaskr import db, header, stooq
+from flaskr.model.quote import QuoteUpdateFrequency, QuoteCurrencyPair
 from flaskr.apps.quotes.list import listIds as listActiveQuoteIds
+from flaskr.quotes import Fetcher as QuotesFetcher
 from pydantic import BaseModel, HttpUrl, ValidationError, Field
 from typing import Optional
-from enum import Enum
-
-
-class PostDataUpdateFrequency(str, Enum):
-    daily = "daily"
-    weekly = "weekly"
-    monthly = "monthly"
 
 
 class PostData(BaseModel):
     name: str
+    unit: str
     ticker: Optional[str]
     url: HttpUrl
-    unit: Optional[str]
-    updateFrequency: PostDataUpdateFrequency
+    updateFrequency: QuoteUpdateFrequency
     currencyPairCheck: bool = Field(False, exclude=True)
 
 
 def postNewItem():
     try:
         model = PostData(**request.form)
-    except ValidationError as e:
+    except ValidationError:
         return ({'error': True, 'code': 1, 'message': "Invalid request"}, 400)
 
     data = model.dict(exclude_none=True)
@@ -39,11 +34,19 @@ def postNewItem():
         # Yes, this is reversed in the application logic
         # The way it was designed is that you need to pay a quote ammount of 'from' currency to convert it to 1 'to'.
         # So having currency pair 'from': 'PLN', 'to': 'EUR', we take a quote (4.5) of 'PLN' to buy 1 'EUR'
-        data['currencyPair'] = {
-            'to': request.form['currencyPairFrom'],
-            'from': model.unit
-        }
+        data['currencyPair'] = QuoteCurrencyPair(
+            destination = request.form['currencyPairFrom'],
+            source = model.unit
+        )
 
+    try:
+        quote = QuotesFetcher(model.url).fetch()
+        data['quoteHistory'] = [dict(
+           timestamp=quote.timestamp,
+           quote=float(quote.quote)
+        )]
+    except:
+        pass
 
     addedId = db.get_db().quotes.insert(data)
     return {'ok': True, 'id': str(addedId)}

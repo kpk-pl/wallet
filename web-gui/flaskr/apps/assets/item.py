@@ -26,7 +26,7 @@ def _getPipelineForAssetDetails(assetId):
             { "$project": {
                 "_id": 0,
                 "name": "$name",
-                "data": "$quoteHistory",
+                "data": {'$ifNull': ['$quoteHistory', []]},
             }}
         ],
         "as": "quoteInfo",
