@@ -1,6 +1,6 @@
 from flask import request, render_template, jsonify
 from flaskr import db, header, stooq
-from flaskr.model.quote import QuoteUpdateFrequency, QuoteCurrencyPair
+from flaskr.model.quote import QuoteUpdateFrequency
 from flaskr.apps.quotes.list import listIds as listActiveQuoteIds
 from flaskr.quotes import Fetcher as QuotesFetcher
 from pydantic import BaseModel, HttpUrl, ValidationError, Field
@@ -34,10 +34,10 @@ def postNewItem():
         # Yes, this is reversed in the application logic
         # The way it was designed is that you need to pay a quote ammount of 'from' currency to convert it to 1 'to'.
         # So having currency pair 'from': 'PLN', 'to': 'EUR', we take a quote (4.5) of 'PLN' to buy 1 'EUR'
-        data['currencyPair'] = QuoteCurrencyPair(
-            destination = request.form['currencyPairFrom'],
-            source = model.unit
-        )
+        data['currencyPair'] = {
+            'to': request.form['currencyPairFrom'],
+            'from': model.unit,
+        }
 
     try:
         quote = QuotesFetcher(model.url).fetch()

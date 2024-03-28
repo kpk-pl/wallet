@@ -9,7 +9,8 @@ from bson.objectid import ObjectId
 MINIMAL_PRICING_SOURCE_DATA = dict(
     name = "Test source",
     url = "http://test.source.com",
-    updateFrequency = "daily"
+    updateFrequency = "daily",
+    unit = "EUR",
 )
 
 
@@ -26,7 +27,8 @@ def test_pricing_add_source(client):
             _id = ObjectId(rv.json['id']),
             name = MINIMAL_PRICING_SOURCE_DATA['name'],
             url = MINIMAL_PRICING_SOURCE_DATA['url'],
-            updateFrequency = MINIMAL_PRICING_SOURCE_DATA['updateFrequency']
+            updateFrequency = MINIMAL_PRICING_SOURCE_DATA['updateFrequency'],
+            unit = MINIMAL_PRICING_SOURCE_DATA['unit'],
         )
 
 
@@ -98,7 +100,6 @@ def test_pricing_add_source_maximal_data(client):
 def test_pricing_add_source_as_currency_pair(client):
     data = {**MINIMAL_PRICING_SOURCE_DATA}
     data.update(
-        unit = "USD",
         currencyPairFrom = "PLN",
         currencyPairCheck = True
     )
@@ -111,7 +112,7 @@ def test_pricing_add_source_as_currency_pair(client):
         dbPricing = db.wallet.quotes.find_one({'_id': ObjectId(rv.json['id'])})
 
         assert 'currencyPair' in dbPricing
-        assert dbPricing['currencyPair'] == {'from': "USD", 'to': "PLN"}
+        assert dbPricing['currencyPair'] == {'from': MINIMAL_PRICING_SOURCE_DATA['unit'], 'to': "PLN"}
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
