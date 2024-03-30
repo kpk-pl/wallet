@@ -23,7 +23,7 @@ class Kraken(BaseFetcher):
             'quote': jsonElement['c'][0],
             'volume': jsonElement['v'][0],
             'vwap': jsonElement['p'][0],
-            'timestamp': datetime.datetime.now(),
+            'timestamp': datetime.datetime.now().replace(microsecond=0),
             'ticker': ticker,
             'currency': ticker[-3:],
         }
