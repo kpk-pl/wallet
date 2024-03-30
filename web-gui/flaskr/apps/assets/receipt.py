@@ -6,6 +6,7 @@ import bson.errors
 from datetime import datetime
 from dateutil import parser
 from flaskr.model import Asset, AssetPricingQuotes
+from decimal import Decimal
 
 
 def _parseNumeric(value):
@@ -116,21 +117,22 @@ def _makeOperation(asset):
         if operation['type'] == typing.Operation.Type.receive:
             raise ReceiptError(10, "Deposit asset does not support RECEIVE")
 
-    operation['finalQuantity'] = typing.Operation.adjustQuantity(operation['type'],
-                                                                 asset['finalQuantity'],
-                                                                 operation['quantity'] if 'quantity' in operation else None)
+    if asset['type'] == 'Deposit' and operation['type'] == typing.Operation.Type.earning:
+        operation['finalQuantity'] = typing.Operation.adjustQuantity(typing.Operation.Type.buy,
+                                                                     asset['finalQuantity'],
+                                                                     operation['quantity'] if 'quantity' in operation else 0)
+    else:
+        operation['finalQuantity'] = typing.Operation.adjustQuantity(operation['type'],
+                                                                     asset['finalQuantity'],
+                                                                     operation['quantity'] if 'quantity' in operation else 0)
 
     if operation['finalQuantity'] < 0:
         raise ReceiptError(11, "Final quantity after operation cannot be less than zero")
 
     if asset['type'] == 'Deposit':
         operation['price'] = operation['quantity']  # for Deposit type, default unit price is 1
-        if operation['type'] == typing.Operation.Type.earning:
-            operation['finalQuantity'] += operation['quantity']
     else:
         operation['price'] = _parseNumeric(_required("price", 103))
-
-    operation['finalQuantity'] = round(operation['finalQuantity'], current_app.config['MAIN_CURRENCY_DECIMALS'])
 
     provisionSupportTypes = [typing.Operation.Type.buy, typing.Operation.Type.sell, typing.Operation.Type.earning]
     if 'provision' in request.form and operation['type'] in provisionSupportTypes:

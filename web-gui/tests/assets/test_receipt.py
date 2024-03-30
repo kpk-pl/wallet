@@ -98,6 +98,25 @@ def test_receipt_successfull_next_buy(client):
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_final_quantity_with_precision(client):
+    assetId = Asset.createEquity().pricing().quantity(10.00001).commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'BUY',
+        date = '2021-07-12T12:01:08',
+        quantity = 0.00003,
+        price = 100
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 2
+        assert dbAsset['operations'][1]['finalQuantity'] == 10.00004
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_receipt_successfull_sell(client):
     assetId = Asset.createEquity().pricing().quantity(10).commit()
 

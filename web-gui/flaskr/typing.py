@@ -1,4 +1,5 @@
 from enum import Enum
+from decimal import Decimal
 
 
 class Operation:
@@ -20,17 +21,24 @@ class Operation:
             raise RuntimeError(f"Cannot reverse operation {op}")
 
     @staticmethod
-    def adjustQuantity(op, initial, adjustment):
-        if op == Operation.Type.buy:
-            return initial + adjustment
-        if op == Operation.Type.sell:
-            return initial - adjustment
-        if op == Operation.Type.receive:
-            return initial + adjustment
-        if op == Operation.Type.earning:
-            return initial
+    def adjustQuantity(op:str,
+                       initial:int|float|Decimal,
+                       adjustment:int|float|Decimal):
+        def add(initial:int|Decimal, adjustment:int|Decimal):
+            if op == Operation.Type.buy:
+                return initial + adjustment
+            if op == Operation.Type.sell:
+                return initial - adjustment
+            if op == Operation.Type.receive:
+                return initial + adjustment
+            if op == Operation.Type.earning:
+                return initial
+            raise RuntimeError(f"Cannot adjust operation {op}")
 
-        raise RuntimeError(f"Cannot adjust operation {op}")
+        if isinstance(initial, int) and isinstance(adjustment, int):
+            return add(initial, adjustment)
+
+        return float(add(Decimal(initial), Decimal(adjustment)))
 
     @staticmethod
     def displayString(op, assetType):
