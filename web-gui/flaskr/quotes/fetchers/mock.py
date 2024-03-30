@@ -6,7 +6,7 @@ from urllib.parse import urlparse, parse_qs
 class Mock(BaseFetcher):
     @staticmethod
     def validUrl(url):
-        return url.startswith("mock://")
+        return url.startswith("mock://") or url.startswith("http://mocking.com")
 
     def __init__(self, url):
         super(Mock, self).__init__(url)

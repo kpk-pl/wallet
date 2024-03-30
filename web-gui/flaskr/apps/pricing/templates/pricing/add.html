@@ -104,9 +104,9 @@
                     <label for="f-updateFreq">Update frequency</label>
                     <select id="f-updateFreq" name="updateFrequency" class="custom-select" required>
                       <option value="" hidden disabled selected value></option>
-                      <option value="daily">daily</option>
-                      <option value="daily">weekly</option>
-                      <option value="monthly">monthly</option>
+                      {%- for frequency in data.updateFrequencies %}
+                      <option value="{{frequency}}">{{frequency}}</option>
+                      {%- endfor %}
                     </select>
                   </div>
                 </div>

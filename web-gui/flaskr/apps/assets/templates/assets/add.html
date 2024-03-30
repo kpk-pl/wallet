@@ -69,7 +69,7 @@ initialize({
                       <label for="f-price-source">Price source</label>
                       <select id="f-price-source" name="priceQuoteId" class="custom-select" required>
                         <option value="" hidden disabled selected></option>
-                        {%- for priceSource in quotesList %}
+                        {%- for priceSource in data.quotesList %}
                         {%- if priceSource.unit in config.SUPPORTED_CURRENCIES %}
                         <option value="{{ priceSource._id }}" data-price-source-unit="{{ priceSource.unit }}">{{ priceSource.name }} [{{ priceSource.unit }}]</option>
                         {%- endif %}
