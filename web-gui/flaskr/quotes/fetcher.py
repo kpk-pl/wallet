@@ -13,6 +13,6 @@ class Fetcher:
         return Stooq.tryCreate(url) or \
             Investing.tryCreate(url) or \
             BiznesRadar.tryCreate(url) or \
-            MarketWatch.tryCreate(url) or \
+            Morningstar.tryCreate(url) or \
             Kraken.tryCreate(url) or \
             Mock.tryCreate(url)
