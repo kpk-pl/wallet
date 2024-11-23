@@ -1,13 +1,4 @@
-In receipt.py there are 3 round(). They should round just like JS to the closest float, not to 2 places
-This is a bigger problem that I tried to aviod for a long time now. The proper solution would be to
-convert all prices, quantities, finalQuantities, provisions and currencyConversions as well as quotes to
-be using decimal.Decimal. In this way calculations would be much simpler.
-Adding two decimals does not change precision. Multiplying a decimal changes precision accordingly, but this can be
-easily rounded as in
-v = decimal.Decimal("2.5")
-x = decimal.Decimal("2.0")
-precision = abs(v.as_tuple().exponent)
-result = round(v*x, precision)
+Display a toast when there are recent price feed errors in the DB
 ----------------------------------------------------------------------------------------------------------------------
 
 Unit Tests for profit analyzer, especially for historical pricing

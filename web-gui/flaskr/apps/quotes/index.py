@@ -55,6 +55,7 @@ def index():
                 if storeQuotes:
                     db.get_db().price_feed_errors.insert_one(dict(
                         pricingId = _id,
+                        name = quote['name'],
                         timestamp = datetime.now(),
                         trigger = request.url,
                         error = str(liveQuote)

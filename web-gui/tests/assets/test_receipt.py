@@ -4,6 +4,7 @@ import pymongo
 import tests
 import datetime
 from bson.objectid import ObjectId
+from bson.decimal128 import Decimal128
 from tests.fixtures import client
 from tests.mocks import PricingSource, Asset
 
@@ -178,7 +179,7 @@ def test_receipt_supports_conversion_rate_for_foreign_currency(clientApp, type):
         dbAsset = db.wallet.assets.find_one({'_id': assetId})
         assert len(dbAsset['operations']) == 2
         assert dbAsset['operations'][1]['type'] == type
-        assert dbAsset['operations'][1]['currencyConversion'] == 1.02
+        assert dbAsset['operations'][1]['currencyConversion'] == Decimal128('1.02')
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
@@ -208,7 +209,7 @@ def test_receipt_failure_no_conversion_rate_for_foreign_currency(clientApp, type
     (pytest.lazy_fixture('client'), "EARNING"),
 ])
 def test_receipt_failure_no_orderid_when_required(clientApp, type):
-    assetId = Asset.createEquity().pricing().quantity(10).hasOrderIds().commit()
+    assetId = Asset.createEquity().pricing().hasOrderIds().quantity(10).commit()
 
     data = {k:v for (k,v) in MINIMAL_WORKING_RECEIPT_DATA.items()}
     data['type'] = type
@@ -226,7 +227,7 @@ def test_receipt_failure_no_orderid_when_required(clientApp, type):
     (pytest.lazy_fixture('client'), "EARNING"),
 ])
 def test_receipt_successfull_for_orderid(clientApp, type):
-    assetId = Asset.createEquity().pricing().quantity(10).hasOrderIds().commit()
+    assetId = Asset.createEquity().pricing().hasOrderIds().quantity(10).commit()
 
     data = {k:v for (k,v) in MINIMAL_WORKING_RECEIPT_DATA.items()}
     data['type'] = type
@@ -264,7 +265,7 @@ def test_receipt_successfull_deposit_handling(client):
             finalQuantity = 1000,
             price = 1000,
             date = datetime.datetime(2020, 1, 4, 12, 13, 14),
-            provision = 12.5
+            provision = Decimal128('12.5')
         )
 
     rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
@@ -308,7 +309,7 @@ def test_receipt_successfull_receive(client):
             date = datetime.datetime(2021, 12, 2, 17, 45, 22),
             quantity = 22,
             finalQuantity = 32,
-            price = 27.2,
+            price = Decimal128('27.2'),
         )
 
 
@@ -348,13 +349,17 @@ def test_receipt_failure_receive_not_supported_for_deposit(client):
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
-def test_receipt_successfull_earning(client):
+@pytest.mark.parametrize('clientApp,price', [
+    (pytest.lazy_fixture('client'), "12.5"),
+    (pytest.lazy_fixture('client'), "-7.5"),
+])
+def test_receipt_successfull_earning(clientApp, price):
     assetId = Asset.createEquity().pricing().quantity(10).commit()
 
-    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+    rv = clientApp.post(f"/assets/receipt?id={str(assetId)}", data=dict(
         type = 'EARNING',
         date = '2021-12-02T17:45:22',
-        price = 12.5,
+        price = price,
     ), follow_redirects=True)
 
     assert rv.status_code == 200
@@ -366,7 +371,7 @@ def test_receipt_successfull_earning(client):
             type = "EARNING",
             date = datetime.datetime(2021, 12, 2, 17, 45, 22),
             finalQuantity = 10,
-            price = 12.5,
+            price = Decimal128(price),
         )
 
 
@@ -390,13 +395,17 @@ def test_receipt_earning_does_not_contain_quantity(client):
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
-def test_receipt_earning_for_deposit_needs_quantity(client):
+@pytest.mark.parametrize('clientApp,quantity', [
+    (pytest.lazy_fixture('client'), "13"),
+    (pytest.lazy_fixture('client'), "-7"),
+])
+def test_receipt_earning_for_deposit_needs_quantity(clientApp, quantity):
     assetId = Asset.createDeposit().quantity(12).commit()
 
-    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+    rv = clientApp.post(f"/assets/receipt?id={str(assetId)}", data=dict(
         type = 'EARNING',
         date = '2021-12-02T17:45:22',
-        quantity = 13,
+        quantity = quantity,
     ), follow_redirects=True)
 
     assert rv.status_code == 200
@@ -407,9 +416,9 @@ def test_receipt_earning_for_deposit_needs_quantity(client):
         assert dbAsset['operations'][1] == dict(
             type = "EARNING",
             date = datetime.datetime(2021, 12, 2, 17, 45, 22),
-            quantity = 13,
-            price = 13,
-            finalQuantity = 25,
+            quantity = int(quantity),
+            price = int(quantity),
+            finalQuantity = 12 + int(quantity),
         )
 
 
@@ -691,7 +700,7 @@ def test_receipt_billing_asset_foreign_currencies(client):
             quantity = 2,
             finalQuantity = 2,
             price = 100,
-            currencyConversion = 4.5,
+            currencyConversion = Decimal128('4.5'),
             provision = 25,
         )
 

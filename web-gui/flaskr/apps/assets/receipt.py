@@ -2,10 +2,11 @@ from flask import render_template, request, current_app
 from flaskr import db, header, typing
 from flaskr.session import Session
 from bson.objectid import ObjectId
+from bson.decimal128 import Decimal128
 import bson.errors
 from datetime import datetime
 from dateutil import parser
-from flaskr.model import Asset, AssetPricingQuotes
+from flaskr.model import Asset, AssetType, AssetPricingQuotes
 from decimal import Decimal
 
 
@@ -16,11 +17,18 @@ def _parseNumeric(value):
         pass
 
     try:
-        return float(value)
+        return Decimal128(value)
     except ValueError:
         pass
 
     return None
+
+
+def _maybeOptional(value):
+    if isinstance(value, Decimal128):
+        return value.to_decimal()
+
+    return value
 
 
 def _receiptGet():
@@ -110,40 +118,39 @@ def _makeOperation(asset):
         'type': _required("type", 101),
     }
 
-    if operation['type'] != typing.Operation.Type.earning or asset['type'] == 'Deposit':
+    if operation['type'] != typing.Operation.Type.earning or asset.type == AssetType.deposit:
         operation['quantity'] = _parseNumeric(_required("quantity", 102))
 
-    if asset['type'] == 'Deposit':
+    if asset.type == AssetType.deposit:
         if operation['type'] == typing.Operation.Type.receive:
             raise ReceiptError(10, "Deposit asset does not support RECEIVE")
 
-    if asset['type'] == 'Deposit' and operation['type'] == typing.Operation.Type.earning:
-        operation['finalQuantity'] = typing.Operation.adjustQuantity(typing.Operation.Type.buy,
-                                                                     asset['finalQuantity'],
-                                                                     operation['quantity'] if 'quantity' in operation else 0)
-    else:
-        operation['finalQuantity'] = typing.Operation.adjustQuantity(operation['type'],
-                                                                     asset['finalQuantity'],
-                                                                     operation['quantity'] if 'quantity' in operation else 0)
+    typeForAdjustment = operation['type']
+    if asset.type == AssetType.deposit and operation['type'] == typing.Operation.Type.earning:
+        typeForAdjustment = typing.Operation.Type.buy
+
+    quantityForAdjustment = operation['quantity'] if 'quantity' in operation else 0
+    operation['finalQuantity'] = typing.Operation.adjustQuantity(typeForAdjustment,
+                                                                 asset.finalQuantity,
+                                                                 _maybeOptional(quantityForAdjustment))
+
 
     if operation['finalQuantity'] < 0:
         raise ReceiptError(11, "Final quantity after operation cannot be less than zero")
 
-    if asset['type'] == 'Deposit':
+    if asset.type == AssetType.deposit:
         operation['price'] = operation['quantity']  # for Deposit type, default unit price is 1
     else:
         operation['price'] = _parseNumeric(_required("price", 103))
 
     provisionSupportTypes = [typing.Operation.Type.buy, typing.Operation.Type.sell, typing.Operation.Type.earning]
-    if 'provision' in request.form and operation['type'] in provisionSupportTypes:
-        provision = _parseNumeric(request.form['provision'])
-        if provision:
-            operation['provision'] = provision
+    if 'provision' in request.form and request.form['provision'] != "" and operation['type'] in provisionSupportTypes:
+        operation['provision'] = _parseNumeric(request.form['provision'])
 
-    if asset['currency']['name'] != current_app.config['MAIN_CURRENCY']:
-        operation['currencyConversion'] = float(_required('currencyConversion', 104))
+    if asset.currency.name != current_app.config['MAIN_CURRENCY']:
+        operation['currencyConversion'] = _parseNumeric(_required('currencyConversion', 104))
 
-    if asset['hasOrderIds']:
+    if asset.hasOrderIds:
         operation['orderId'] = _required('orderId', 105)
 
     return operation
@@ -157,7 +164,7 @@ def _makeBillingOperation(asset, operation, session):
     if operation['type'] not in billingSupportTypes:
         raise ReceiptError(200, "Unsupported operation type for billing asset")
 
-    if operation['type'] == typing.Operation.Type.earning and asset['type'] == 'Deposit':
+    if operation['type'] == typing.Operation.Type.earning and asset.type == AssetType.deposit:
         raise ReceiptError(201, "EARNING on Deposit does not support billing")
 
     try:
@@ -165,20 +172,13 @@ def _makeBillingOperation(asset, operation, session):
     except bson.errors.InvalidId:
         raise ReceiptError(202, "Invalid billingAsset id")
 
-    billingAssets = list(db.get_db().assets.aggregate([
-        {'$match': query},
-        {'$project': {
-            'type': 1,
-            'currency': 1,
-            'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
-        }}
-    ], session=session))
+    billingAssets = list(db.get_db().assets.aggregate([{'$match': query}], session=session))
 
     if not billingAssets:
         raise ReceiptError(203, "Unknown billing asset id")
 
-    billingAsset = billingAssets[0]
-    if billingAsset['type'] != 'Deposit':
+    billingAsset = Asset(**billingAssets[0])
+    if billingAsset.type != AssetType.deposit:
         raise ReceiptError(204, "Billing asset must be a Deposit")
 
     billingOperation = {
@@ -187,18 +187,18 @@ def _makeBillingOperation(asset, operation, session):
         'quantity': operation['price']
     }
 
-    if billingAsset['currency']['name'] != current_app.config['MAIN_CURRENCY']:
+    if billingAsset.currency.name != current_app.config['MAIN_CURRENCY']:
         assert 'currencyConversion' in operation  # checked already at code(104)
         billingOperation['currencyConversion'] = operation['currencyConversion']
 
-    if asset['currency'] != billingAsset['currency']:
+    if asset.currency != billingAsset.currency:
         assert 'currencyConversion' in operation  # checked already at code(104)
-        if billingAsset['currency']['name'] != current_app.config['MAIN_CURRENCY']:
+        if billingAsset.currency.name != current_app.config['MAIN_CURRENCY']:
             raise ReceiptError(205, "Invalid billing asset currency")
         # if operation was in foreign currency then billing asset currency can only be the same or main
         # and here we know that the operation currency and billing asset currency are different
 
-        billingOperation['quantity'] = billingOperation['quantity'] * operation['currencyConversion']
+        billingOperation['quantity'] = billingOperation['quantity'] * _maybeOptional(operation['currencyConversion'])
 
     if 'provision' in operation:
         billingOperation['quantity'] = typing.Operation.adjustQuantity(operation['type'],
@@ -209,7 +209,7 @@ def _makeBillingOperation(asset, operation, session):
 
     billingOperation['price'] = billingOperation['quantity']
     billingOperation['finalQuantity'] = typing.Operation.adjustQuantity(billingOperation['type'],
-                                                                        billingAsset['finalQuantity'],
+                                                                        billingAsset.finalQuantity,
                                                                         billingOperation['quantity'])
 
     if billingOperation['finalQuantity'] < 0:
@@ -231,18 +231,12 @@ def _receiptPost(session):
 
     assets = list(db.get_db().assets.aggregate([
         {'$match': query},
-        {'$project': {
-            'type': 1,
-            'currency': 1,
-            'hasOrderIds': { '$ifNull': ['$hasOrderIds', False]},
-            'finalQuantity': {'$ifNull': [{'$last': '$operations.finalQuantity'}, 0]}
-        }}
     ], session=session))
 
     if not assets:
         return ({"error": True, "message": "Unknown asset id", "code": 3}, 400)
 
-    asset = assets[0]
+    asset = Asset(**assets[0])
 
     try:
         operation = _makeOperation(asset)

@@ -88,9 +88,13 @@ class Asset(_DictLike):
     def quantity(self, quantity):
         if 'operations' in self._data:
             del self._data['operations']
-        return self.operation('BUY', datetime.datetime(1970, 1, 1), quantity, quantity, 1)
 
-    def operation(self, type, date, quantity, finalQuantity, price, currencyConversion = None):
+        orderId = 1 if 'hasOrderIds' in self._data and self._data['hasOrderIds'] else None
+        price = quantity if self._data['type'] == 'Deposit' else 1
+        currencyConversion = 4 if 'currency' in self._data else None
+        return self.operation('BUY', datetime.datetime(1970, 1, 1), quantity, quantity, price, currencyConversion, orderId)
+
+    def operation(self, type, date, quantity, finalQuantity, price, currencyConversion = None, orderId = None):
         if not 'operations' in self._data:
             self._data['operations'] = []
 
@@ -105,6 +109,9 @@ class Asset(_DictLike):
 
         if 'pricing' in self._data and 'quoteId' in self._data['pricing']:
             self._data['operations'][-1]['currencyConversion'] = 1
+
+        if orderId is not None:
+            self._data['operations'][-1]['orderId'] = orderId
 
         return self
 
