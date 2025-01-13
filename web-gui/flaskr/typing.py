@@ -1,5 +1,6 @@
 from enum import Enum
 from decimal import Decimal
+from bson.decimal128 import Decimal128
 
 
 class Operation:
@@ -35,10 +36,14 @@ class Operation:
                 return initial
             raise RuntimeError(f"Cannot adjust operation {op}")
 
-        if isinstance(initial, int) and isinstance(adjustment, int):
-            return add(initial, adjustment)
+        def simplifyDecimal(val:int|float|Decimal|Decimal128):
+            if isinstance(val, Decimal128):
+                return val.to_decimal()
+            if isinstance(val, int):
+                return val
+            return Decimal(val)
 
-        return float(add(Decimal(initial), Decimal(adjustment)))
+        return add(simplifyDecimal(initial), simplifyDecimal(adjustment))
 
     @staticmethod
     def displayString(op, assetType):

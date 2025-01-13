@@ -24,10 +24,14 @@ def _parseNumeric(value):
     return None
 
 
-def _maybeOptional(value):
+def _handleConversions(operation, field):
+    if isinstance(operation[field], Decimal):
+        operation[field] = Decimal128(operation[field])
+
+
+def _simplifyDecimal(value):
     if isinstance(value, Decimal128):
         return value.to_decimal()
-
     return value
 
 
@@ -132,11 +136,13 @@ def _makeOperation(asset):
     quantityForAdjustment = operation['quantity'] if 'quantity' in operation else 0
     operation['finalQuantity'] = typing.Operation.adjustQuantity(typeForAdjustment,
                                                                  asset.finalQuantity,
-                                                                 _maybeOptional(quantityForAdjustment))
+                                                                 quantityForAdjustment)
 
 
     if operation['finalQuantity'] < 0:
         raise ReceiptError(11, "Final quantity after operation cannot be less than zero")
+
+    _handleConversions(operation, 'finalQuantity')
 
     if asset.type == AssetType.deposit:
         operation['price'] = operation['quantity']  # for Deposit type, default unit price is 1
@@ -184,7 +190,7 @@ def _makeBillingOperation(asset, operation, session):
     billingOperation = {
         'date': operation['date'],
         'type': typing.Operation.Type.reverse(operation['type']),
-        'quantity': operation['price']
+        'quantity': _simplifyDecimal(operation['price'])
     }
 
     if billingAsset.currency.name != current_app.config['MAIN_CURRENCY']:
@@ -198,14 +204,19 @@ def _makeBillingOperation(asset, operation, session):
         # if operation was in foreign currency then billing asset currency can only be the same or main
         # and here we know that the operation currency and billing asset currency are different
 
-        billingOperation['quantity'] = billingOperation['quantity'] * _maybeOptional(operation['currencyConversion'])
+        billingOperation['quantity'] = _simplifyDecimal(billingOperation['quantity']) * _simplifyDecimal(operation['currencyConversion'])
 
     if 'provision' in operation:
         billingOperation['quantity'] = typing.Operation.adjustQuantity(operation['type'],
                                                                        billingOperation['quantity'],
                                                                        operation['provision'])
 
-    billingOperation['quantity'] = round(billingOperation['quantity'], current_app.config['MAIN_CURRENCY_DECIMALS'])
+    def normalize(d):
+        return d.quantize(Decimal(1)) if d == d.to_integral() else d.normalize()
+
+    if isinstance(billingOperation["quantity"], Decimal):
+        billingOperation['quantity'] = normalize(round(billingOperation['quantity'], current_app.config['MAIN_CURRENCY_DECIMALS']))
+        _handleConversions(billingOperation, 'quantity')
 
     billingOperation['price'] = billingOperation['quantity']
     billingOperation['finalQuantity'] = typing.Operation.adjustQuantity(billingOperation['type'],
@@ -215,7 +226,10 @@ def _makeBillingOperation(asset, operation, session):
     if billingOperation['finalQuantity'] < 0:
         raise ReceiptError(206, "Not enough asset quantity for billing operation")
 
-    billingOperation['finalQuantity'] = round(billingOperation['finalQuantity'], current_app.config['MAIN_CURRENCY_DECIMALS'])
+
+    if isinstance(billingOperation["finalQuantity"], Decimal):
+        billingOperation['finalQuantity'] = normalize(round(billingOperation['finalQuantity'], current_app.config['MAIN_CURRENCY_DECIMALS']))
+        _handleConversions(billingOperation, 'finalQuantity')
 
     return query, billingOperation
 

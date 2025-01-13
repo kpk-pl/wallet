@@ -95,7 +95,7 @@ def test_receipt_successfull_next_buy(client):
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
         dbAsset = db.wallet.assets.find_one({'_id': assetId})
         assert len(dbAsset['operations']) == 2
-        assert dbAsset['operations'][1]['finalQuantity'] == 25
+        assert dbAsset['operations'][1]['finalQuantity'] == Decimal128("25")
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
@@ -114,7 +114,7 @@ def test_receipt_final_quantity_with_precision(client):
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
         dbAsset = db.wallet.assets.find_one({'_id': assetId})
         assert len(dbAsset['operations']) == 2
-        assert dbAsset['operations'][1]['finalQuantity'] == 10.00004
+        assert dbAsset['operations'][1]['finalQuantity'] == Decimal128("10.00004")
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
@@ -136,7 +136,7 @@ def test_receipt_successfull_sell(client):
         assert dbAsset['operations'][1] == dict(
             type = 'SELL',
             quantity = 3,
-            finalQuantity = 7,
+            finalQuantity = Decimal128("7"),
             price = 100,
             date = datetime.datetime(2021, 7, 12, 12, 1, 8)
         )
@@ -282,7 +282,7 @@ def test_receipt_successfull_deposit_handling(client):
         assert dbAsset['operations'][1] == dict(
             type = 'SELL',
             quantity = 999,
-            finalQuantity = 1,
+            finalQuantity = Decimal128("1"),
             price = 999,
             date = datetime.datetime(2020, 1, 4, 13, 0, 0),
         )
@@ -308,7 +308,7 @@ def test_receipt_successfull_receive(client):
             type = "RECEIVE",
             date = datetime.datetime(2021, 12, 2, 17, 45, 22),
             quantity = 22,
-            finalQuantity = 32,
+            finalQuantity = Decimal128("32"),
             price = Decimal128('27.2'),
         )
 
@@ -370,7 +370,7 @@ def test_receipt_successfull_earning(clientApp, price):
         assert dbAsset['operations'][1] == dict(
             type = "EARNING",
             date = datetime.datetime(2021, 12, 2, 17, 45, 22),
-            finalQuantity = 10,
+            finalQuantity = Decimal128("10"),
             price = Decimal128(price),
         )
 
@@ -418,7 +418,7 @@ def test_receipt_earning_for_deposit_needs_quantity(clientApp, quantity):
             date = datetime.datetime(2021, 12, 2, 17, 45, 22),
             quantity = int(quantity),
             price = int(quantity),
-            finalQuantity = 12 + int(quantity),
+            finalQuantity = Decimal128(str(12 + int(quantity))),
         )
 
 
@@ -447,7 +447,7 @@ def test_receipt_billing_asset_for_buy(client):
             type = 'SELL',
             date = datetime.datetime(2021, 12, 3, 12),
             quantity = 560,
-            finalQuantity = 440,
+            finalQuantity = Decimal128("440"),
             price = 560,
         )
 
@@ -477,9 +477,9 @@ def test_receipt_billing_asset_for_sell_currency_conversion(client):
         assert billingAsset['operations'][1] == dict(
             type = 'BUY',
             date = datetime.datetime(2021, 12, 3, 12),
-            quantity = 350,
-            finalQuantity = 450,
-            price = 350,
+            quantity = Decimal128("350"),
+            finalQuantity = Decimal128("450"),
+            price = Decimal128("350"),
         )
 
 
@@ -638,7 +638,7 @@ def test_receipt_billing_asset_buy_with_provision(client):
             type = 'SELL',
             date = datetime.datetime(2021, 12, 3, 12),
             quantity = 585,
-            finalQuantity = 415,
+            finalQuantity = Decimal128("415"),
             price = 585,
         )
 
@@ -669,7 +669,7 @@ def test_receipt_billing_asset_sell_with_provision(client):
             type = 'BUY',
             date = datetime.datetime(2021, 12, 3, 12),
             quantity = 535,
-            finalQuantity = 1535,
+            finalQuantity = Decimal128("1535"),
             price = 535,
         )
 
@@ -709,7 +709,7 @@ def test_receipt_billing_asset_foreign_currencies(client):
         assert billingAsset['operations'][1] == dict(
             type = 'SELL',
             date = datetime.datetime(2021, 12, 3, 12),
-            quantity = 475,
-            finalQuantity = 525,
-            price = 475,
+            quantity = Decimal128("475"),
+            finalQuantity = Decimal128("525"),
+            price = Decimal128("475"),
         )
