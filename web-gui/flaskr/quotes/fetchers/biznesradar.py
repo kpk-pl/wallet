@@ -31,7 +31,7 @@ class BiznesRadar(BaseFetcher):
             raise FetchError(self.url, "Cannot find quote tag")
 
         if not quoteHtml.span:
-            raise BaseFetcher(self.url, "Cannot recognize quote tag's content")
+            raise FetchError(self.url, "Cannot recognize quote tag's content")
 
         return Decimal(quoteHtml.span.string)
 

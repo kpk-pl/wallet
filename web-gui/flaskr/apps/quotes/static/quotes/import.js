@@ -74,15 +74,20 @@ function loadCsvQuotes() {
     try {
       let response = await fetch(settings.csvUploadUrl, {method: "POST", body: formData, signal: ctrl.signal});
       if (!response.ok) {
-        throw new Error("Invalid response " + r.status());
+        throw new Error("Invalid response " + response.status);
       }
       return response.json();
     } catch(e) {
-      // TODO: maybe display a popup with the error
+      $(document).Toasts('create', {
+        class: 'bg-danger',
+        title: 'Error',
+        body: 'CSV upload failed: ' + e.message,
+      });
     }
   }
 
   fetchCsv(file).then(function(quotes){
+    if (!quotes) return;
     ui.importNew(
       quotes.map(function(e){ return {x: Date.parse(e.timestamp), y: e.quote}; }));
   });

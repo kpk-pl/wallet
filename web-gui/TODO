@@ -62,24 +62,9 @@ Quotes from quandl https://stackoverflow.com/questions/55658446/stooq-api-for-no
 BUGS — URGENT FIXES
 ======================================================================================================================
 
-[BUG] typing.py:80,90 — Typo 'GPB' instead of 'GBP' breaks GBP↔GBX currency conversion silently
-    Both CurrencyConversion.staticRate() and staticConvert() check `ffrom == 'GPB'` — will never match 'GBP'.
-    Any asset priced in GBX with PLN↔GBP conversion will raise NotImplementedError at runtime.
-----------------------------------------------------------------------------------------------------------------------
-
-[BUG] flaskr/quotes/fetchers/biznesradar.py:34 — raises BaseFetcher(...) instead of FetchError(...)
-    `raise BaseFetcher(self.url, "Cannot recognize quote tag's content")` — BaseFetcher is not an Exception
-    subclass so Python raises TypeError instead of a proper FetchError. Error message is lost.
-----------------------------------------------------------------------------------------------------------------------
-
 [BUG] flaskr/quotes/fetchers/stooq.py:33 — unguarded index into symbols list causes IndexError
     `data = data['symbols'][0]` crashes when Stooq returns an empty symbols array (e.g. bad ticker).
     The comment acknowledges this but there is no fix. Wraps the whole quote refresh in an unhandled exception.
-----------------------------------------------------------------------------------------------------------------------
-
-[BUG] flaskr/apps/quotes/static/quotes/import.js:77 — ReferenceError 'r' is not defined
-    Error handler inside fetchCsv() uses `r.status()` but the parameter is named `response`.
-    CSV upload errors silently swallow the ReferenceError in the outer catch; UI gives no feedback.
 ----------------------------------------------------------------------------------------------------------------------
 
 [BUG] flaskr/apps/wallet/templates/wallet/wallet.html:29 — JSON.parse() wrapping a JS object literal
@@ -92,18 +77,6 @@ BUGS — URGENT FIXES
     `historicalData.t.findIndex(...)` returns -1 when the start date is before all stored timestamps.
     `asset.value.slice(-1)` then takes only the last data point instead of all of them, giving a
     one-point sparkline and a completely wrong % return value.
-----------------------------------------------------------------------------------------------------------------------
-
-[BUG] flaskr/analyzers/profits.py:129 — % operator applied to NotImplementedError, not to string
-    `raise NotImplementedError("Did not implement profits for operation type {}" % (operation.type))`
-    The `%` is evaluated on the already-constructed exception object, not on the format string.
-    Raises TypeError in Python 3 instead of the intended message. Use an f-string.
-----------------------------------------------------------------------------------------------------------------------
-
-[BUG] flaskr/templates/base.html:99,109 — error/warning messages injected raw into JS string literals
-    `body: '{{ error }}'` and `body: '{{ warning }}'` — if a message contains a single quote or
-    originates from user-controlled data (e.g. asset name in a fetch error), it breaks out of the
-    JS string. Use `{{ error | tojson }}` / `{{ warning | tojson }}` (includes the surrounding quotes).
 ----------------------------------------------------------------------------------------------------------------------
 
 [BUG] flaskr/apps/assets/trash.py:14, flaskr/apps/quotes/index.py:75,

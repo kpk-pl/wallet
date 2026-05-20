@@ -77,7 +77,7 @@ class CurrencyConversion:
         from decimal import Decimal
         if ffrom == to:
             return Decimal(1)
-        if ffrom == 'GPB' and to == 'GBX':
+        if ffrom == 'GBP' and to == 'GBX':
             return Decimal(100)
         if ffrom == 'GBX' and to == 'GBP':
             return Decimal("0.01")
@@ -87,7 +87,7 @@ class CurrencyConversion:
     def staticConvert(ffrom:str, to:str, value):
         if ffrom == to:
             return value
-        if ffrom == 'GPB' and to == 'GBX':
+        if ffrom == 'GBP' and to == 'GBX':
             return value * 100
         if ffrom == 'GBX' and to == 'GBP':
             return value / 100

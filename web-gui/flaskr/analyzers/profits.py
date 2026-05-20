@@ -126,7 +126,7 @@ class Profits:
             elif operation.type is model.AssetOperationType.earning:
                 breakdown = self._earning(operation, asset.type)
             else:
-                raise NotImplementedError("Did not implement profits for operation type {}" % (operation.type))
+                raise NotImplementedError(f"Did not implement profits for operation type {operation.type}")
 
             breakdown.avgPrice = self._running.avgPrice()
             breakdown.avgNetPrice = self._running.avgNetPrice()
