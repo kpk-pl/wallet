@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import BaseModel, Field, HttpUrl, validator
 from typing import Optional, List
 from enum import Enum

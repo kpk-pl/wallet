@@ -57,3 +57,214 @@ A pricing source should have a possibility to have multiple URIs and/or symbols 
 Quotes from https://www.alphavantage.co/ APIKEY=G8APPXPVB3YNTPEM
 Quotes from https://marketstack.com/
 Quotes from quandl https://stackoverflow.com/questions/55658446/stooq-api-for-non-us-stock-market-data
+
+======================================================================================================================
+BUGS — URGENT FIXES
+======================================================================================================================
+
+[BUG] typing.py:80,90 — Typo 'GPB' instead of 'GBP' breaks GBP↔GBX currency conversion silently
+    Both CurrencyConversion.staticRate() and staticConvert() check `ffrom == 'GPB'` — will never match 'GBP'.
+    Any asset priced in GBX with PLN↔GBP conversion will raise NotImplementedError at runtime.
+----------------------------------------------------------------------------------------------------------------------
+
+[BUG] flaskr/quotes/fetchers/biznesradar.py:34 — raises BaseFetcher(...) instead of FetchError(...)
+    `raise BaseFetcher(self.url, "Cannot recognize quote tag's content")` — BaseFetcher is not an Exception
+    subclass so Python raises TypeError instead of a proper FetchError. Error message is lost.
+----------------------------------------------------------------------------------------------------------------------
+
+[BUG] flaskr/quotes/fetchers/stooq.py:33 — unguarded index into symbols list causes IndexError
+    `data = data['symbols'][0]` crashes when Stooq returns an empty symbols array (e.g. bad ticker).
+    The comment acknowledges this but there is no fix. Wraps the whole quote refresh in an unhandled exception.
+----------------------------------------------------------------------------------------------------------------------
+
+[BUG] flaskr/apps/quotes/static/quotes/import.js:77 — ReferenceError 'r' is not defined
+    Error handler inside fetchCsv() uses `r.status()` but the parameter is named `response`.
+    CSV upload errors silently swallow the ReferenceError in the outer catch; UI gives no feedback.
+----------------------------------------------------------------------------------------------------------------------
+
+[BUG] flaskr/apps/wallet/templates/wallet/wallet.html:29 — JSON.parse() wrapping a JS object literal
+    `const categoryAllocation = JSON.parse({{ allocation | tojson }});`
+    `tojson` emits a JS object/array literal inline; passing it to JSON.parse() coerces it to the string
+    "[object Object]" and throws SyntaxError. Should be: `const categoryAllocation = {{ allocation | tojson }};`
+----------------------------------------------------------------------------------------------------------------------
+
+[BUG] flaskr/apps/wallet/static/wallet/wallet_sparklines.js:11 — slice(-1) when date is not found
+    `historicalData.t.findIndex(...)` returns -1 when the start date is before all stored timestamps.
+    `asset.value.slice(-1)` then takes only the last data point instead of all of them, giving a
+    one-point sparkline and a completely wrong % return value.
+----------------------------------------------------------------------------------------------------------------------
+
+[BUG] flaskr/analyzers/profits.py:129 — % operator applied to NotImplementedError, not to string
+    `raise NotImplementedError("Did not implement profits for operation type {}" % (operation.type))`
+    The `%` is evaluated on the already-constructed exception object, not on the format string.
+    Raises TypeError in Python 3 instead of the intended message. Use an f-string.
+----------------------------------------------------------------------------------------------------------------------
+
+[BUG] flaskr/templates/base.html:99,109 — error/warning messages injected raw into JS string literals
+    `body: '{{ error }}'` and `body: '{{ warning }}'` — if a message contains a single quote or
+    originates from user-controlled data (e.g. asset name in a fetch error), it breaks out of the
+    JS string. Use `{{ error | tojson }}` / `{{ warning | tojson }}` (includes the surrounding quotes).
+----------------------------------------------------------------------------------------------------------------------
+
+[BUG] flaskr/apps/assets/trash.py:14, flaskr/apps/quotes/index.py:75,
+      flaskr/apps/pricing/listAll.py:52, flaskr/apps/assets/list.py:105
+    Deprecated PyMongo methods: .update() and .insert() were removed in PyMongo 4.
+    Replace with .update_one() / .insert_one() consistently across the codebase.
+----------------------------------------------------------------------------------------------------------------------
+
+
+======================================================================================================================
+LOGIC / MATH BUGS — financial calculations
+======================================================================================================================
+
+[LOGIC] Provisions are accumulated in NATIVE currency but reported alongside default-currency totals
+    Files: flaskr/analyzers/profits.py:144,168,182,197  flaskr/analyzers/period.py:115
+           flaskr/pricing/pricing.py:334-347 (_getProvision)
+    Every place that sums `operation.provision` does so WITHOUT applying `currencyConversion`.
+    Inside the Profits analyzer:
+        - _buy:   self._running.provision += operation.provision          (native)
+        - _sell:  breakdown.provisions = operation.provision + running.partProvision(quantity)  (native)
+        - Result: sum of breakdown.provisions + running.provision         (native)
+    Period.profits.provisions does the same: `+= operation.provision`.
+    HistoryPricing._getProvision accumulates native too.
+    Meanwhile netProfit / netInvestment / value ARE converted to default currency on the same lines.
+    Effect: for any USD/EUR/GBP asset, the displayed "provision" column is in foreign currency but
+    rendered as if PLN. The per-portfolio "Net P/L" in wallet_historical.js subtracts these mixed
+    numbers from PLN totals — all multi-currency portfolios show wrong P/L and wrong tax-relevant
+    provision totals. Fix: multiply provision by currencyConversion at every accumulation point.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] Profit is computed by AVERAGE COST while matchingOpenPositions is FIFO — inconsistency
+    File: flaskr/analyzers/profits.py:191-216 (_sell)
+    `breakdown.profit = operation.price - self._running.partPrice(quantity)` where
+    `partPrice = self.price * quantity / self.quantity` is the running AVERAGE cost basis.
+    But the loop right below it (lines 201-209) walks preceding breakdowns in chronological order
+    and decrements `remainingOpenQuantity` FIFO, then exposes those matches in
+    `matchingOpenPositions` (used by the results template to show which BUYs were closed).
+    Worked example: BUY 10@100, BUY 5@150 (avg=$116.67), SELL 8@120.
+        - avg-cost profit shown:  120*8 - 116.67*8 = +26.67
+        - FIFO profit (what tax wants): closes 8 of first BUY -> 120*8 - 100*8 = +160
+    The results page tells the user they sold their oldest 8 shares (FIFO matching) but charges
+    them avg-cost P/L. For Polish Belka tax (FIFO is mandated), the per-operation profit number
+    is wrong. Pick one method and use it consistently in both places.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] Aggregating deposit accounts recomputes finalQuantity with wrong rule for EARNING ops
+    File: flaskr/analyzers/aggregate.py:60-66
+    Receipt.py stores deposit EARNING (interest) operations with finalQuantity computed using BUY
+    semantics (typeForAdjustment = buy in receipt.py:133-134), so the stored finalQuantity for an
+    interest payment includes the interest amount.
+    When two deposit accounts are merged, _merge re-derives finalQuantity by calling
+    `typing.Operation.adjustQuantity(operation['type'], finalQuantity, operation['quantity'])`
+    using the STORED type 'EARNING'. But adjustQuantity for EARNING returns `initial` unchanged
+    (typing.py:35-36). So interest payments do NOT add to the merged finalQuantity.
+    Effect: a wallet showing merged deposit accounts undercounts the balance by the sum of all
+    interest paid. Fix: pass an asset-type-aware override in _merge, or change EARNING semantics
+    in adjustQuantity to depend on asset type.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] EARNING provisions are silently dropped when creating the billing operation
+    File: flaskr/apps/assets/receipt.py:209-212
+    The billing-side cash adjustment is computed as
+        billingOperation['quantity'] = adjustQuantity(operation['type'], quantity, provision)
+    where operation['type'] is the ORIGINAL op type. For BUY/SELL this correctly adds/subtracts
+    provision. But for EARNING (e.g. a dividend with withholding tax recorded as provision)
+    adjustQuantity returns the quantity unchanged (typing.py:35-36).
+    Effect: a $100 dividend with $19 tax records a $100 inflow on the billing deposit instead of
+    $81. The user's cash balance drifts upward by the tax amount every dividend.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] Profits.matchOrders (FIFO by orderId) is never used by the Profits analyzer
+    Files: flaskr/pricing/pricing.py:61-88 (matchOrders) vs flaskr/analyzers/profits.py:201
+    `matchOrders` groups operations by `orderId` and does FIFO matching only within each group,
+    and is consumed by Pricing._byInterest (parametrized assets) and HistoryPricing.
+    The Profits analyzer uses a different scheme: chronological matching across ALL operations,
+    ignoring orderId. Result: per-asset profit numbers, parametrized valuations, and historical
+    pricing all use different conventions for what counts as an "open position." If `orderId` is
+    supposed to mean anything (e.g. matching a specific SELL to specific BUYs from the same
+    broker order), the Profits analyzer needs the same logic — or `orderId` should be deleted.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] Period analyzer half-open vs results-page closed interval mismatch
+    Files: flaskr/analyzers/period.py:77 vs flaskr/apps/results/index.py:98
+    The Period analyzer treats operations with `op.date >= startDate AND op.date < finalDate` as
+    in-scope. The results template loop in index.py uses `op.date <= timerange['periodEnd']`.
+    For the CURRENT year, periodEnd = `min(Jan 1 next year, datetime.now())` — so an operation
+    occurring at the exact `datetime.now()` boundary is shown in the operations table but is NOT
+    included in the analyzer's netProfit/provisions totals. The totals row and the per-row totals
+    won't reconcile on the current-year report at the moment a new operation is added.
+    Use the same comparator on both sides (prefer `[startDate, finalDate)` everywhere).
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] _parseNumeric silently returns None on invalid input; callers store None into the DB
+    File: flaskr/apps/assets/receipt.py:13-24, used at lines 126, 150, 154, 157
+    On a non-numeric value (e.g. a comma in a locale-sensitive field or a pasted stray character),
+    _parseNumeric returns None. The caller assigns None directly into the operation dict and the
+    receipt POST proceeds. Downstream comparisons like `operation['finalQuantity'] < 0` raise
+    TypeError, OR the operation gets persisted with quantity=None which corrupts every subsequent
+    analyzer that calls .partPrice etc. Either raise ReceiptError on None, or validate at a single
+    boundary with a proper response code.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] `assert quantity == Decimal(0)` in Profits._sell is a production crash, not a check
+    File: flaskr/analyzers/profits.py:211
+    If somehow there are not enough preceding open positions to close a SELL (data corruption,
+    bad migration, manual DB edit), the analyzer triggers an AssertionError that kills the whole
+    request — wallet, results, and assets pages all break at once. Replace with a proper
+    exception that propagates to header.errors so the user sees which asset is bad and the rest
+    of the portfolio still renders.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] Aggregating assets changes the cost basis used for profit calculations
+    File: flaskr/analyzers/aggregate.py + flaskr/apps/wallet/wallet.py:59
+    When the wallet is requested with ?aggregation=p (or n), assets are merged and then Profits
+    is run over the merged operations. Running average cost on the merged stream gives a
+    different per-SELL profit than running Profits per-asset and summing. Example: two USD
+    accounts at the same broker each with their own BUY 10@100 and BUY 10@200, then SELL 5 from
+    one of them. Per-asset profit uses that account's avg cost; merged profit uses the combined
+    avg. The aggregated wallet totals won't match the sum of the per-asset Results page values,
+    with no indication to the user. Decide on one canonical view.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] Categories.fillStrategy can produce negative or wrong "Others" when allocations overlap
+    File: flaskr/analyzers/categories.py:27-41
+    If two `assetType` entries both claim the same category (e.g. both list "USD Equities" at
+    100%), `remainingShare` for that strategy bucket becomes -100, and the `othersValue` at
+    line 39 silently subtracts that bucket's value from the Others total. There is no validation
+    that strategy.assetTypes' categories sum to <= 100% per allocation key. Add a check or clamp.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] Subcategory + category name concatenation is ambiguous
+    Files: flaskr/analyzers/categories.py:24, flaskr/apps/wallet/static/wallet/strategyTable.js:88,
+           flaskr/apps/wallet/static/wallet/wallet_historical.js:30
+    Category bucket names are formed as `subcategory + ' ' + category`. Real-world names like
+    subcategory="Mid Cap" + category="Equities" = "Mid Cap Equities" can collide with a single
+    category named "Mid Cap Equities" or any subcategory whose tail matches another category's
+    head. Use an unambiguous separator (e.g. ' / ') or a tuple key.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] HistoryPricing parametrized SELL assumes operations within an orderId are date-sorted
+    File: flaskr/pricing/pricing.py:391-416
+    Operations are iterated in the order MongoDB returns them inside each orderId bucket. There
+    is no explicit sort by date. A SELL stored before its corresponding BUYs in the array would
+    try to subtract from positions that haven't been appended yet, crashing on `opq[firstIdx]`.
+    Either sort `operations` by `.date` at the top of `_priceAssetByInterest`, or assert order.
+    Also: the SELL match loop (lines 410-416) never breaks when remainingQuantity reaches 0; it
+    keeps iterating with min(0, x) = 0. O(N^2) on lots-heavy assets; add an early break.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] Header.lastQuoteUpdate rendered without a None guard on `daysPast`
+    File: flaskr/templates/base.html:49
+    `{{ "green" if header.lastQuoteUpdate.daysPast < 3 else "red" }}` assumes daysPast is a
+    number. If header.lastQuoteUpdate exists but daysPast is None/missing, the Jinja2 comparison
+    raises TypeError and breaks the entire page render. Guard with an additional `is not none`.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] Period analyzer error path is set but downstream rendering not verified
+    File: flaskr/analyzers/period.py:66-68 + flaskr/apps/results/index.py:92
+    `if initialNetValue is None or finalNetValue is None: error = True; return`. The Result then
+    has None for several Decimal fields. results/index.py:92 only skips assets where
+    `period.profits.isZero()`, but an `error=True` asset with None fields is still pushed to
+    `assetData`. The template will try to format None as currency and either show garbage or
+    crash. Either drop error-tagged assets from the report, or render an explicit error row.
+----------------------------------------------------------------------------------------------------------------------

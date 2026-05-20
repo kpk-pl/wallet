@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import BaseModel, PositiveInt
 from enum import Enum
 from typing import List, Optional, Union

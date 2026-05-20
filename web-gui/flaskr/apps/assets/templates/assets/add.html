@@ -120,7 +120,7 @@ initialize({
                     <div class="form-group">
                       <label for="f-type">Type</label>
                       <select id="f-type" name="type" class="custom-select" required>
-                        <option value="" hidden disabled selected value></option>
+                        <option value="" hidden disabled selected></option>
                         <option value="ETF">ETF</option>
                         <option value="Equity">Equity</option>
                         <option value="Investment Fund">Investment Fund</option>
@@ -140,7 +140,7 @@ initialize({
                     <div class="form-group">
                       <label for="f-category">Category</label>
                       <select id="f-category" name="category" class="custom-select" required>
-                        <option value="" hidden disabled selected value></option>
+                        <option value="" hidden disabled selected></option>
                         <option value="Equities">Equities</option>
                         <option value="Bonds">Bonds</option>
                         <option value="Gold">Gold</option>
@@ -196,7 +196,7 @@ initialize({
                     <div class="form-group">
                       <label for="c-currency">Currency</label>
                       <select id="c-currency" name="currency" class="custom-select" required>
-                        <option value="" hidden disabled selected value></option>
+                        <option value="" hidden disabled selected></option>
                         {%- for currency in config.SUPPORTED_CURRENCIES %}
                         <option value="{{ currency }}">{{ currency }}</option>
                         {%- endfor %}

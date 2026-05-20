@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field, HttpUrl
+from __future__ import annotations
+from pydantic import BaseModel, Field, HttpUrl, root_validator
 from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime
@@ -12,8 +13,16 @@ class QuoteHistoryItem(BaseModel):
 
 
 class QuoteCurrencyPair(BaseModel):
-    destination: str = Field(alias='to')
-    source: str = Field(alias='from')
+    destination: str
+    source: str
+
+    @root_validator(pre=True)
+    def map_from_to_aliases(cls, values):
+        if 'to' in values and 'destination' not in values:
+            values['destination'] = values.pop('to')
+        if 'from' in values and 'source' not in values:
+            values['source'] = values.pop('from')
+        return values
 
 
 class QuoteUpdateFrequency(str, Enum):

@@ -49,7 +49,7 @@ function updateAllocationCharts(data){
 
     if (cat in mapping) {
       mapping[cat].value = mapping[cat].value.map((v, i) => v + assetValue[i]);
-      mapping[cat].provision = mapping[cat].value.map((v, i) => v + assetProvision[i]);
+      mapping[cat].provision = mapping[cat].provision.map((v, i) => v + assetProvision[i]);
       mapping[cat].investment = mapping[cat].investment.map((v, i) => v + assetInvestedValue[i]);
       mapping[cat].profit = mapping[cat].profit.map((v, i) => v + assetProfit[i]);
     } else {

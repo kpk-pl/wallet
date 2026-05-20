@@ -1,3 +1,4 @@
+from __future__ import annotations
 from flask import render_template, request, jsonify, current_app
 from flaskr.session import Session
 from bson.objectid import ObjectId

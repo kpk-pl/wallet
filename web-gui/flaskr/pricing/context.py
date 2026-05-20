@@ -1,3 +1,4 @@
+from __future__ import annotations
 from datetime import datetime, timedelta
 from pydantic import BaseModel, Field
 from decimal import Decimal

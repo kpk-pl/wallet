@@ -67,7 +67,7 @@
                   {%- endif %}
                   {%- if source.currencyPair %}
                   <span class="badge badge-info ml-1" title="Currency pair">
-                    {{ source.currencyPair.to}}/{{ source.currencyPair.from }}
+                    {{ source.currencyPair.destination}}/{{ source.currencyPair.source }}
                   </span>
                   {%- endif %}
                   {%- if not source.active and not source.trashed %}

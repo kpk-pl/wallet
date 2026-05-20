@@ -1,3 +1,4 @@
+from __future__ import annotations
 from flask import request, render_template, jsonify
 from flaskr import db, header, stooq
 from flaskr.model.quote import QuoteUpdateFrequency
