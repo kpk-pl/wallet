@@ -2,6 +2,9 @@ import pymongo
 from flask import current_app, g
 
 
+COLLECTIONS = ['assets', 'quotes', 'strategy', 'price_feed_errors']
+
+
 def get_db():
     if 'db' not in g:
         user = current_app.config["MONGO_USER"]

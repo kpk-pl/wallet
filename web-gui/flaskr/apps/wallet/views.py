@@ -27,3 +27,9 @@ def strategy_json():
 def strategy_edit():
     from .strategy_edit import strategy_edit
     return strategy_edit()
+
+
+@wallet.route('/backup', methods=['GET'])
+def backup():
+    from .backup import backup
+    return backup()
