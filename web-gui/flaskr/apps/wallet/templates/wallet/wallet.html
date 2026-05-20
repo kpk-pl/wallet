@@ -68,8 +68,11 @@
           <div class="card-tools">
             <span id="tableElements" class="px-2"></span>
             <input id="wallet-filter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
-            <a href="{{ url_for_self(aggregation='pn') }}">
-              <button class="btn btn-tool" type="button" title="Group assets in different institutions"><i class="fas fa-calendar-plus"></i></button>
+            {%- set isAggregating = request.args.get('aggregation') %}
+            <a href="{{ url_for_self(aggregation=None if isAggregating else 'pn') }}">
+              <button class="btn btn-tool" type="button" title="{{ 'Show one row per institution' if isAggregating else 'Group assets in different institutions' }}">
+                <i class="fas {{ 'fa-calendar-minus' if isAggregating else 'fa-calendar-plus' }}"></i>
+              </button>
             </a>
           </div>
         </div>
@@ -96,11 +99,11 @@
               {%- set asset = data.asset %}
               <tr>
                 <td data-title="Name" data-order="{{ asset.name }}">
-                  {%- if asset.id is not list %}
+                  {%- if not data.isAggregated %}
                     <a href="{{ url_for('assets.index', id=asset.id) }}">
                   {%- endif %}
                   {{ asset.name }}{{ " [" + asset.ticker + "]" if asset.ticker else "" }}
-                  {%- if asset.id is not list %}
+                  {%- if not data.isAggregated %}
                     </a>
                     {%- if session.debug -%}
                     <a href="#modalDebug_{{ asset.id }}" class="imagelink" data-toggle="modal" data-target="#modalDebug_{{ asset.id }}">
@@ -113,12 +116,12 @@
                   {%- endif %}
                 </td>
                 <td data-title="Institution">
-                  {%- if asset.institution is not list %}
-                    {{ asset.institution }}
-                  {%- else %}
-                  {%- for institution in asset.institution %}
+                  {%- if data.isAggregated %}
+                  {%- for institution in asset.institutions %}
                     {{ institution }}<br/>
                   {%- endfor %}
+                  {%- else %}
+                    {{ asset.institution }}
                   {%- endif %}
                 </td>
                 <td data-title="Category" data-order="{{ asset.category }}{{ (" " + asset.subcategory) if asset.subcategory else ""}}">
@@ -129,7 +132,7 @@
                 </td>
                 <td data-title="Region">{{ asset.region }}</td>
                 <td data-title="Holding period" class="text-right">{{ data.profits.holdingDays }}</td>
-                <td data-title="Quaterly change" data-order="0" id="sparkline-{{ asset.id }}">
+                <td data-title="Quaterly change" data-order="0" id="sparkline-{{ asset.id if not data.isAggregated else 'agg-' ~ loop.index0 }}">
                   <span class="sparkline"></span>
                   <span class="value text-right color-gain float-right"></span>
                 </td>
@@ -293,7 +296,7 @@
   </div>
 </div>
 {%- if session.debug %}
-{%- for data in assetData %}
+{%- for data in assetData if not data.isAggregated %}
 <div class="modal fade" id="modalDebug_{{ data.asset.id }}">
 	<div class="modal-dialog">
 		<div class="modal-content">

@@ -91,10 +91,6 @@ def create_app(test_config=None):
             return url_for(request.endpoint, **dict(request.args, **args))
         return dict(url_for_self=url_for_self);
 
-    @app.template_test(name='list')
-    def isList(o):
-        return isinstance(o, list)
-
     @app.context_processor
     def constants():
         return dict(

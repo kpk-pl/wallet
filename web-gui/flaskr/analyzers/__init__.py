@@ -11,4 +11,4 @@ def _printJson(data):
 
 from .profits import Profits
 from .period import Period
-from .categories import Categories
+from .categories import Categories, CategoryEntry

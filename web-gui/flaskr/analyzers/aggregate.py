@@ -1,7 +1,17 @@
 from itertools import groupby
 from enum import Enum
-import copy
+from decimal import Decimal
+from typing import List
+
 from flaskr import typing
+from flaskr.model import (
+    Asset,
+    AggregatedAsset,
+    AssetOperation,
+    AssetOperationType,
+    AssetType,
+    WalletAsset,
+)
 
 
 class AggregationType(str, Enum):
@@ -9,87 +19,109 @@ class AggregationType(str, Enum):
     name = 'n'
 
 
-# https://stackoverflow.com/questions/5884066/hashing-a-dictionary
-def make_hash(o):
-    """
-    makes a hash out of anything that contains only list,dict and hashable types including string and numeric types
-    """
-    def _freeze(o):
-        if isinstance(o, dict):
-            return frozenset({ k:_freeze(v) for k,v in o.items()}.items())
-        if isinstance(o, (list)):
-            return tuple([_freeze(v) for v in o])
+def _idsOf(entry: WalletAsset):
+    if isinstance(entry, AggregatedAsset):
+        return list(entry.ids)
+    return [entry.id]
 
-        return str(o)
-    return hash(_freeze(o))
+
+def _institutionsOf(entry: WalletAsset):
+    if isinstance(entry, AggregatedAsset):
+        return list(entry.institutions)
+    return [entry.institution]
 
 
 def _key(aggregationType: AggregationType):
+    # Pydantic v1 BaseModel is not orderable/hashable by default, so we use
+    # repr() as a stable, sortable, hashable representative. Pydantic's repr
+    # lists fields in declaration order and ObjectId has a stable repr, so
+    # equal models yield equal reprs.
     if aggregationType == AggregationType.pricing:
-        return lambda a: make_hash([a['pricing'] if 'pricing' in a else None, a['currency']])
+        return lambda e: (
+            repr(e.pricing) if e.pricing is not None else 'null',
+            repr(e.currency),
+        )
     if aggregationType == AggregationType.name:
-        return lambda a: make_hash([a['name'], a['currency']])
+        return lambda e: (e.name, repr(e.currency))
+    raise ValueError(f"Unknown aggregation type {aggregationType}")
 
 
-def _filter(aggregationType: AggregationType):
-    if aggregationType == AggregationType.pricing:
-        return None
+def _shouldAggregate(aggregationType: AggregationType, entry: WalletAsset) -> bool:
+    # 'name' aggregation only operates on entries without pricing (deposits).
+    # Entries with pricing pass straight through — they are grouped by 'p' instead.
     if aggregationType == AggregationType.name:
-        return lambda a: 'pricing' not in a
+        return entry.pricing is None
+    return True
 
 
-def _asList(o, key=None):
-    if isinstance(o, dict):
-        if key in o:
-            return _asList(o[key])
-        return []
-    if isinstance(o, list):
-        return o
-    return [o]
+def _renamespacedOps(entry: WalletAsset) -> List[AssetOperation]:
+    # AggregatedAsset operations were namespaced on a prior merge — pass through (still copied).
+    if isinstance(entry, AggregatedAsset):
+        return [op.copy() for op in entry.operations]
+
+    prefix = f"{entry.institution}:"
+    return [
+        op.copy(update={'orderId': prefix + op.orderId}) if op.orderId else op.copy()
+        for op in entry.operations
+    ]
 
 
-def _merge(lhs, rhs):
-    assert 'pricing' not in lhs or 'pricing' not in rhs or lhs['pricing'] == rhs['pricing']
-    assert lhs['currency'] == rhs['currency']
+def _merge(lhs: WalletAsset, rhs: WalletAsset) -> AggregatedAsset:
+    # The grouping key already enforced these; the asserts trap any future regression.
+    assert lhs.currency == rhs.currency
+    assert lhs.pricing == rhs.pricing
 
-    result = copy.deepcopy(lhs)
+    ids = sorted(set(_idsOf(lhs) + _idsOf(rhs)), key=str)
+    institutions = sorted(set(_institutionsOf(lhs) + _institutionsOf(rhs)))
 
-    result['_id'] = list(set(_asList(lhs, '_id') + _asList(rhs, '_id')))
-    result['institution'] = list(set(_asList(lhs, 'institution') + _asList(rhs, 'institution')))
+    mergedOps = sorted(_renamespacedOps(lhs) + _renamespacedOps(rhs), key=lambda op: op.date)
 
-    result['operations'] = sorted(_asList(lhs, 'operations') + _asList(rhs, 'operations'), key=lambda op: op['date'])
-    finalQuantity = 0
-    for operation in result['operations']:
-        if 'quantity' in operation:
-            finalQuantity = typing.Operation.adjustQuantity(operation['type'], finalQuantity, operation['quantity'])
-        operation['finalQuantity'] = finalQuantity
+    isDeposit = lhs.type == AssetType.deposit
+    finalQuantity = Decimal(0)
+    recomputed: List[AssetOperation] = []
+    for op in mergedOps:
+        if op.type == AssetOperationType.earning:
+            if isDeposit and op.quantity is not None:
+                finalQuantity = finalQuantity + op.quantity
+        elif op.quantity is not None:
+            finalQuantity = typing.Operation.adjustQuantity(op.type, finalQuantity, op.quantity)
+        recomputed.append(op.copy(update={'finalQuantity': finalQuantity}))
 
-    result['finalQuantity'] = finalQuantity
+    labels = sorted(set(lhs.labels) | set(rhs.labels))
 
-    return result
+    return AggregatedAsset(
+        ids=ids,
+        institutions=institutions,
+        name=lhs.name,
+        ticker=lhs.ticker,
+        currency=lhs.currency,
+        type=lhs.type,
+        category=lhs.category,
+        subcategory=lhs.subcategory,
+        region=lhs.region,
+        pricing=lhs.pricing,
+        operations=recomputed,
+        labels=labels,
+        hasOrderIds=lhs.hasOrderIds,
+    )
 
 
-def aggregate(assets, type: AggregationType):
-    filt = _filter(type)
-    ignored = []
-    if filt:
-        assetsSorted = sorted(assets, key=filt)
-        for key, group in groupby(assetsSorted, filt):
-            if key:
-                assets = list(group)
-            else:
-                ignored = list(group)
+def aggregate(entries: List[WalletAsset], aggregationType) -> List[WalletAsset]:
+    if isinstance(aggregationType, str):
+        aggregationType = AggregationType(aggregationType)
 
-    key = _key(type)
-    assets = sorted(assets, key=key)
+    participants = [e for e in entries if _shouldAggregate(aggregationType, e)]
+    ignored = [e for e in entries if not _shouldAggregate(aggregationType, e)]
 
-    pos = 0
-    while pos < len(assets)-1:
-        if key(assets[pos]) != key(assets[pos+1]):
-            pos += 1
-            continue
+    keyFn = _key(aggregationType)
+    participants = sorted(participants, key=keyFn)
 
-        assets[pos] = _merge(assets[pos], assets[pos+1])
-        del assets[pos+1]
+    result: List[WalletAsset] = []
+    for _, group in groupby(participants, keyFn):
+        members = list(group)
+        merged = members[0]
+        for entry in members[1:]:
+            merged = _merge(merged, entry)
+        result.append(merged)
 
-    return ignored + assets
+    return ignored + result

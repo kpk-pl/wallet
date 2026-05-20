@@ -4,7 +4,7 @@ from datetime import datetime
 from flaskr import db, header
 from flaskr.session import Session
 from flaskr.pricing import Pricing
-from flaskr.analyzers.categories import Categories
+from flaskr.analyzers.categories import Categories, CategoryEntry
 from flaskr.model import Asset, AssetPricingQuotes
 from flaskr.utils import jsonify
 from decimal import Decimal
@@ -77,10 +77,16 @@ def _response(shouldAllocate=False, label=None):
     if shouldAllocate:
         pricing = Pricing()
         assets = list(db.get_db().assets.aggregate(_getPipeline(label)))
+        categoryEntries = []
         for rawAsset in assets:
             asset = Asset(**rawAsset)
             netValue, quantity = pricing(asset)
-            rawAsset['_netValue'] = netValue 
+            categoryEntries.append(CategoryEntry(
+                name=asset.name,
+                category=asset.category,
+                subcategory=asset.subcategory,
+                netValue=netValue,
+            ))
 
             if asset.pricing is not None and isinstance(asset.pricing, AssetPricingQuotes):
                 currencyConversion = pricing.getLastPrice(asset.currency.quoteId, asset.currency.name)
@@ -97,7 +103,7 @@ def _response(shouldAllocate=False, label=None):
                         unitPrice=unitPrice
                     ))
 
-        response['allocation'] = Categories()(assets)
+        response['allocation'] = Categories()(categoryEntries)
         response['assets'] = assetData
 
     return response

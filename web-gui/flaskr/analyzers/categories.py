@@ -1,4 +1,15 @@
 from collections import defaultdict
+from dataclasses import dataclass
+from decimal import Decimal
+from typing import List, Optional
+
+
+@dataclass
+class CategoryEntry:
+    name: str
+    category: str
+    subcategory: Optional[str]
+    netValue: Optional[Decimal]
 
 
 class Categories(object):
@@ -6,14 +17,11 @@ class Categories(object):
         super(Categories, self).__init__()
         self.allocation = defaultdict(lambda: defaultdict(int))
 
-    def __call__(self, assets):
-        for asset in assets:
-            category = asset['category']
-            subcategory = asset['subcategory'] if 'subcategory' in asset else None
-
-            if '_netValue' not in asset or asset['_netValue'] is None:
-                raise RuntimeError(f"Could not determine '{asset['name']}' asset value for categories allocation engine")
-            self.allocation[category][subcategory] += asset['_netValue']
+    def __call__(self, entries: List[CategoryEntry]):
+        for entry in entries:
+            if entry.netValue is None:
+                raise RuntimeError(f"Could not determine '{entry.name}' asset value for categories allocation engine")
+            self.allocation[entry.category][entry.subcategory] += entry.netValue
 
         return self.allocation
 

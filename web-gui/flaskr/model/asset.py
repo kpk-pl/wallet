@@ -23,21 +23,17 @@ class AssetType(str, Enum):
     cryptocurrency = "Cryptocurrency"
 
 
-class Asset(BaseModel):
-    id: PyObjectId = Field(alias='_id')
+class _AssetCore(BaseModel):
     name: str
     ticker: Optional[str]
     currency: AssetCurrency
-    institution: str
     type: AssetType
     category: str
     subcategory: Optional[str]
     region: Optional[str]
-    link: Optional[HttpUrl]
     pricing: Optional[AssetPricing]
     operations: List[AssetOperation] = Field(default_factory=list)
     labels: List[str] = Field(default_factory=list)
-    trashed: bool = False
     hasOrderIds: bool = False
 
     @property
@@ -111,3 +107,8 @@ class Asset(BaseModel):
         return hasOrderIds
 
 
+class Asset(_AssetCore):
+    id: PyObjectId = Field(alias='_id')
+    institution: str
+    link: Optional[HttpUrl]
+    trashed: bool = False
