@@ -102,5 +102,5 @@ def post():
 
         data['currency']['quoteId'] = currencyId['_id']
 
-    addedId = db.get_db().assets.insert(data)
+    addedId = db.get_db().assets.insert_one(data).inserted_id
     return jsonify(id=str(addedId))

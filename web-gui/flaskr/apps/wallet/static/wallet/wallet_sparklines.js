@@ -8,7 +8,8 @@ function updateSparklines(historicalData, months, getter) {
   };
 
   const timeRange = moment().subtract(months, 'months');
-  const fromIdx = historicalData.t.findIndex(t => new Date(t) >= timeRange)
+  const foundIdx = historicalData.t.findIndex(t => new Date(t) >= timeRange);
+  const fromIdx = foundIdx === -1 ? 0 : foundIdx;
 
   for (let asset of historicalData.assets) {
     const element = getter(asset)

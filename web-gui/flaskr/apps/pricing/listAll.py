@@ -49,7 +49,7 @@ def postNewItem():
     except:
         pass
 
-    addedId = db.get_db().quotes.insert(data)
+    addedId = db.get_db().quotes.insert_one(data).inserted_id
     return {'ok': True, 'id': str(addedId)}
 
 

@@ -72,7 +72,7 @@ def index():
                             'timestamp': liveQuote.timestamp,
                             'quote': float(liveQuote.quote)
                         }}}
-                        db.get_db().quotes.update(query, update)
+                        db.get_db().quotes.update_one(query, update)
 
                 responseQuote = simplifyModel(liveQuote.dict(exclude_none=True))
                 if stale:

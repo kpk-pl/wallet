@@ -30,8 +30,13 @@ class Stooq(BaseFetcher):
         except Exception as e:
             raise FetchError(url, e)
 
-        data = data['symbols'][0]
-        # Here is a potential error, when the symbol is incorrect the api returns just the 'symbol' field
+        symbols = data.get('symbols') or []
+        if not symbols:
+            raise FetchError(url, f"Stooq returned no data for symbol '{self.symbol}'")
+        data = symbols[0]
+        if 'date' not in data or 'close' not in data:
+            raise FetchError(url, f"Stooq returned incomplete data for symbol '{self.symbol}'")
+
         timestamp = dateutil.parser.parse(data['date'] + ' ' + data['time'])
 
         return Quote(quote = data['close'], timestamp=timestamp, ticker=self.symbol, name = data['name'])

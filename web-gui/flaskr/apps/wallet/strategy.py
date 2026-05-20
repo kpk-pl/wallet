@@ -118,7 +118,7 @@ def strategy():
         for entry in data:
             entry['categories'] = [v['name'] if v['percentage'] == 100 else v for v in entry['categories']]
 
-        db.get_db().strategy.insert(dict(
+        db.get_db().strategy.insert_one(dict(
             creationDate = datetime.now(),
             assetTypes = data,
             label = label,

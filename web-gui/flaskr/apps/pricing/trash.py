@@ -11,6 +11,6 @@ def trash():
 
         query = {'_id': ObjectId(quoteId)}
         update = {'$set': {'trashed': True}}
-        db.get_db().quotes.update(query, update)
+        db.get_db().quotes.update_one(query, update)
 
         return Response()

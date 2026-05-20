@@ -59,34 +59,6 @@ Quotes from https://marketstack.com/
 Quotes from quandl https://stackoverflow.com/questions/55658446/stooq-api-for-non-us-stock-market-data
 
 ======================================================================================================================
-BUGS — URGENT FIXES
-======================================================================================================================
-
-[BUG] flaskr/quotes/fetchers/stooq.py:33 — unguarded index into symbols list causes IndexError
-    `data = data['symbols'][0]` crashes when Stooq returns an empty symbols array (e.g. bad ticker).
-    The comment acknowledges this but there is no fix. Wraps the whole quote refresh in an unhandled exception.
-----------------------------------------------------------------------------------------------------------------------
-
-[BUG] flaskr/apps/wallet/templates/wallet/wallet.html:29 — JSON.parse() wrapping a JS object literal
-    `const categoryAllocation = JSON.parse({{ allocation | tojson }});`
-    `tojson` emits a JS object/array literal inline; passing it to JSON.parse() coerces it to the string
-    "[object Object]" and throws SyntaxError. Should be: `const categoryAllocation = {{ allocation | tojson }};`
-----------------------------------------------------------------------------------------------------------------------
-
-[BUG] flaskr/apps/wallet/static/wallet/wallet_sparklines.js:11 — slice(-1) when date is not found
-    `historicalData.t.findIndex(...)` returns -1 when the start date is before all stored timestamps.
-    `asset.value.slice(-1)` then takes only the last data point instead of all of them, giving a
-    one-point sparkline and a completely wrong % return value.
-----------------------------------------------------------------------------------------------------------------------
-
-[BUG] flaskr/apps/assets/trash.py:14, flaskr/apps/quotes/index.py:75,
-      flaskr/apps/pricing/listAll.py:52, flaskr/apps/assets/list.py:105
-    Deprecated PyMongo methods: .update() and .insert() were removed in PyMongo 4.
-    Replace with .update_one() / .insert_one() consistently across the codebase.
-----------------------------------------------------------------------------------------------------------------------
-
-
-======================================================================================================================
 LOGIC / MATH BUGS — financial calculations
 ======================================================================================================================
 
