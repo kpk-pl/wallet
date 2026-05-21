@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from flaskr import db
+from flaskr.model import PriceFeedError
 from flask import request
 
 
@@ -16,6 +17,24 @@ def _allLabelsPipeline():
     }})
 
     return pipeline
+
+
+def _recentPriceFeedErrors(days: int = 7) -> list[dict]:
+    cutoff = datetime.now() - timedelta(days=days)
+    docs = db.get_db().price_feed_errors.find(
+        {'timestamp': {'$gte': cutoff}},
+        sort=[('timestamp', 1)],
+    )
+    result = []
+    for d in docs:
+        m = PriceFeedError(**d)
+        result.append({
+            'id': str(m.id),
+            'name': m.name,
+            'timestamp': m.timestamp.isoformat(),
+            'error': m.error,
+        })
+    return result
 
 
 def _lastQuoteUpdateTime():
@@ -57,6 +76,7 @@ class HeaderData:
 
     warnings : list[str] = field(default_factory=list)
     errors : list[str] = field(default_factory=list)
+    priceFeedErrors : list[dict] = field(default_factory=list)
 
     def __init__(self, showLabels = False):
         self.showLabels = showLabels
@@ -68,6 +88,10 @@ class HeaderData:
 
         self.warnings = []
         self.errors = []
+        self.priceFeedErrors = []
+
+    def loadPriceFeedErrors(self, days: int = 7):
+        self.priceFeedErrors = _recentPriceFeedErrors(days=days)
 
     def asDict(self):
         return asdict(self)

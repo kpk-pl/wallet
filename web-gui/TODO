@@ -1,6 +1,3 @@
-Display a toast when there are recent price feed errors in the DB
-----------------------------------------------------------------------------------------------------------------------
-
 Unit Tests for profit analyzer, especially for historical pricing
 ----------------------------------------------------------------------------------------------------------------------
 
@@ -92,20 +89,6 @@ LOGIC / MATH BUGS — financial calculations
     The results page tells the user they sold their oldest 8 shares (FIFO matching) but charges
     them avg-cost P/L. For Polish Belka tax (FIFO is mandated), the per-operation profit number
     is wrong. Pick one method and use it consistently in both places.
-----------------------------------------------------------------------------------------------------------------------
-
-[LOGIC] Aggregating deposit accounts recomputes finalQuantity with wrong rule for EARNING ops
-    File: flaskr/analyzers/aggregate.py:60-66
-    Receipt.py stores deposit EARNING (interest) operations with finalQuantity computed using BUY
-    semantics (typeForAdjustment = buy in receipt.py:133-134), so the stored finalQuantity for an
-    interest payment includes the interest amount.
-    When two deposit accounts are merged, _merge re-derives finalQuantity by calling
-    `typing.Operation.adjustQuantity(operation['type'], finalQuantity, operation['quantity'])`
-    using the STORED type 'EARNING'. But adjustQuantity for EARNING returns `initial` unchanged
-    (typing.py:35-36). So interest payments do NOT add to the merged finalQuantity.
-    Effect: a wallet showing merged deposit accounts undercounts the balance by the sum of all
-    interest paid. Fix: pass an asset-type-aware override in _merge, or change EARNING semantics
-    in adjustQuantity to depend on asset type.
 ----------------------------------------------------------------------------------------------------------------------
 
 [LOGIC] EARNING provisions are silently dropped when creating the billing operation

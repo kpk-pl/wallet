@@ -53,6 +53,7 @@ class WalletData:
 def wallet():
     session = Session(['label', 'debug'])
     headerData = header.HeaderData(showLabels = True)
+    headerData.loadPriceFeedErrors()
 
     rawAssets = list(db.get_db().assets.aggregate(_getPipeline(session.label())))
     entries: List[WalletAsset] = [Asset(**a) for a in rawAssets]

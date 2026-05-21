@@ -95,7 +95,7 @@
     });
   </script>
   {% block user_scripts %}{% endblock %}
-  {%- if header.warnings or header.errors %}
+  {%- if header.warnings or header.errors or header.priceFeedErrors %}
   <script type="text/javascript">
     {%- for error in header.errors %}
       $(document).Toasts('create', {
@@ -117,6 +117,28 @@
         position: 'bottomRight',
       });
     {% endfor %}
+    {%- if header.priceFeedErrors %}
+    (function() {
+      const KEY = 'lastSeenPriceFeedErrorAt';
+      const lastSeen = localStorage.getItem(KEY) || '';
+      let maxShown = lastSeen;
+      const errors = {{ header.priceFeedErrors | tojson }};
+      for (const err of errors) {
+        if (err.timestamp > lastSeen) {
+          $(document).Toasts('create', {
+            class: 'bg-danger',
+            title: 'Price feed error: ' + err.name,
+            body: err.error,
+            autohide: true,
+            delay: 10000,
+            position: 'bottomRight',
+          });
+          if (err.timestamp > maxShown) maxShown = err.timestamp;
+        }
+      }
+      if (maxShown !== lastSeen) localStorage.setItem(KEY, maxShown);
+    })();
+    {%- endif %}
   </script>
   {%- endif %}
 </body>
