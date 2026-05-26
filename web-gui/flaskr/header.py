@@ -32,6 +32,7 @@ def _recentPriceFeedErrors(days: int = 7) -> list[dict]:
             'id': str(m.id),
             'name': m.name,
             'timestamp': m.timestamp.isoformat(),
+            'timestampDisplay': m.timestamp.strftime('%Y-%m-%d %H:%M'),
             'error': m.error,
         })
     return result

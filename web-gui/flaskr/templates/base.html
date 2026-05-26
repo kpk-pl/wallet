@@ -49,6 +49,13 @@
             <i class="fas fa-fw fa-calendar-check" title="Last quote update in DB: {{ header.lastQuoteUpdate.timestamp }}" data-toggle="tooltip" style="color: {{ "green" if header.lastQuoteUpdate.daysPast < 3 else "red" }}"></i>
           </li>
           {%- endif -%}
+          {%- if header.priceFeedErrors -%}
+          <li class="nav-item pl-2">
+            <a href="#" id="priceFeedErrorIndicator" role="button" data-toggle="popover" data-html="true" data-trigger="click" data-placement="bottom" title="Recent price feed errors">
+              <i class="fas fa-fw fa-exclamation-triangle" style="color: red"></i>
+            </a>
+          </li>
+          {%- endif -%}
           <li class="nav-item pl-2">
             <a href="{{ url_for('wallet.backup') }}" title="Download DB backup (zip)" data-toggle="tooltip">
               <i class="fas fa-fw fa-database" style="color: gray"></i>
@@ -89,9 +96,48 @@
   <script type="text/javascript" src="{{ url_for('static', filename='js/utils.js') }}"></script>
   <script type="text/javascript" src="{{ url_for('static', filename='js/styling.js') }}"></script>
 
+  {%- if header.priceFeedErrors %}
+  <style>
+    .popover.price-feed-error-popover { max-width: 480px; }
+    #priceFeedErrorPopoverContent .pfe-msg {
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+  </style>
+  <div id="priceFeedErrorPopoverContent" style="display: none">
+    <ul class="list-unstyled mb-0" style="max-height: 60vh; overflow-y: auto; min-width: 280px;">
+      {%- for err in header.priceFeedErrors | reverse %}
+      <li class="mb-2 pb-2 {% if not loop.last %}border-bottom{% endif %}">
+        <div><strong>{{ err.name }}</strong></div>
+        <div><small class="text-muted">{{ err.timestampDisplay }}</small></div>
+        <div class="text-danger pfe-msg">{{ err.error }}</div>
+      </li>
+      {%- endfor %}
+    </ul>
+  </div>
+  {%- endif %}
+
   <script type="text/javascript">
     $(document).ready(function(){
       $('[data-toggle="tooltip"]').tooltip();
+      $('#priceFeedErrorIndicator').popover({
+        html: true,
+        sanitize: false,
+        template: '<div class="popover price-feed-error-popover" role="tooltip"><div class="arrow"></div><h3 class="popover-header"></h3><div class="popover-body"></div></div>',
+        content: function() {
+          return $('#priceFeedErrorPopoverContent').html();
+        }
+      });
+      // Dismiss popover when clicking outside it or the trigger
+      $(document).on('click', function(e) {
+        var $trigger = $('#priceFeedErrorIndicator');
+        if (!$trigger.length) return;
+        if (!$trigger.is(e.target) && $trigger.has(e.target).length === 0
+            && $('.popover').has(e.target).length === 0) {
+          $trigger.popover('hide');
+        }
+      });
     });
   </script>
   {% block user_scripts %}{% endblock %}
