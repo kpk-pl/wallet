@@ -171,14 +171,15 @@ LOGIC / MATH BUGS — financial calculations
     head. Use an unambiguous separator (e.g. ' / ') or a tuple key.
 ----------------------------------------------------------------------------------------------------------------------
 
-[LOGIC] HistoryPricing parametrized SELL assumes operations within an orderId are date-sorted
-    File: flaskr/pricing/pricing.py:391-416
-    Operations are iterated in the order MongoDB returns them inside each orderId bucket. There
-    is no explicit sort by date. A SELL stored before its corresponding BUYs in the array would
-    try to subtract from positions that haven't been appended yet, crashing on `opq[firstIdx]`.
-    Either sort `operations` by `.date` at the top of `_priceAssetByInterest`, or assert order.
-    Also: the SELL match loop (lines 410-416) never breaks when remainingQuantity reaches 0; it
-    keeps iterating with min(0, x) = 0. O(N^2) on lots-heavy assets; add an early break.
+[LOGIC] HistoryPricing parametrized SELL O(N^2) — early-break missing
+    File: flaskr/pricing/pricing.py:410-416
+    (NOTE: the storage-order half of this bug — SELL appearing before its BUYs and silently
+    dropping the SELL — is RESOLVED by the model-layer ascending-date validator in
+    flaskr/model/asset.py. See tests/model/test_asset.py and
+    tests/pricing/test_pricing_historical_edge_cases.py::test_parametrized_sell_before_buy_is_rejected_by_model.)
+    Remaining issue: the SELL match loop (lines 410-416) never breaks when remainingQuantity
+    reaches 0; it keeps iterating with min(0, x) = 0. O(N^2) on lots-heavy assets; add an
+    early break.
 ----------------------------------------------------------------------------------------------------------------------
 
 [LOGIC] Header.lastQuoteUpdate rendered without a None guard on `daysPast`

@@ -87,3 +87,72 @@ def test_model_price_equals_quantity_for_deposits():
     data['operations'][0]['price'] = Decimal(25)
     Asset(**data)
 
+
+# ---------------------------------------------------------------------------
+# Operation date-ordering invariant
+# ---------------------------------------------------------------------------
+# Every consumer of `Asset.operations` iterates the list in storage order and
+# treats it as date-ascending order.  The model validator below guarantees
+# that, so out-of-order data cannot reach the analyzers / pricing engines.
+
+
+def _op(date, price=10, quantity=10, finalQuantity=10, type='BUY'):
+    return dict(date=date, type=type,
+                price=Decimal(price),
+                quantity=Decimal(quantity),
+                finalQuantity=Decimal(finalQuantity))
+
+
+def test_model_rejects_operations_with_descending_dates():
+    data = copy.deepcopy(PROTO_DEPOSIT)
+    data['operations'] = [
+        _op(datetime(2022, 1, 2), price=10, quantity=10, finalQuantity=10),
+        _op(datetime(2022, 1, 1), price=5,  quantity=5,  finalQuantity=15),  # earlier
+    ]
+    with pytest.raises(ValidationError) as exc_info:
+        Asset(**data)
+    assert "ascending" in str(exc_info.value)
+
+
+def test_model_allows_operations_on_equal_timestamps():
+    """Two operations at the same instant (e.g. settlement batch) are valid."""
+    data = copy.deepcopy(PROTO_DEPOSIT)
+    data['operations'] = [
+        _op(datetime(2022, 1, 1), price=10, quantity=10, finalQuantity=10),
+        _op(datetime(2022, 1, 1), price=5,  quantity=5,  finalQuantity=15),
+    ]
+    Asset(**data)
+
+
+def test_model_accepts_single_operation():
+    data = copy.deepcopy(PROTO_DEPOSIT)
+    Asset(**data)  # PROTO_DEPOSIT has exactly one op — must pass
+
+
+def test_model_accepts_empty_operations_list():
+    data = copy.deepcopy(PROTO_DEPOSIT)
+    data['operations'] = []
+    Asset(**data)
+
+
+def test_model_accepts_long_ascending_chain():
+    data = copy.deepcopy(PROTO_DEPOSIT)
+    data['operations'] = [
+        _op(datetime(2022, 1, d), price=1, quantity=1, finalQuantity=d)
+        for d in range(1, 11)
+    ]
+    Asset(**data)
+
+
+def test_model_rejects_when_only_last_pair_out_of_order():
+    """A single descending step anywhere in the list is enough to reject."""
+    data = copy.deepcopy(PROTO_DEPOSIT)
+    data['operations'] = [
+        _op(datetime(2022, 1, 1), price=1, quantity=1, finalQuantity=1),
+        _op(datetime(2022, 1, 2), price=1, quantity=1, finalQuantity=2),
+        _op(datetime(2022, 1, 3), price=1, quantity=1, finalQuantity=3),
+        _op(datetime(2022, 1, 2, 23), price=1, quantity=1, finalQuantity=4),  # 1h earlier
+    ]
+    with pytest.raises(ValidationError):
+        Asset(**data)
+

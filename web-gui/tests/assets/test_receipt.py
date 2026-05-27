@@ -713,3 +713,92 @@ def test_receipt_billing_asset_foreign_currencies(client):
             finalQuantity = Decimal128("525"),
             price = Decimal128("475"),
         )
+
+
+# ---------------------------------------------------------------------------
+# Date-ordering invariant on the receipt POST path
+# ---------------------------------------------------------------------------
+# A back-dated receipt cannot be accepted: every downstream consumer (Pricing,
+# HistoryPricing, Profits) iterates `operations` in storage order and treats
+# it as ascending date order.  The Asset model validator enforces this, but
+# the receipt route also rejects early with a clear error code so the UI gets
+# a proper toast instead of a 500 on the next page load.
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_rejects_backdated_operation(client):
+    # Initial BUY at 2022-06-15. A second BUY dated 2022-01-01 (before the
+    # first) must be rejected with code 106.
+    asset = Asset.createEquity().pricing()
+    asset.operation('BUY', datetime.datetime(2022, 6, 15, 10), 10, 10, 100)
+    assetId = asset.commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type='BUY',
+        date='2022-01-01T12:00:00',
+        quantity=5,
+        price=100,
+    ), follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == 106
+    assert 'chronological' in rv.json['message'].lower()
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        # Push must not have happened.
+        assert len(dbAsset['operations']) == 1
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_accepts_same_timestamp_operation(client):
+    # A receipt at the same instant as the previous op is allowed
+    # (e.g. settlement batch on the same broker timestamp).
+    asset = Asset.createEquity().pricing()
+    asset.operation('BUY', datetime.datetime(2022, 6, 15, 10), 10, 10, 100)
+    assetId = asset.commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type='BUY',
+        date='2022-06-15T10:00:00',
+        quantity=5,
+        price=100,
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 2
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_rejects_backdated_billing_operation(client):
+    # The main asset has no operations, so its own check passes. But the
+    # billing deposit's last op is in the future relative to this receipt,
+    # which would create an out-of-order operation on the deposit. Reject
+    # with code 207 and ensure NEITHER asset got a push (the route should
+    # fail before any DB write).
+    assetId = Asset.createEquity().pricing().commit()
+
+    billing = Asset.createDeposit()
+    billing.operation('BUY', datetime.datetime(2022, 6, 15, 10), 1000, 1000, 1000)
+    billingId = billing.commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type='BUY',
+        date='2022-01-01T12:00:00',
+        quantity=2,
+        price=100,
+        billingAsset=str(billingId),
+    ), follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == 207
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        dbBilling = db.wallet.assets.find_one({'_id': billingId})
+        # Neither should have been touched.
+        assert 'operations' not in dbAsset or len(dbAsset['operations']) == 0
+        assert len(dbBilling['operations']) == 1

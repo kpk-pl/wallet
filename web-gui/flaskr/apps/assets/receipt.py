@@ -122,6 +122,19 @@ def _makeOperation(asset):
         'type': _required("type", 101),
     }
 
+    # Operations are stored in date-ascending order — this is the invariant
+    # enforced by the Asset model validator and assumed by every downstream
+    # consumer (pricing, history, analyzers). Reject a back-dated receipt
+    # here with a clear code rather than letting the $push succeed and
+    # then crash every page on the next load with a ValidationError.
+    if asset.operations and operation['date'] < asset.operations[-1].date:
+        raise ReceiptError(
+            106,
+            f"Operation date {operation['date'].isoformat()} is earlier than the "
+            f"last recorded operation ({asset.operations[-1].date.isoformat()}). "
+            "Operations must be entered in chronological order."
+        )
+
     if operation['type'] != typing.Operation.Type.earning or asset.type == AssetType.deposit:
         operation['quantity'] = _parseNumeric(_required("quantity", 102))
 
@@ -186,6 +199,18 @@ def _makeBillingOperation(asset, operation, session):
     billingAsset = Asset(**billingAssets[0])
     if billingAsset.type != AssetType.deposit:
         raise ReceiptError(204, "Billing asset must be a Deposit")
+
+    # Same date-ordering invariant applies to the billing deposit — the
+    # billing op is stamped with the originating op's date, so a backdated
+    # main operation also backdates the billing entry.
+    if billingAsset.operations and operation['date'] < billingAsset.operations[-1].date:
+        raise ReceiptError(
+            207,
+            f"Billing asset's last operation is on "
+            f"{billingAsset.operations[-1].date.isoformat()}, which is later "
+            f"than this operation's date {operation['date'].isoformat()}. "
+            "Operations on the billing deposit must also be chronological."
+        )
 
     billingOperation = {
         'date': operation['date'],

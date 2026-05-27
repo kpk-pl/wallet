@@ -72,6 +72,16 @@ class _AssetCore(BaseModel):
         return op
 
     @validator('operations')
+    def check_operations_sorted_by_date(cls, operations):
+        for prev, curr in zip(operations, operations[1:]):
+            if curr.date < prev.date:
+                raise ValueError(
+                    f"Operations must be ordered by date ascending; "
+                    f"got {curr.date.isoformat()} after {prev.date.isoformat()}"
+                )
+        return operations
+
+    @validator('operations')
     def check_quantity_and_final_quantity_is_consistent(cls, operations, values):
         if 'type' not in values:
             raise ValueError("Cannot check quantity consistency because asset type is unknown")
