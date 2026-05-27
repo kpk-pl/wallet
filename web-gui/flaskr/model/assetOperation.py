@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from enum import Enum
 from datetime import datetime
 from decimal import Decimal
@@ -19,9 +19,20 @@ class AssetOperation(BaseModel):
     price: Decimal
     quantity: Optional[Decimal]
     finalQuantity: Decimal
+    # Always entered and stored in MAIN_CURRENCY (typically PLN), even when
+    # the asset itself is denominated in a foreign currency. Do NOT multiply
+    # by currencyConversion when summing — it would double-convert.
     provision: Decimal = Decimal(0)
     currencyConversion: Optional[Decimal]
     orderId: Optional[str]
+
+    @validator('finalQuantity')
+    def check_finalQuantity_non_negative(cls, finalQuantity):
+        if finalQuantity < 0:
+            raise ValueError(
+                f"finalQuantity cannot be negative (got {finalQuantity})"
+            )
+        return finalQuantity
 
     @property
     def unitPrice(self):

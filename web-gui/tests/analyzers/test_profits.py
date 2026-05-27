@@ -5,17 +5,33 @@ from decimal import Decimal as D
 from datetime import datetime
 
 
-def makeAsset(type:AssetType):
+def makeAsset(type:AssetType=AssetType.equity, currency_name:str="TST"):
     return Asset(
         _id = PyObjectId(),
         name = "Test asset",
         currency = AssetCurrency(
-            name = "TST"
+            name = currency_name
         ),
         institution = "Test",
         type = type,
         category = "Testing"
     )
+
+
+def _op(type, date, price, quantity, finalQuantity, provision=None, currencyConversion=None):
+    kwargs = dict(
+        date=date,
+        type=type,
+        price=D(str(price)),
+        finalQuantity=D(str(finalQuantity)),
+    )
+    if quantity is not None:
+        kwargs["quantity"] = D(str(quantity))
+    if provision is not None:
+        kwargs["provision"] = D(str(provision))
+    if currencyConversion is not None:
+        kwargs["currencyConversion"] = D(str(currencyConversion))
+    return AssetOperation(**kwargs)
 
 
 def test_asset_with_no_operations():
@@ -590,3 +606,368 @@ def test_single_receive():
     assert result.quantity == D(10)
     assert result.breakdown == breakdowns
 
+
+def test_investmentStart_set_on_first_buy_and_holdingDays_is_correct():
+    asset = makeAsset()
+    asset.operations = [_op(AssetOperationType.buy, datetime(2020, 1, 1), 100, 10, 10)]
+
+    result = Profits(currentDate=datetime(2020, 4, 10))(asset)
+
+    assert result.investmentStart == datetime(2020, 1, 1)
+    assert result.holdingDays == 100  # Jan 1 → Apr 10, 2020 is 100 days
+
+
+def test_investmentStart_cleared_after_full_liquidation():
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10),
+        _op(AssetOperationType.sell, datetime(2020, 6, 1), 100, 10, 0),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    assert result.investmentStart is None
+    assert result.holdingDays is None
+
+
+def test_investmentStart_reset_on_rebuy_after_full_liquidation():
+    """After selling everything and buying again, the investmentStart must
+    move to the new buy date — not stay anchored at the original buy."""
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10),
+        _op(AssetOperationType.sell, datetime(2020, 6, 1), 100, 10, 0),
+        _op(AssetOperationType.buy,  datetime(2020, 9, 1),  50,  5, 5),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    assert result.investmentStart == datetime(2020, 9, 1)
+    assert result.holdingDays == 121  # Sep 1 → Dec 31
+
+
+def test_investmentStart_unchanged_on_partial_sell():
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10),
+        _op(AssetOperationType.sell, datetime(2020, 6, 1),  50,  5, 5),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    assert result.investmentStart == datetime(2020, 1, 1)
+    assert result.holdingDays == 365  # full year
+
+
+def test_investmentStart_set_by_receive_when_first_operation():
+    asset = makeAsset()
+    asset.operations = [_op(AssetOperationType.receive, datetime(2020, 3, 1), 0, 10, 10)]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    assert result.investmentStart == datetime(2020, 3, 1)
+
+
+def test_investmentStart_set_by_earning_when_first_operation_on_deposit():
+    """EARNING on a deposit creates cash and is the only operation type that
+    can be 'first' aside from BUY/RECEIVE.  Investment must start there."""
+    asset = makeAsset(type=AssetType.deposit)
+    asset.operations = [_op(AssetOperationType.earning, datetime(2020, 3, 1), 100, 100, 100)]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    assert result.investmentStart == datetime(2020, 3, 1)
+
+
+def test_receive_then_sell_realises_full_proceeds_as_profit():
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.receive, datetime(2020, 1, 1), 0, 10, 10),
+        _op(AssetOperationType.sell,    datetime(2020, 6, 1), 50, 5,  5),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    # avg cost was 0, so the full SELL price is profit
+    assert result.profit == D(50)
+    assert result.netProfit == D(50)
+    # remaining 5 shares still at zero avg price
+    assert result.avgPrice == D(0)
+    assert result.quantity == D(5)
+
+
+def test_sell_after_receive_plus_buy_uses_running_average_cost():
+    """RECEIVE 5@0 then BUY 5@100 → avg cost 10/share.  SELL 3@40 takes a
+    cost basis of 3*10=30 (avg), so profit=10."""
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.receive, datetime(2020, 1, 1),   0,  5, 5),
+        _op(AssetOperationType.buy,     datetime(2020, 2, 1), 100,  5, 10),
+        _op(AssetOperationType.sell,    datetime(2020, 3, 1),  40,  3, 7),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    # avg = (0 + 100) / 10 = 10. SELL 3 → cost basis = 30. profit = 40-30 = 10.
+    assert result.profit == D(10)
+    assert result.netProfit == D(10)
+
+
+def test_sell_split_across_two_buys_records_FIFO_matching_positions():
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10),
+        _op(AssetOperationType.buy,  datetime(2020, 2, 1), 200, 10, 20),
+        _op(AssetOperationType.sell, datetime(2020, 3, 1), 200, 15,  5),  # crosses the two BUYs
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    sell_breakdown = result.breakdown[2]
+    assert len(sell_breakdown.matchingOpenPositions) == 2
+    # First closed: all 10 from the first BUY
+    assert sell_breakdown.matchingOpenPositions[0].operation.date == datetime(2020, 1, 1)
+    assert sell_breakdown.matchingOpenPositions[0].quantity == D(10)
+    # Then 5 from the second BUY
+    assert sell_breakdown.matchingOpenPositions[1].operation.date == datetime(2020, 2, 1)
+    assert sell_breakdown.matchingOpenPositions[1].quantity == D(5)
+
+    # Verify remainingOpenQuantity got decremented on the prior buys
+    assert result.breakdown[0].remainingOpenQuantity == D(0)
+    assert result.breakdown[1].remainingOpenQuantity == D(5)
+
+
+def test_two_consecutive_sells_after_one_buy():
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10),
+        _op(AssetOperationType.sell, datetime(2020, 2, 1),  60,  6,  4),
+        _op(AssetOperationType.sell, datetime(2020, 3, 1),  50,  4,  0),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    # avg cost = 10/share
+    # SELL 1: 60 - 6*10 = 0
+    # SELL 2: 50 - 4*10 = 10
+    assert result.breakdown[1].profit == D(0)
+    assert result.breakdown[2].profit == D(10)
+    assert result.profit == D(10)
+    # Final position cleared
+    assert result.quantity == D(0)
+    assert result.avgPrice == D(0)
+
+
+def test_matchingOpenPositions_skips_non_position_breakdowns():
+    """EARNING on a non-deposit creates a breakdown with
+    remainingOpenQuantity=None.  Subsequent SELL matching should ignore it
+    and only match against BUY / RECEIVE entries."""
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,     datetime(2020, 1, 1), 100, 10, 10),
+        _op(AssetOperationType.earning, datetime(2020, 2, 1),   5, None, 10),
+        _op(AssetOperationType.sell,    datetime(2020, 3, 1),  60,  6, 4),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    sell = result.breakdown[2]
+    assert len(sell.matchingOpenPositions) == 1
+    assert sell.matchingOpenPositions[0].operation.date == datetime(2020, 1, 1)
+    assert sell.matchingOpenPositions[0].quantity == D(6)
+
+
+def test_negative_finalQuantity_rejected_by_AssetOperation_validator():
+    """An oversell would leave finalQuantity < 0.  The AssetOperation model
+    rejects that at field level, so the bad data never reaches the analyzer."""
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        AssetOperation(
+            date=datetime(2020, 2, 1),
+            type=AssetOperationType.sell,
+            price=D(150),
+            quantity=D(15),
+            finalQuantity=D(-5),
+            provision=D(0),
+        )
+
+
+def test_oversell_assert_is_defensive_backstop():
+    """Defense-in-depth: if some path bypasses validation (e.g. .construct()
+    or a hand-rolled dict), the Profits analyzer still asserts that a SELL
+    is fully matched against open positions.  Pinned so the backstop isn't
+    accidentally removed."""
+    asset = makeAsset()
+    asset.operations = [_op(AssetOperationType.buy, datetime(2020, 1, 1), 100, 10, 10)]
+    bad_sell = AssetOperation.construct(
+        date=datetime(2020, 2, 1),
+        type=AssetOperationType.sell,
+        price=D(150),
+        quantity=D(15),       # 5 more than available
+        finalQuantity=D(-5),
+        provision=D(0),
+    )
+    asset.operations = list(asset.operations) + [bad_sell]
+
+    with pytest.raises(AssertionError):
+        Profits()(asset)
+
+
+def test_earning_on_equity_records_profit_but_does_not_change_quantity():
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,     datetime(2020, 1, 1), 100, 10, 10),
+        _op(AssetOperationType.earning, datetime(2020, 6, 1),  15, None, 10),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    # Quantity unchanged
+    assert result.quantity == D(10)
+    # avg price unchanged (dividend doesn't reduce cost basis)
+    assert result.avgPrice == D(10)
+    # Profit was 15
+    assert result.profit == D(15)
+    assert result.netProfit == D(15)
+    # Earning breakdown has no remainingOpenQuantity (not a position)
+    assert result.breakdown[1].remainingOpenQuantity is None
+
+
+def test_earning_on_deposit_appears_as_remainingOpenQuantity_equal_to_price():
+    """A bit of an oddity: for deposits, the EARNING breakdown's
+    remainingOpenQuantity is set to operation.price (the cash inflow size).
+    Locks in this current behaviour."""
+    asset = makeAsset(type=AssetType.deposit)
+    asset.operations = [
+        _op(AssetOperationType.buy,     datetime(2020, 1, 1), 100, 100, 100),
+        _op(AssetOperationType.earning, datetime(2020, 6, 1),  10,  10, 110),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    assert result.breakdown[1].remainingOpenQuantity == D(10)
+
+
+def test_provisions_correctly_distributed_after_partial_sells():
+    """Each SELL should consume a proportional slice of the running BUY
+    provisions and report them in its breakdown.  After the asset is
+    completely sold, every cent of provisions should appear in the total."""
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10, provision=10),
+        _op(AssetOperationType.sell, datetime(2020, 2, 1),  60,  4,  6, provision=2),
+        _op(AssetOperationType.sell, datetime(2020, 3, 1),  90,  6,  0, provision=3),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    # BUY provision is 10; SELL 4/10 consumes 4 of it, SELL 6/6 consumes 6.
+    # Plus the SELLs' own provisions 2 + 3 = 5.  Total = 15.
+    assert result.provisions == D(15)
+    assert result.breakdown[0].provisions == D(0)              # BUY defers
+    assert result.breakdown[1].provisions == D(2) + D(4)       # SELL prov + 40% of 10
+    assert result.breakdown[2].provisions == D(3) + D(6)       # SELL prov + remaining 6
+
+
+def test_provisions_total_equals_sum_when_no_sells():
+    """Without sells, BUY provisions stay in running.provision and are added
+    only at the end."""
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy, datetime(2020, 1, 1), 100, 10, 10, provision=3),
+        _op(AssetOperationType.buy, datetime(2020, 2, 1), 100, 10, 20, provision=5),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    assert result.provisions == D(8)
+    # but the per-breakdown values are 0 (deferred to a future SELL)
+    assert result.breakdown[0].provisions == D(0)
+    assert result.breakdown[1].provisions == D(0)
+
+
+def test_provisions_recorded_as_entered_regardless_of_currencyConversion():
+    """Provisions and taxes are entered manually in the default (main)
+    currency — even when the asset itself is denominated in a foreign
+    currency.  The Profits analyzer therefore sums operation.provision
+    AS-IS without applying currencyConversion.
+
+    This test pins down that convention so a future "let's convert
+    provisions" patch doesn't get reintroduced."""
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10,
+            provision=10, currencyConversion=2),   # provision already in PLN
+        _op(AssetOperationType.sell, datetime(2020, 6, 1),  60,  5,  5,
+            provision=2, currencyConversion=3),    # provision already in PLN
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    # In PLN throughout: BUY 10 + SELL 2 = 12.
+    # currencyConversion does NOT touch provisions.
+    assert result.provisions == D(12)
+
+
+def test_loss_making_sell_records_negative_profit():
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10),
+        _op(AssetOperationType.sell, datetime(2020, 6, 1),  30,  5,  5),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    # cost basis for 5 shares is 50; sold for 30 → -20
+    assert result.profit == D(-20)
+    assert result.netProfit == D(-20)
+
+
+def test_currency_conversion_none_treated_as_one():
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10),
+        _op(AssetOperationType.sell, datetime(2020, 6, 1), 150, 10,  0),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    assert result.profit == D(50)
+    assert result.netProfit == D(50)  # equal because conv == 1
+
+
+def test_avg_price_stays_constant_after_partial_sells():
+    """A SELL must reduce running totals proportionally so that the average
+    price stays the same when no new BUY happens."""
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10),
+        _op(AssetOperationType.sell, datetime(2020, 2, 1),  30,  3,  7),
+        _op(AssetOperationType.sell, datetime(2020, 3, 1),  20,  2,  5),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    assert result.avgPrice == D(10)  # all the way through
+    for b in result.breakdown:
+        assert b.avgPrice == D(10)
+
+
+def test_netInvestment_equals_quantity_times_avgNetPrice_after_each_op():
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,     datetime(2020, 1, 1), 100, 10, 10, currencyConversion=2),
+        _op(AssetOperationType.buy,     datetime(2020, 2, 1), 200, 10, 20, currencyConversion=3),
+        _op(AssetOperationType.sell,    datetime(2020, 3, 1), 120,  5, 15, currencyConversion=4),
+        _op(AssetOperationType.earning, datetime(2020, 4, 1),  10, None, 15, currencyConversion=2),
+        _op(AssetOperationType.sell,    datetime(2020, 5, 1), 200,  5, 10, currencyConversion=3),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    for i, b in enumerate(result.breakdown):
+        assert b.netInvestment == b.quantity * b.avgNetPrice, (
+            f"netInvestment invariant broken at op {i}: "
+            f"{b.netInvestment} != {b.quantity} * {b.avgNetPrice}"
+        )

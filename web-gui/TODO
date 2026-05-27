@@ -59,23 +59,6 @@ Quotes from quandl https://stackoverflow.com/questions/55658446/stooq-api-for-no
 LOGIC / MATH BUGS — financial calculations
 ======================================================================================================================
 
-[LOGIC] Provisions are accumulated in NATIVE currency but reported alongside default-currency totals
-    Files: flaskr/analyzers/profits.py:144,168,182,197  flaskr/analyzers/period.py:115
-           flaskr/pricing/pricing.py:334-347 (_getProvision)
-    Every place that sums `operation.provision` does so WITHOUT applying `currencyConversion`.
-    Inside the Profits analyzer:
-        - _buy:   self._running.provision += operation.provision          (native)
-        - _sell:  breakdown.provisions = operation.provision + running.partProvision(quantity)  (native)
-        - Result: sum of breakdown.provisions + running.provision         (native)
-    Period.profits.provisions does the same: `+= operation.provision`.
-    HistoryPricing._getProvision accumulates native too.
-    Meanwhile netProfit / netInvestment / value ARE converted to default currency on the same lines.
-    Effect: for any USD/EUR/GBP asset, the displayed "provision" column is in foreign currency but
-    rendered as if PLN. The per-portfolio "Net P/L" in wallet_historical.js subtracts these mixed
-    numbers from PLN totals — all multi-currency portfolios show wrong P/L and wrong tax-relevant
-    provision totals. Fix: multiply provision by currencyConversion at every accumulation point.
-----------------------------------------------------------------------------------------------------------------------
-
 [LOGIC] Profit is computed by AVERAGE COST while matchingOpenPositions is FIFO — inconsistency
     File: flaskr/analyzers/profits.py:191-216 (_sell)
     `breakdown.profit = operation.price - self._running.partPrice(quantity)` where
@@ -132,15 +115,6 @@ LOGIC / MATH BUGS — financial calculations
     TypeError, OR the operation gets persisted with quantity=None which corrupts every subsequent
     analyzer that calls .partPrice etc. Either raise ReceiptError on None, or validate at a single
     boundary with a proper response code.
-----------------------------------------------------------------------------------------------------------------------
-
-[LOGIC] `assert quantity == Decimal(0)` in Profits._sell is a production crash, not a check
-    File: flaskr/analyzers/profits.py:211
-    If somehow there are not enough preceding open positions to close a SELL (data corruption,
-    bad migration, manual DB edit), the analyzer triggers an AssertionError that kills the whole
-    request — wallet, results, and assets pages all break at once. Replace with a proper
-    exception that propagates to header.errors so the user sees which asset is bad and the rest
-    of the portfolio still renders.
 ----------------------------------------------------------------------------------------------------------------------
 
 [LOGIC] Aggregating assets changes the cost basis used for profit calculations
