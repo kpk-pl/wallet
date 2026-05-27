@@ -8,9 +8,16 @@ from datetime import datetime
 from flaskr.model.quote import QuoteUpdateFrequency
 
 
+# The Mock fetcher recognises any URL starting with "http://mocking.com" and
+# returns the quote/timestamp encoded in the query string.  Using it as the
+# default URL keeps the initial-fetch step happy without hitting the network.
+_MOCK_URL = "http://mocking.com?quote=10.1&timestamp=2022-01-12T14:30:00"
+_MOCK_QUOTE = dict(quote=10.1, timestamp=datetime(2022, 1, 12, 14, 30))
+
+
 MINIMAL_PRICING_SOURCE_DATA = dict(
     name = "Test source",
-    url = "http://test.source.com",
+    url = _MOCK_URL,
     updateFrequency = "daily",
     unit = "EUR",
 )
@@ -31,6 +38,7 @@ def test_pricing_add_source(client):
             url = MINIMAL_PRICING_SOURCE_DATA['url'],
             updateFrequency = MINIMAL_PRICING_SOURCE_DATA['updateFrequency'],
             unit = MINIMAL_PRICING_SOURCE_DATA['unit'],
+            quoteHistory = [_MOCK_QUOTE],
         )
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
@@ -90,33 +98,48 @@ def test_pricing_add_source_maximal_data(client):
             ticker = data['ticker'],
             unit = data['unit'],
             url = data['url'],
-            updateFrequency = data['updateFrequency']
+            updateFrequency = data['updateFrequency'],
+            quoteHistory = [_MOCK_QUOTE],
         )
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
-def test_pricing_add_source_maximal_data(client):
+def test_pricing_add_source_rejected_when_no_fetcher_recognises_url(client):
+    """If the URL doesn't match any known fetcher, the source must NOT be
+    persisted and the response must surface an error toast payload."""
     data = {**MINIMAL_PRICING_SOURCE_DATA}
-    data.update(
-        ticker = "PS",
-        unit = "USD"
-    )
+    data['url'] = "http://no-fetcher-recognises-this.example.com"
 
     rv = client.post(f"/pricing", data=data, follow_redirects=True)
-    assert rv.status_code == 200
-    assert 'id' in rv.json
+
+    assert rv.status_code == 400
+    assert rv.json.get('error') is True
+    assert 'code' in rv.json
+    assert 'message' in rv.json
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
-        dbPricing = db.wallet.quotes.find_one({'_id': ObjectId(rv.json['id'])})
+        assert db.wallet.quotes.count_documents({'name': data['name']}) == 0
 
-        assert dbPricing == dict(
-            _id = ObjectId(rv.json['id']),
-            name = data['name'],
-            ticker = data['ticker'],
-            unit = data['unit'],
-            url = data['url'],
-            updateFrequency = data['updateFrequency']
-        )
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_pricing_add_source_rejected_when_initial_fetch_fails(client):
+    """If the fetcher recognises the URL but raises a FetchError on the
+    initial call, the source must NOT be persisted."""
+    data = {**MINIMAL_PRICING_SOURCE_DATA}
+    # Mock fetcher matches "http://mocking.com..." but Quote(**{}) raises
+    # ValidationError when the query string is empty, which the fetcher
+    # wraps in FetchError.
+    data['url'] = "http://mocking.com"
+
+    rv = client.post(f"/pricing", data=data, follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json.get('error') is True
+    assert 'code' in rv.json
+    assert 'message' in rv.json
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        assert db.wallet.quotes.count_documents({'name': data['name']}) == 0
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])

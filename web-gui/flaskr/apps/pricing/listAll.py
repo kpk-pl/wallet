@@ -3,7 +3,7 @@ from flask import request, render_template, jsonify
 from flaskr import db, header, stooq
 from flaskr.model.quote import QuoteUpdateFrequency
 from flaskr.apps.quotes.list import listIds as listActiveQuoteIds
-from flaskr.quotes import Fetcher as QuotesFetcher
+from flaskr.quotes import Fetcher as QuotesFetcher, FetchError
 from pydantic import BaseModel, HttpUrl, ValidationError, Field
 from typing import Optional
 
@@ -40,14 +40,25 @@ def postNewItem():
             'from': model.unit,
         }
 
+    # The pricing source must have at least one quote at creation time —
+    # downstream consumers (HistoryPricing, wallet charts) assume a non-empty
+    # quoteHistory and produce broken NaN timelines if one is missing.
+    # If the initial fetch fails for any reason, surface the error to the
+    # user via the standard error-toast contract and do NOT insert the doc.
+    fetcher = QuotesFetcher.getInstance(model.url)
+    if fetcher is None:
+        return ({'error': True, 'code': 3,
+                 'message': "No quote fetcher recognises this URL"}, 400)
     try:
-        quote = QuotesFetcher(model.url).fetch()
-        data['quoteHistory'] = [dict(
-           timestamp=quote.timestamp,
-           quote=float(quote.quote)
-        )]
-    except:
-        pass
+        quote = fetcher.fetch()
+    except FetchError as e:
+        return ({'error': True, 'code': 3,
+                 'message': f"Could not fetch initial quote: {e.msg}"}, 400)
+
+    data['quoteHistory'] = [dict(
+       timestamp=quote.timestamp,
+       quote=float(quote.quote)
+    )]
 
     addedId = db.get_db().quotes.insert_one(data).inserted_id
     return {'ok': True, 'id': str(addedId)}
