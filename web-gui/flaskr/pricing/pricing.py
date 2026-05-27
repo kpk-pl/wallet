@@ -408,6 +408,8 @@ class HistoryPricing(_PricingBase):
 
                     remainingQuantity = operation.quantity
                     for opq in openPositionsQuotes:
+                        if remainingQuantity == 0:
+                            break
                         removedQuantity = min(remainingQuantity, opq[firstIdx].quantity)
                         if removedQuantity == 0:
                             continue
