@@ -155,6 +155,11 @@ $(function(){
   $('#submit').click(function(){
     const tree = $.ui.fancytree.getTree("#treeTable");
 
+    const activeNode = tree.getActiveNode();
+    if (activeNode) {
+      activeNode.setActive(false);
+    }
+
     const data = tree.toDict(true).children.map(o => {
       return {
         name: o.title,

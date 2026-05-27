@@ -9,10 +9,6 @@ data needs to be pulled from backend and series modified accordingly.
 https://apexcharts.com/javascript-chart-demos/area-charts/datetime-x-axis/
 ----------------------------------------------------------------------------------------------------------------------
 
-Strategy edit page -> when a submit button is clicked the currently edited row changed data does not get reflected in
-the fancytree model and then not saved to database
-----------------------------------------------------------------------------------------------------------------------
-
 Change handling of the "coded" field. Rename it to "Transaction ID". Allow setting this on the asset creation page as
 a checkbox.
 ----------------------------------------------------------------------------------------------------------------------
