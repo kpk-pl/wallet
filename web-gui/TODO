@@ -20,23 +20,6 @@ Wallet aggregated -> display sparklines for the merged items
 ----------------------------------------------------------------------------------------------------------------------
 
 Strategy -> Chart with allocation dynamically updated
-----------------------------------------------------------------------------------------------------------------------
-
-Each asset should have an additional settings fields 'taxes'. If the field is not present then no taxes should apply.
-Format of the field:
-taxes: {
-  type: "automatic" | "profit",
-  percentage: 19
-}
-Automatic means that the taxes are already included in the 'provisions' fields. The 'profit' means that taxes can be
-estimated from the netProfit field.
-
-Use gather NBP course of currency pairs. There needs to be another list field in the 'currencyPair' field in the
-quoteId with a list of labels. Then a specific currency pair quote can be selected for calculations of taxes.
-
-Use the NBP course to sum up all taxes that need to be applied. For SELL operations with the matched ones this should
-include Belka tax. For the DIVIDEND, also Belka tax. For the RECEIVE I need to research.
-
 
 ----------------------------------------------------------------------------------------------------------------------
 A pricing source should have a possibility to have multiple URIs and/or symbols as well as a possibility to pick
@@ -47,6 +30,9 @@ A pricing source should have a possibility to have multiple URIs and/or symbols 
 Quotes from https://www.alphavantage.co/ APIKEY=G8APPXPVB3YNTPEM
 Quotes from https://marketstack.com/
 Quotes from quandl https://stackoverflow.com/questions/55658446/stooq-api-for-non-us-stock-market-data
+
+----------------------------------------------------------------------------------------------------------------------
+Storing large arrays of quotes inside quotes collection is not very performant. Quotes should be moved to a separate collection and reference pricing assets. Maybe even use time series mongo DB collections?
 
 ======================================================================================================================
 LOGIC / MATH BUGS — financial calculations
@@ -65,17 +51,6 @@ LOGIC / MATH BUGS — financial calculations
     The results page tells the user they sold their oldest 8 shares (FIFO matching) but charges
     them avg-cost P/L. For Polish Belka tax (FIFO is mandated), the per-operation profit number
     is wrong. Pick one method and use it consistently in both places.
-----------------------------------------------------------------------------------------------------------------------
-
-[LOGIC] EARNING provisions are silently dropped when creating the billing operation
-    File: flaskr/apps/assets/receipt.py:209-212
-    The billing-side cash adjustment is computed as
-        billingOperation['quantity'] = adjustQuantity(operation['type'], quantity, provision)
-    where operation['type'] is the ORIGINAL op type. For BUY/SELL this correctly adds/subtracts
-    provision. But for EARNING (e.g. a dividend with withholding tax recorded as provision)
-    adjustQuantity returns the quantity unchanged (typing.py:35-36).
-    Effect: a $100 dividend with $19 tax records a $100 inflow on the billing deposit instead of
-    $81. The user's cash balance drifts upward by the tax amount every dividend.
 ----------------------------------------------------------------------------------------------------------------------
 
 [LOGIC] Profits.matchOrders (FIFO by orderId) is never used by the Profits analyzer
@@ -145,4 +120,17 @@ LOGIC / MATH BUGS — financial calculations
     `period.profits.isZero()`, but an `error=True` asset with None fields is still pushed to
     `assetData`. The template will try to format None as currency and either show garbage or
     crash. Either drop error-tagged assets from the report, or render an explicit error row.
+----------------------------------------------------------------------------------------------------------------------
+
+[LOGIC] CurrencyConversion.staticConvert crashes when passed a Decimal128
+    File: flaskr/typing.py:107-115, caller flaskr/apps/assets/receipt.py:72
+    The GBP<->GBX branches do raw `value * 100` / `value / 100` with no input
+    normalization. Decimal128 (the Mongo wire type) does not implement arithmetic
+    operators — `Decimal128("1.5") * 100` raises TypeError. The one real caller
+    feeds it `lastQuote` straight from `quoteHistory.quote`, which is Decimal128.
+    Path triggers when an asset's currency differs from the quote's `currencyPair.to`
+    AND one side is GBP / the other GBX — niche but real for UK equities priced in
+    pence. Route `value` through Operation._simplifyDecimal (or a module-level
+    equivalent) before arithmetic. Same shape as the EARNING bug — a sibling helper
+    in the same file normalizes Decimal128 and this one doesn't.
 ----------------------------------------------------------------------------------------------------------------------

@@ -22,9 +22,21 @@ class Operation:
             raise RuntimeError(f"Cannot reverse operation {op}")
 
     @staticmethod
+    def _simplifyDecimal(val:int|Decimal|Decimal128):
+        # float is intentionally not accepted: Decimal(0.1) materializes the binary
+        # float's exact representation (0.1000000000000000055...) and silently
+        # corrupts any money calculation downstream. Route floats through
+        # Decimal(str(v)) at the call site if you really must.
+        if isinstance(val, Decimal128):
+            return val.to_decimal()
+        if isinstance(val, int):
+            return val
+        return Decimal(val)
+
+    @staticmethod
     def adjustQuantity(op:str,
-                       initial:int|float|Decimal,
-                       adjustment:int|float|Decimal):
+                       initial:int|Decimal|Decimal128,
+                       adjustment:int|Decimal|Decimal128):
         def add(initial:int|Decimal, adjustment:int|Decimal):
             if op == Operation.Type.buy:
                 return initial + adjustment
@@ -36,14 +48,27 @@ class Operation:
                 return initial
             raise RuntimeError(f"Cannot adjust operation {op}")
 
-        def simplifyDecimal(val:int|float|Decimal|Decimal128):
-            if isinstance(val, Decimal128):
-                return val.to_decimal()
-            if isinstance(val, int):
-                return val
-            return Decimal(val)
+        return add(Operation._simplifyDecimal(initial), Operation._simplifyDecimal(adjustment))
 
-        return add(simplifyDecimal(initial), simplifyDecimal(adjustment))
+    @staticmethod
+    def adjustBillingQuantity(op:str,
+                              initial:int|Decimal|Decimal128,
+                              provision:int|Decimal|Decimal128):
+        # Mirrors adjustQuantity but answers a different question: how a provision
+        # on the original op shifts the cash flow posted to the billing deposit.
+        # The EARNING branch is the only real divergence — on the asset side a
+        # dividend doesn't change the share count, but on the billing side the
+        # provision is withholding tax and reduces the net cash arriving.
+        initial = Operation._simplifyDecimal(initial)
+        provision = Operation._simplifyDecimal(provision)
+
+        if op == Operation.Type.buy:
+            return initial + provision
+        if op == Operation.Type.sell:
+            return initial - provision
+        if op == Operation.Type.earning:
+            return initial - provision
+        raise RuntimeError(f"Cannot adjust billing for operation {op}")
 
     @staticmethod
     def displayString(op, assetType):

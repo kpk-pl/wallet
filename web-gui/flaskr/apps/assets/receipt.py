@@ -232,9 +232,9 @@ def _makeBillingOperation(asset, operation, session):
         billingOperation['quantity'] = _simplifyDecimal(billingOperation['quantity']) * _simplifyDecimal(operation['currencyConversion'])
 
     if 'provision' in operation:
-        billingOperation['quantity'] = typing.Operation.adjustQuantity(operation['type'],
-                                                                       billingOperation['quantity'],
-                                                                       operation['provision'])
+        billingOperation['quantity'] = typing.Operation.adjustBillingQuantity(operation['type'],
+                                                                              billingOperation['quantity'],
+                                                                              operation['provision'])
 
     def normalize(d):
         return d.quantize(Decimal(1)) if d == d.to_integral() else d.normalize()

@@ -675,6 +675,37 @@ def test_receipt_billing_asset_sell_with_provision(client):
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_billing_asset_earning_with_provision(client):
+    # Dividend $100 with $19 withholding tax recorded as provision. The asset
+    # side keeps `price = 100` (gross), while the billing deposit must only
+    # receive the net cash $81 — otherwise the user's cash balance would
+    # silently drift up by the tax amount every dividend.
+    assetId = Asset.createEquity().commit()
+    billingId = Asset.createDeposit().quantity(1000).commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type = 'EARNING',
+        date = '2021-12-03T12:00:00',
+        price = 100,
+        billingAsset = str(billingId),
+        provision = 19,
+    ), follow_redirects=True)
+
+    assert rv.status_code == 200
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        billingAsset = db.wallet.assets.find_one({'_id': billingId})
+        assert len(billingAsset['operations']) == 2
+        assert billingAsset['operations'][1] == dict(
+            type = 'BUY',
+            date = datetime.datetime(2021, 12, 3, 12),
+            quantity = 81,
+            finalQuantity = Decimal128("1081"),
+            price = 81,
+        )
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_receipt_billing_asset_foreign_currencies(client):
     assetId = Asset.createEquity().currency("USD").commit()
     billingId = Asset.createDeposit().quantity(1000).commit()
