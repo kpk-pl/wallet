@@ -46,7 +46,7 @@
 
           {%- if header and header.lastQuoteUpdate -%}
           <li class="nav-item pl-4">
-            <i class="fas fa-fw fa-calendar-check" title="Last quote update in DB: {{ header.lastQuoteUpdate.timestamp }}" data-toggle="tooltip" style="color: {{ "green" if header.lastQuoteUpdate.daysPast < 3 else "red" }}"></i>
+            <i class="fas fa-fw fa-calendar-check" title="Last quote update in DB: {{ header.lastQuoteUpdate.timestamp }}" data-toggle="tooltip" style="color: {{ "green" if header.lastQuoteUpdate.daysPast is not none and header.lastQuoteUpdate.daysPast < 3 else "red" }}"></i>
           </li>
           {%- endif -%}
           {%- if header.priceFeedErrors -%}

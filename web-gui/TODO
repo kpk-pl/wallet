@@ -138,13 +138,6 @@ LOGIC / MATH BUGS — financial calculations
     head. Use an unambiguous separator (e.g. ' / ') or a tuple key.
 ----------------------------------------------------------------------------------------------------------------------
 
-[LOGIC] Header.lastQuoteUpdate rendered without a None guard on `daysPast`
-    File: flaskr/templates/base.html:49
-    `{{ "green" if header.lastQuoteUpdate.daysPast < 3 else "red" }}` assumes daysPast is a
-    number. If header.lastQuoteUpdate exists but daysPast is None/missing, the Jinja2 comparison
-    raises TypeError and breaks the entire page render. Guard with an additional `is not none`.
-----------------------------------------------------------------------------------------------------------------------
-
 [LOGIC] Period analyzer error path is set but downstream rendering not verified
     File: flaskr/analyzers/period.py:66-68 + flaskr/apps/results/index.py:92
     `if initialNetValue is None or finalNetValue is None: error = True; return`. The Result then
