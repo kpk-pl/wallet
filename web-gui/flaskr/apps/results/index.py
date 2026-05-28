@@ -81,6 +81,7 @@ def index():
         periodAnalyzer = Period(timerange['periodStart'], timerange['periodEnd'])
 
         assetData = []
+        erroredAssets = []
         for asset in assets:
             debug = None
             if session.isDebug():
@@ -88,6 +89,10 @@ def index():
 
             profits = profitsAnalyzer(asset, debug=debug['profits'] if session.isDebug() else None)
             period = periodAnalyzer(asset, profits, debug=debug['period'] if session.isDebug() else None)
+
+            if period.error:
+                erroredAssets.append(asset)
+                continue
 
             if not period.profits.isZero():
                 assetData.append(AssetData(asset, profits, period, debug))
@@ -99,9 +104,16 @@ def index():
                     operationsBreakdown.append(BreakdownElement(data.asset, op, idx, bdown))
 
 
+        headerData = header.data(showLabels=True)
+        if erroredAssets:
+            names = ", ".join(a.name for a in erroredAssets)
+            headerData['errors'].append(
+                f"Could not price the following assets for the selected period and excluded them from the report: {names}"
+            )
+
         return render_template("results/index.html",
                                assetData=assetData,
                                operationsBreakdown=operationsBreakdown,
                                timerange=timerange,
-                               header=header.data(showLabels=True)
+                               header=headerData
                                )

@@ -105,15 +105,6 @@ LOGIC / MATH BUGS — financial calculations
     head. Use an unambiguous separator (e.g. ' / ') or a tuple key.
 ----------------------------------------------------------------------------------------------------------------------
 
-[LOGIC] Period analyzer error path is set but downstream rendering not verified
-    File: flaskr/analyzers/period.py:66-68 + flaskr/apps/results/index.py:92
-    `if initialNetValue is None or finalNetValue is None: error = True; return`. The Result then
-    has None for several Decimal fields. results/index.py:92 only skips assets where
-    `period.profits.isZero()`, but an `error=True` asset with None fields is still pushed to
-    `assetData`. The template will try to format None as currency and either show garbage or
-    crash. Either drop error-tagged assets from the report, or render an explicit error row.
-----------------------------------------------------------------------------------------------------------------------
-
 [LOGIC] CurrencyConversion.staticConvert crashes when passed a Decimal128
     File: flaskr/typing.py:107-115, caller flaskr/apps/assets/receipt.py:72
     The GBP<->GBX branches do raw `value * 100` / `value / 100` with no input
