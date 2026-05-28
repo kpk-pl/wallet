@@ -93,6 +93,58 @@ function loadCsvQuotes() {
   });
 }
 
+function loadOnlineQuotes() {
+  const source = $('#f-source').val();
+  const from = $("#f-date-from").val();
+  const to = $("#f-date-to").val();
+  if (!from || !to) {
+    $(document).Toasts('create', {
+      class: 'bg-warning',
+      title: 'Missing dates',
+      body: 'Please select both the "Since" and "To" dates.',
+    });
+    return;
+  }
+
+  async function fetchHistory() {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 15000);
+
+    const url = settings.historyUrl
+      + "?id=" + encodeURIComponent(settings.id)
+      + "&source=" + encodeURIComponent(source)
+      + "&from=" + encodeURIComponent(from)
+      + "&to=" + encodeURIComponent(to);
+
+    try {
+      let response = await fetch(url, {signal: ctrl.signal});
+      let body = await response.json();
+      if (!response.ok) {
+        throw new Error(body && body.error ? body.error : "Invalid response " + response.status);
+      }
+      return body;
+    } catch(e) {
+      $(document).Toasts('create', {
+        class: 'bg-danger',
+        title: 'Error',
+        body: 'Import failed: ' + e.message,
+      });
+    }
+  }
+
+  fetchHistory().then(function(quotes){
+    if (!quotes) return;
+    ui.importNew(
+      quotes.map(function(e){ return {x: Date.parse(e.timestamp), y: e.quote}; }));
+  });
+}
+
+function toggleSource() {
+  const source = $('#f-source').val();
+  $('#source-csv').toggle(source === 'csv');
+  $('#source-online').toggle(source !== 'csv');
+}
+
 function submitImport(event) {
   event.preventDefault();
 
@@ -114,7 +166,14 @@ $(function(){
   });
   bsCustomFileInput.init();
 
+  if ($('#f-date-to').length) {
+    $('#f-date-to-group').datetimepicker('date', moment());
+    $('#f-date-from-group').datetimepicker('date', moment().subtract(30, 'days'));
+  }
+
+  toggleSource();
+
   $('#f-method').change(function(){ ui.update(); });
   $('#f-source-file').change(function(){ ui.reset(); });
-  $('#f-source').change(function(){ ui.reset(); });
+  $('#f-source').change(function(){ toggleSource(); ui.reset(); });
 });

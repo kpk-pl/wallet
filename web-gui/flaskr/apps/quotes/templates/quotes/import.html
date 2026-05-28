@@ -29,6 +29,7 @@
     },
     id: '{{ quote._id }}',
     csvUploadUrl: "{{ url_for('quotes.csvUpload') }}",
+    historyUrl: "{{ url_for('quotes.historyImport') }}",
     submitUrl: "{{ url_for('quotes.importQuotes') }}",
     nextUrl: "{{ url_for('pricing.index', quoteId=quote._id) }}"
   });
@@ -53,43 +54,17 @@
             {%- endif %}
           </dl>
           <form method="post" action="" id="f-form">
-            <!--
-            <div class="row">
-              <div class="col-sm-6">
-                <div class="form-group">
-                  <label for="f-date-from">From</label>
-                  <div class="input-group date f-date-group" id="f-date-from-group" data-target-input="nearest">
-                    <input type="text" id="f-date-from" name="date-from" class="form-control datetimepicker-input" data-target="#f-date-from-group" required/>
-                    <div class="input-group-append" data-target="#f-date-from-group" data-toggle="datetimepicker">
-                      <div class="input-group-text"><i class="fa fa-calendar"></i></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-sm-6">
-                <div class="form-group">
-                  <label for="f-date-to">To</label>
-                  <div class="input-group date f-date-group" id="f-date-to-group" data-target-input="nearest">
-                    <input type="text" id="f-date-to" name="date-to" class="form-control datetimepicker-input" data-target="#f-date-to-group" required/>
-                    <div class="input-group-append" data-target="#f-date-to-group" data-toggle="datetimepicker">
-                      <div class="input-group-text"><i class="fa fa-calendar"></i></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            -->
             <div class="row">
               <div class="form-group col-sm-4">
                 <label for="f-source">Source</label>
                 <select id="f-source" name="source" class="custom-select" required>
-                  {% if quote.stooqSymbol -%}
-                  <option value="stooq" disabled>Online from stooq</option>
-                  {%- endif %}
-                  <option value="csv" selected>From CSV file</option>
+                  {% for src in onlineSources -%}
+                  <option value="{{ src }}" {% if loop.first %}selected{% endif %}>Online from {{ {'stooq': 'Stooq', 'justetf': 'justETF'}.get(src, src) }}</option>
+                  {% endfor -%}
+                  <option value="csv" {% if not onlineSources %}selected{% endif %}>From CSV file</option>
                 </select>
               </div>
-              <div class="form-group col-sm-8">
+              <div class="form-group col-sm-8" id="source-csv">
                 <label for="source-file-div">File</label>
                 <div class="input-group">
                   <div class="custom-file" id="source-file-div">
@@ -101,6 +76,33 @@
                   </div>
                 </div>
               </div>
+              {% if onlineSources -%}
+              <div class="form-group col-sm-8" id="source-online">
+                <div class="row">
+                  <div class="col-sm-5">
+                    <label for="f-date-from">Since</label>
+                    <div class="input-group date f-date-group" id="f-date-from-group" data-target-input="nearest">
+                      <input type="text" id="f-date-from" name="date-from" class="form-control datetimepicker-input" data-target="#f-date-from-group"/>
+                      <div class="input-group-append" data-target="#f-date-from-group" data-toggle="datetimepicker">
+                        <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-sm-5">
+                    <label for="f-date-to">To</label>
+                    <div class="input-group date f-date-group" id="f-date-to-group" data-target-input="nearest">
+                      <input type="text" id="f-date-to" name="date-to" class="form-control datetimepicker-input" data-target="#f-date-to-group"/>
+                      <div class="input-group-append" data-target="#f-date-to-group" data-toggle="datetimepicker">
+                        <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-sm-2 d-flex align-items-end">
+                    <button class="btn btn-primary btn-block" type="button" id="f-online-load-button" onclick="loadOnlineQuotes();">Load</button>
+                  </div>
+                </div>
+              </div>
+              {%- endif %}
             </div>
             <div class="row">
               <div class="form-group col-sm-4">

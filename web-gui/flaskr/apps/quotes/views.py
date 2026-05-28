@@ -23,3 +23,9 @@ def importQuotes():
 def csvUpload():
     from .importQuotes import csvUpload
     return csvUpload()
+
+
+@quotes.route("/import/history", methods=['GET'])
+def historyImport():
+    from .importQuotes import historyImport
+    return historyImport()
