@@ -1,10 +1,12 @@
 from __future__ import annotations
 from flask import request, render_template, jsonify
 from flaskr import db, header, stooq
+from flaskr.model import Quote
 from flaskr.model.quote import QuoteUpdateFrequency
 from flaskr.apps.quotes.list import listIds as listActiveQuoteIds
 from flaskr.quotes import Fetcher as QuotesFetcher, FetchError
 from pydantic import BaseModel, HttpUrl, ValidationError, Field
+from dataclasses import dataclass
 from typing import Optional
 
 
@@ -15,6 +17,16 @@ class PostData(BaseModel):
     url: HttpUrl
     updateFrequency: QuoteUpdateFrequency
     currencyPairCheck: bool = Field(False, exclude=True)
+
+
+@dataclass
+class _ListEntry:
+    """View-only wrapper pairing a Quote with its derived `active` flag
+    (true when at least one non-trashed asset references this pricing source).
+    Mirrors the `WalletData` pattern in `flaskr/apps/wallet/wallet.py`.
+    """
+    quote: Quote
+    active: bool
 
 
 def postNewItem():
@@ -70,14 +82,21 @@ def _getPipeline(includeTrashed = False):
     if not includeTrashed:
         pipeline.append({'$match': {'trashed': {'$ne': True}}})
 
+    # Project the same shape as a full Quote document but trim quoteHistory
+    # to the last entry — the listing only needs `lastQuote` (a Quote
+    # property derived from quoteHistory) and pulling the full history would
+    # be wasteful.
     pipeline.append({'$project': {
             '_id': 1,
             'name': 1,
             'url': 1,
             'unit': 1,
+            'ticker': 1,
+            'stooqSymbol': 1,
+            'updateFrequency': 1,
             'trashed': 1,
             'currencyPair': 1,
-            'lastQuote': {'$last': '$quoteHistory'}
+            'quoteHistory': {'$slice': ['$quoteHistory', -1]},
         }})
 
     return pipeline
@@ -85,11 +104,11 @@ def _getPipeline(includeTrashed = False):
 def listAll():
     if request.method == 'GET':
         includeTrashed = 'all' in request.args
-        sources = list(db.get_db().quotes.aggregate(_getPipeline(includeTrashed)))
-
         activeQuoteIds = listActiveQuoteIds(used=True)
-        for source in sources:
-            source['active'] = source['_id'] in activeQuoteIds
+        sources = [
+            _ListEntry(quote=Quote(**doc), active=doc['_id'] in activeQuoteIds)
+            for doc in db.get_db().quotes.aggregate(_getPipeline(includeTrashed))
+        ]
 
         return render_template("pricing/list.html", sources=sources, header=header.data())
 

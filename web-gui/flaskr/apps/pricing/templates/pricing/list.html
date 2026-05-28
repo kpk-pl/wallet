@@ -53,13 +53,14 @@
               </tr>
             </thead>
             <tbody>
-              {% for source in sources %}
-              <tr {{ ('class="text-muted"' if source.trashed or not source.active else '') | safe }}>
+              {% for entry in sources %}
+              {%- set source = entry.quote %}
+              <tr {{ ('class="text-muted"' if source.trashed or not entry.active else '') | safe }}>
                 <td data-title="Name" data-order="{{ source.name }}">
                   {%- if source.trashed %}
                   <del>
                   {%- endif %}
-                  <a href="{{ url_for('pricing.index', quoteId=source._id) }}" >
+                  <a href="{{ url_for('pricing.index', quoteId=source.id) }}" >
                     {{ source.name }}
                   </a>
                   {%- if source.trashed %}
@@ -70,7 +71,7 @@
                     {{ source.currencyPair.destination}}/{{ source.currencyPair.source }}
                   </span>
                   {%- endif %}
-                  {%- if not source.active and not source.trashed %}
+                  {%- if not entry.active and not source.trashed %}
                   <span class="badge badge-secondary ml-1" title="Unused">
                     unused
                   </span>
@@ -78,7 +79,7 @@
                   <a href="{{source.url}}" target="_blank" rel="noopener noreferrer" class="imagelink" title="Source feed">
                     <i class="fas fa-external-link-alt fa-fw fa-pull-right"></i>
                   </a>
-                  <a class="refresh-quote-link imagelink" data-refresh-quote-url="{{ url_for('quotes.index', id=source._id) }}" title="Refresh quote from live source">
+                  <a class="refresh-quote-link imagelink" data-refresh-quote-url="{{ url_for('quotes.index', id=source.id) }}" title="Refresh quote from live source">
                     <i class="fas fa-sync-alt fa-fw fa-pull-right"></i>
                   </a>
                 </td>

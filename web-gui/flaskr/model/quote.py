@@ -39,6 +39,11 @@ class Quote(BaseModel):
     url: HttpUrl
     updateFrequency: QuoteUpdateFrequency
     stooqSymbol: Optional[str]
+    trashed: bool = False
     currencyPair: Optional[QuoteCurrencyPair]
     quoteHistory: List[QuoteHistoryItem] = Field(default_factory=list)
+
+    @property
+    def lastQuote(self) -> Optional[QuoteHistoryItem]:
+        return self.quoteHistory[-1] if self.quoteHistory else None
 

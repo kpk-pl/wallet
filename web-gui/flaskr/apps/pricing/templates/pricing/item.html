@@ -15,15 +15,15 @@
 
 <script type="text/javascript">
   function onTrash() {
-    $.post('{{ url_for('pricing.trash', quoteId=item._id) }}', success=function(data){
+    $.post('{{ url_for('pricing.trash', quoteId=item.id) }}', success=function(data){
       location.href='{{ url_for('pricing.index') }}'
     })
   }
 </script>
 
-{% if item.quoteHistory %}
+{% if quoteHistory %}
 <script type="text/javascript">
-  const data = {{ item.quoteHistory | tojson }};
+  const data = {{ quoteHistory | tojson }};
   createQuoteHistoryChart(document.getElementById('chart'), '{{ item.name | safe }}', data, '{{ item.unit | safe }}');
 </script>
 {% endif %}
@@ -42,7 +42,7 @@
             <dt class="col-sm-3">Name</dt>
             <dd class="col-sm-9">{{ item.name }}</dd>
             <dt class="col-sm-3">Status</dt>
-            <dd class="col-sm-9">{{ 'Trashed' if item.trashed else ('Active' if item.active else 'Inactive') }}</dd>
+            <dd class="col-sm-9">{{ 'Trashed' if item.trashed else ('Active' if active else 'Inactive') }}</dd>
             <dt class="col-sm-3">Unit</dt>
             <dd class="col-sm-9">{{ item.unit }}</dd>
             {%- if item.currencyPair %}
@@ -71,11 +71,11 @@
             <i class="fas fa-edit"></i> Edit
           </button>
 
-          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('quotes.importQuotes', id=item._id) }}'">
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('quotes.importQuotes', id=item.id) }}'">
             <i class="fa fa-upload"></i> Import quotes
           </button>
 
-          {% if not item.trashed and not item.active -%}
+          {% if not item.trashed and not active -%}
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="onTrash()">
             <i class="fa fa-trash"></i> Move to trash
           </button>
@@ -85,7 +85,7 @@
     </div>
   </div>
 </div>
-{% if item.quoteHistory -%}
+{% if quoteHistory -%}
 <div class="container-sm">
   <div class="row">
     <div class="col-12">
