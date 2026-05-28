@@ -96,14 +96,6 @@ LOGIC / MATH BUGS — financial calculations
     with no indication to the user. Decide on one canonical view.
 ----------------------------------------------------------------------------------------------------------------------
 
-[LOGIC] Categories.fillStrategy can produce negative or wrong "Others" when allocations overlap
-    File: flaskr/analyzers/categories.py:27-41
-    If two `assetType` entries both claim the same category (e.g. both list "USD Equities" at
-    100%), `remainingShare` for that strategy bucket becomes -100, and the `othersValue` at
-    line 39 silently subtracts that bucket's value from the Others total. There is no validation
-    that strategy.assetTypes' categories sum to <= 100% per allocation key. Add a check or clamp.
-----------------------------------------------------------------------------------------------------------------------
-
 [LOGIC] Subcategory + category name concatenation is ambiguous
     Files: flaskr/analyzers/categories.py:24, flaskr/apps/wallet/static/wallet/strategyTable.js:88,
            flaskr/apps/wallet/static/wallet/wallet_historical.js:30

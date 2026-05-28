@@ -30,20 +30,27 @@ class Categories(object):
         for category, subcategories in self.allocation.items():
             for subcategory, value in subcategories.items():
                 name = (subcategory + ' ' if subcategory else '') + category
-                strategyAllocation[name] = {'value': value, 'remainingShare': 100.0}
+                strategyAllocation[name] = {'value': value, 'remainingShare': Decimal(100)}
 
         for assetType in strategy['assetTypes']:
-            assetType['_totalNetValue'] = 0.0
+            assetType['_totalNetValue'] = Decimal(0)
             for category in assetType['categories']:
                 if isinstance(category, str):
-                    if category in strategyAllocation:
-                        assetType['_totalNetValue'] += strategyAllocation[category]['value']
-                        strategyAllocation[category]['remainingShare'] -= 100.0
+                    name, share = category, Decimal(100)
                 else:
-                    if category['name'] in strategyAllocation:
-                        assetType['_totalNetValue'] += strategyAllocation[category['name']]['value'] * category['percentage'] / 100
-                        strategyAllocation[category['name']]['remainingShare'] -= category['percentage']
+                    name, share = category['name'], Decimal(str(category['percentage']))
 
-        othersValue = sum(s['remainingShare'] * s['value'] / 100 for _, s in strategyAllocation.items() if isinstance(s, dict))
+                if name not in strategyAllocation:
+                    continue
+
+                bucket = strategyAllocation[name]
+                if share > bucket['remainingShare']:
+                    raise RuntimeError(
+                        f"Strategy over-allocates '{name}': cumulative share exceeds 100%"
+                    )
+                assetType['_totalNetValue'] += bucket['value'] * share / 100
+                bucket['remainingShare'] -= share
+
+        othersValue = sum((s['remainingShare'] * s['value'] / 100 for s in strategyAllocation.values()), Decimal(0))
         if othersValue != 0:
             strategy['assetTypes'].append({'name': 'Others', 'percentage': 0, '_totalNetValue': othersValue})
