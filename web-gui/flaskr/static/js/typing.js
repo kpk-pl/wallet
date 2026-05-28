@@ -1,6 +1,6 @@
 const typing = function(){
   return {
-    locales: 'us-US',
+    locales: 'en-US',
     operationTypes: ['BUY', 'SELL', 'RECEIVE', 'EARNING'],
     datetimeLocale: 'pl',
     datetimeFormat: 'YYYY-MM-DD HH:mm:ss'
