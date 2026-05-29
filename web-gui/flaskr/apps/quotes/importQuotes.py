@@ -3,7 +3,6 @@ from bson.objectid import ObjectId
 from pymongo.errors import OperationFailure
 from flaskr import db, header
 from flaskr.model import Quote
-from flaskr.quotes.fetchers.stooq import Stooq
 from flaskr.quotes.fetchers.justetf import JustETF
 from flaskr.quotes.fetchers.base import FetchError
 from datetime import datetime
@@ -12,8 +11,6 @@ import dateutil.parser
 
 def _onlineSources(quote):
     sources = []
-    if Stooq.identify(quote.urls, quote.stooqSymbol):
-        sources.append('stooq')
     if JustETF.identify(quote.urls):
         sources.append('justetf')
     return sources
@@ -104,16 +101,33 @@ def csvUpload():
     if 'file' not in request.files:
         return ({}, 500)
 
+    lines = [line.decode().strip() for line in request.files.get('file')]
+    lines = [line for line in lines if line]
+    if not lines:
+        return ({}, 500)
+
+    header = lines[0].split(',')
+    # Stooq daily-history CSV: "Data,Otwarcie,Najwyzszy,Najnizszy,Zamkniecie,Wolumen".
+    # Recognise it by its header and import the close price ("Zamkniecie").
+    if 'Data' in header and 'Zamkniecie' in header:
+        dateIdx, quoteIdx = header.index('Data'), header.index('Zamkniecie')
+        rows = lines[1:]
+    else:
+        # Plain headerless two-column CSV: "<timestamp-or-date>,<quote>".
+        dateIdx, quoteIdx = 0, 1
+        rows = lines
+
     result = []
-    for csvLine in request.files.get('file'):
-        fields = csvLine.decode().strip().split(',')
-        if len(fields) < 2:
+    for line in rows:
+        fields = line.split(',')
+        if len(fields) <= max(dateIdx, quoteIdx):
             return ({}, 500)
 
-        timestamp = datetime.utcfromtimestamp(int(fields[0])) if fields[0].isdigit() else dateutil.parser.parse(fields[0])
+        dateField = fields[dateIdx]
+        timestamp = datetime.utcfromtimestamp(int(dateField)) if dateField.isdigit() else dateutil.parser.parse(dateField)
         result.append({
             'timestamp': timestamp,
-            'quote': float(fields[1])
+            'quote': float(fields[quoteIdx])
         })
 
     return Response(json.dumps(result), mimetype="application/json")
@@ -136,12 +150,7 @@ def historyImport():
         return ({"error": "Quote not found"}, 404)
     quote = Quote(**doc)
 
-    if source == 'stooq':
-        symbol = Stooq.identify(quote.urls, quote.stooqSymbol)
-        if not symbol:
-            return ({"error": "No Stooq symbol available for this quote"}, 400)
-        fetcher = Stooq("https://stooq.pl/q/l/?s={}".format(symbol))
-    elif source == 'justetf':
+    if source == 'justetf':
         isin = JustETF.identify(quote.urls)
         if not isin:
             return ({"error": "No justETF ISIN available for this quote"}, 400)

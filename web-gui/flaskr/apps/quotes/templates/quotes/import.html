@@ -63,7 +63,7 @@
                 <label for="f-source">Source</label>
                 <select id="f-source" name="source" class="custom-select" required>
                   {% for src in onlineSources -%}
-                  <option value="{{ src }}" {% if loop.first %}selected{% endif %}>Online from {{ {'stooq': 'Stooq', 'justetf': 'justETF'}.get(src, src) }}</option>
+                  <option value="{{ src }}" {% if loop.first %}selected{% endif %}>Online from {{ {'justetf': 'justETF'}.get(src, src) }}</option>
                   {% endfor -%}
                   <option value="csv" {% if not onlineSources %}selected{% endif %}>From CSV file</option>
                 </select>
