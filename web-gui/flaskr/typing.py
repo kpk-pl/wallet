@@ -112,6 +112,7 @@ class CurrencyConversion:
     def staticConvert(ffrom:str, to:str, value):
         if ffrom == to:
             return value
+        value = Operation._simplifyDecimal(value)
         if ffrom == 'GBP' and to == 'GBX':
             return value * 100
         if ffrom == 'GBX' and to == 'GBP':

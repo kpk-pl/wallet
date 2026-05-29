@@ -114,15 +114,3 @@ LOGIC / MATH BUGS — financial calculations
     head. Use an unambiguous separator (e.g. ' / ') or a tuple key.
 ----------------------------------------------------------------------------------------------------------------------
 
-[LOGIC] CurrencyConversion.staticConvert crashes when passed a Decimal128
-    File: flaskr/typing.py:107-115, caller flaskr/apps/assets/receipt.py:72
-    The GBP<->GBX branches do raw `value * 100` / `value / 100` with no input
-    normalization. Decimal128 (the Mongo wire type) does not implement arithmetic
-    operators — `Decimal128("1.5") * 100` raises TypeError. The one real caller
-    feeds it `lastQuote` straight from `quoteHistory.quote`, which is Decimal128.
-    Path triggers when an asset's currency differs from the quote's `currencyPair.to`
-    AND one side is GBP / the other GBX — niche but real for UK equities priced in
-    pence. Route `value` through Operation._simplifyDecimal (or a module-level
-    equivalent) before arithmetic. Same shape as the EARNING bug — a sibling helper
-    in the same file normalizes Decimal128 and this one doesn't.
-----------------------------------------------------------------------------------------------------------------------
