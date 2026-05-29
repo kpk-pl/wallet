@@ -1,6 +1,8 @@
 from flask import render_template, request, Response, json
 from bson.objectid import ObjectId
+from pymongo.errors import OperationFailure
 from flaskr import db, header
+from flaskr.model import Quote
 from flaskr.quotes.fetchers.stooq import Stooq
 from flaskr.quotes.fetchers.justetf import JustETF
 from flaskr.quotes.fetchers.base import FetchError
@@ -10,9 +12,9 @@ import dateutil.parser
 
 def _onlineSources(quote):
     sources = []
-    if Stooq.identify(quote):
+    if Stooq.identify(quote.urls, quote.stooqSymbol):
         sources.append('stooq')
-    if JustETF.identify(quote):
+    if JustETF.identify(quote.urls):
         sources.append('justetf')
     return sources
 
@@ -24,8 +26,10 @@ def _getPipeline(quoteId):
         '_id': 1,
         'name': 1,
         'stooqSymbol': 1,
+        'urls': 1,
         'url': 1,
         'unit': 1,
+        'updateFrequency': 1,
         'quoteHistory': 1
     }})
     return pipeline
@@ -41,8 +45,12 @@ def importQuotes():
         if not quoteItems:
             return ('', 404)
 
-        quote = quoteItems[0]
+        quote = Quote(**quoteItems[0])
+        # `quoteHistory` is forwarded as the raw list of {timestamp, quote}
+        # dicts so the chart JS gets native values through |tojson; the Quote
+        # model supplies everything else (name, url, id, unit).
         return render_template("quotes/import.html", quote=quote,
+                               quoteHistory=quoteItems[0].get('quoteHistory', []),
                                onlineSources=_onlineSources(quote), header=header.data())
 
     elif request.method == 'POST':
@@ -60,7 +68,7 @@ def importQuotes():
 
         data.sort(key=lambda e: e['timestamp'])
 
-        def callback(session):
+        def callback(session=None):
             query = {'_id': ObjectId(quoteId)}
 
             if method == 'replace':
@@ -79,8 +87,15 @@ def importQuotes():
             db.get_db().quotes.update_one(query, update, session=session);
 
 
-        with db.get_db().client.start_session() as session:
-            session.with_transaction(callback)
+        try:
+            with db.get_db().client.start_session() as session:
+                session.with_transaction(callback)
+        except OperationFailure as e:
+            # Standalone MongoDB deployments don't support multi-document
+            # transactions; fall back to sequential (non-atomic) updates.
+            if e.code != 20:  # IllegalOperation: "Transaction numbers are only allowed..."
+                raise
+            callback()
 
         return ({"ok": True}, 200)
 
@@ -116,17 +131,18 @@ def historyImport():
     except (TypeError, ValueError):
         return ({"error": "Invalid or missing date range"}, 400)
 
-    quote = db.get_db().quotes.find_one({'_id': ObjectId(quoteId)}, {'stooqSymbol': 1, 'url': 1})
-    if not quote:
+    doc = db.get_db().quotes.find_one({'_id': ObjectId(quoteId)}, {'quoteHistory': 0})
+    if not doc:
         return ({"error": "Quote not found"}, 404)
+    quote = Quote(**doc)
 
     if source == 'stooq':
-        symbol = Stooq.identify(quote)
+        symbol = Stooq.identify(quote.urls, quote.stooqSymbol)
         if not symbol:
             return ({"error": "No Stooq symbol available for this quote"}, 400)
         fetcher = Stooq("https://stooq.pl/q/l/?s={}".format(symbol))
     elif source == 'justetf':
-        isin = JustETF.identify(quote)
+        isin = JustETF.identify(quote.urls)
         if not isin:
             return ({"error": "No justETF ISIN available for this quote"}, 400)
         fetcher = JustETF("https://www.justetf.com/en/etf-profile.html?isin={}".format(isin))

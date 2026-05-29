@@ -36,12 +36,28 @@ class Quote(BaseModel):
     name: str
     unit: str
     ticker: Optional[str]
-    url: HttpUrl
+    urls: List[HttpUrl] = Field(default_factory=list)
     updateFrequency: QuoteUpdateFrequency
     stooqSymbol: Optional[str]
     trashed: bool = False
     currencyPair: Optional[QuoteCurrencyPair]
     quoteHistory: List[QuoteHistoryItem] = Field(default_factory=list)
+
+    @root_validator(pre=True)
+    def _coalesce_urls(cls, values):
+        # Back-compat: documents (or payloads) carrying a scalar `url` and no
+        # `urls` array are folded into the array form so `urls` stays the
+        # single source of truth. Safe to keep even after the DB migration —
+        # post-migration docs have `urls` and skip this branch.
+        if not values.get('urls') and values.get('url'):
+            values['urls'] = [values['url']]
+        return values
+
+    @property
+    def url(self) -> Optional[HttpUrl]:
+        """The primary source URL — first entry of `urls`. Kept as a property
+        so existing callers/templates that read a single `url` keep working."""
+        return self.urls[0] if self.urls else None
 
     @property
     def lastQuote(self) -> Optional[QuoteHistoryItem]:

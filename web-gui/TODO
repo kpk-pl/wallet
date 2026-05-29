@@ -27,6 +27,15 @@ A pricing source should have a possibility to have multiple URIs and/or symbols 
   sources and then a particular pricing source could define a preffered one as well.
 
 ----------------------------------------------------------------------------------------------------------------------
+Get rid of the stooqSymbol field on quotes. Now that `urls` is the source of truth, it's pure denormalization of
+Stooq.symbol(urls[0]). Audit of the DB: of 24 quotes with a stooqSymbol, 23 match the URL-derived symbol and 0 have a
+symbol without a parseable stooq URL — so it carries no extra info. The one row that diverges (Beta ETF WIG20short:
+stored betaw20st.pl vs URL-derived etfbw20st.pl) is a stale value that wrongly WINS because identify() gives the stored
+symbol precedence over the URL. Plan: stop writing it (listAll.postNewItem), infer purely from urls in
+Stooq.identify(), drop the field from flaskr/model/quote.py and the pricing/quotes projections, and $unset it across
+the collection via a migration script (same dry-run/--commit pattern as scripts/migrate_quote_urls.py). Verify the live
+WIG20short ticker before running, since the migration switches it betaw20st.pl -> etfbw20st.pl.
+----------------------------------------------------------------------------------------------------------------------
 Quotes from https://www.alphavantage.co/ APIKEY=G8APPXPVB3YNTPEM
 Quotes from https://marketstack.com/
 Quotes from quandl https://stackoverflow.com/questions/55658446/stooq-api-for-non-us-stock-market-data

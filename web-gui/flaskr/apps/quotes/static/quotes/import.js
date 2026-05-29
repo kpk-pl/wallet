@@ -11,6 +11,7 @@ class ChartUi {
   }
 
   init(name, unit) {
+    this.name = name;
     const chartOpts = jQuery.extend(true, {}, apexOptions, {
       series: [{
         name: name,
@@ -39,13 +40,16 @@ class ChartUi {
     let method = $('#f-method').val();
     let filteredQuotes = this.existingQuotes;
     if (method == 'replace' && this.importedQuotes.length > 0) {
-      filteredQuotes = filteredQuotes.filter(function(q) {
+      filteredQuotes = filteredQuotes.filter((q) => {
         return q.x < this.importedQuotes.at(0).x || q.x > this.importedQuotes.at(-1).x;
       });
     }
 
     const combinedData = filteredQuotes.concat(this.importedQuotes).sort((lhs, rhs) => { return lhs.x - rhs.x; });
-    this.chart.updateSeries([{data: combinedData}, {data: this.importedQuotes}]);
+    this.chart.updateSeries([
+      {name: this.name, data: combinedData},
+      {name: 'Imported data', data: this.importedQuotes}
+    ]);
 
     $("#f-submit").attr('disabled', this.importedQuotes.length == 0);
   }

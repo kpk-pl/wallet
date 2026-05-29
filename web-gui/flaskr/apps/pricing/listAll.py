@@ -1,10 +1,11 @@
 from __future__ import annotations
 from flask import request, render_template, jsonify
-from flaskr import db, header, stooq
+from flaskr import db, header
 from flaskr.model import Quote
 from flaskr.model.quote import QuoteUpdateFrequency
 from flaskr.apps.quotes.list import listIds as listActiveQuoteIds
 from flaskr.quotes import Fetcher as QuotesFetcher, FetchError
+from flaskr.quotes.fetchers.stooq import Stooq
 from pydantic import BaseModel, HttpUrl, ValidationError, Field
 from dataclasses import dataclass
 from typing import Optional
@@ -37,8 +38,13 @@ def postNewItem():
 
     data = model.dict(exclude_none=True)
 
-    if stooq.Stooq.isValidUrl(model.url):
-        data['stooqSymbol'] = stooq.Stooq(url=model.url).ticker
+    # The submit form still collects a single URL; store it as the first (and
+    # only) entry of the `urls` array, which is now the source of truth.
+    data['urls'] = [str(model.url)]
+    data.pop('url', None)
+
+    if Stooq.validUrl(model.url):
+        data['stooqSymbol'] = Stooq.symbol(model.url)
 
     if model.currencyPairCheck:
         if 'currencyPairFrom' not in request.form.keys() or not model.unit:
@@ -89,6 +95,7 @@ def _getPipeline(includeTrashed = False):
     pipeline.append({'$project': {
             '_id': 1,
             'name': 1,
+            'urls': 1,
             'url': 1,
             'unit': 1,
             'ticker': 1,

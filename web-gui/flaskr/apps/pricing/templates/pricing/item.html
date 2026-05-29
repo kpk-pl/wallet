@@ -53,8 +53,12 @@
               </span>
             </dd>
             {%- endif %}
-            <dt class="col-sm-3">Link</dt>
-            <dd class="col-sm-9"><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.url }}</a></dd>
+            <dt class="col-sm-3">{{ 'Links' if item.urls|length > 1 else 'Link' }}</dt>
+            <dd class="col-sm-9">
+              {%- for url in item.urls %}
+              <a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ url }}</a>{{ '<br>' | safe if not loop.last }}
+              {%- endfor %}
+            </dd>
             <dt class="col-sm-3">Update frequency</dt>
             <dd class="col-sm-9">{{ item.updateFrequency.value }}</dd>
           </dl>

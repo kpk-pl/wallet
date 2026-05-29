@@ -11,6 +11,8 @@ import dateutil.parser
 
 
 class Stooq(BaseFetcher):
+    _HEADERS = {"User-Agent": "Mozilla/5.0"}
+
     @staticmethod
     def validUrl(url):
         return url.startswith("https://stooq.pl/")
@@ -28,17 +30,19 @@ class Stooq(BaseFetcher):
         return url[s+2 : end]
 
     @classmethod
-    def identify(cls, quote):
-        symbol = quote.get('stooqSymbol')
-        if not symbol and cls.validUrl(quote.get('url') or ''):
-            symbol = cls.symbol(quote['url'])
-        return symbol
+    def identify(cls, urls, stooqSymbol=None):
+        if stooqSymbol:
+            return stooqSymbol
+        for url in urls:
+            if cls.validUrl(url):
+                return cls.symbol(url)
+        return None
 
     def fetch(self):
         url = 'https://stooq.pl/q/l/?s={}&f=snd2t2c&e=json'.format(self.symbol)
 
         try:
-            data = json.loads(requests.get(url).text)
+            data = json.loads(requests.get(url, headers=self._HEADERS).text)
         except Exception as e:
             raise FetchError(url, e)
 
@@ -57,7 +61,7 @@ class Stooq(BaseFetcher):
         url = 'https://stooq.pl/q/d/l/?s={}&d1={:%Y%m%d}&d2={:%Y%m%d}&i=d'.format(self.symbol, fromDate, toDate)
 
         try:
-            text = requests.get(url).text
+            text = requests.get(url, headers=self._HEADERS).text
         except Exception as e:
             raise FetchError(url, e)
 

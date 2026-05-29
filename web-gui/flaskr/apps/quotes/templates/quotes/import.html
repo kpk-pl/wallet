@@ -18,8 +18,8 @@
 <script type="text/javascript">
   init({
     chart: {
-      {%- if quote.quoteHistory %}
-      existingQuotes: {{ quote.quoteHistory | tojson }}
+      {%- if quoteHistory %}
+      existingQuotes: {{ quoteHistory | tojson }}
         .map(function(e){ return {x: Date.parse(e.timestamp), y: e.quote}; }),
       {%- else %}
       existingQuotes: [],
@@ -27,11 +27,11 @@
       name: '{{ quote.name | safe }}',
       unit: '{{ quote.unit }}'
     },
-    id: '{{ quote._id }}',
+    id: '{{ quote.id }}',
     csvUploadUrl: "{{ url_for('quotes.csvUpload') }}",
     historyUrl: "{{ url_for('quotes.historyImport') }}",
     submitUrl: "{{ url_for('quotes.importQuotes') }}",
-    nextUrl: "{{ url_for('pricing.index', quoteId=quote._id) }}"
+    nextUrl: "{{ url_for('pricing.index', quoteId=quote.id) }}"
   });
 </script>
 {% endblock %}
@@ -48,9 +48,13 @@
           <dl class="row">
             <dt class="col-sm-3">Name</dt>
             <dd class="col-sm-9">{{ quote.name }}</dd>
-            {% if quote.url -%}
-            <dt class="col-sm-3">Link</dt>
-            <dd class="col-sm-9"><a href="{{ quote.url }}" target="_blank" rel="noopener noreferrer">{{ quote.url }}</a></dd>
+            {% if quote.urls -%}
+            <dt class="col-sm-3">{{ 'Links' if quote.urls|length > 1 else 'Link' }}</dt>
+            <dd class="col-sm-9">
+              {%- for url in quote.urls %}
+              <a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ url }}</a>{{ '<br>' | safe if not loop.last }}
+              {%- endfor %}
+            </dd>
             {%- endif %}
           </dl>
           <form method="post" action="" id="f-form">

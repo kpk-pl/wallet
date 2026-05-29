@@ -23,8 +23,12 @@ class JustETF(BaseFetcher):
         return m.group(1) if m else None
 
     @classmethod
-    def identify(cls, quote):
-        return cls.isin(quote.get('url') or '')
+    def identify(cls, urls):
+        for url in urls:
+            isin = cls.isin(url)
+            if isin:
+                return isin
+        return None
 
     def __init__(self, url):
         super(JustETF, self).__init__(url)

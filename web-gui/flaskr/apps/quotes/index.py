@@ -1,5 +1,6 @@
 from flask import request, Response, json
 from flaskr import db
+from flaskr.model import Quote
 from flaskr.quotes import Fetcher
 from flaskr.utils import simplifyModel, clamp
 from datetime import datetime
@@ -21,8 +22,12 @@ def _getPipelineForQuoteUrls(ids):
     pipeline.append({'$project': {
         '_id': 1,
         'name': 1,
+        'urls': 1,
         'url': 1,
-        'lastQuote': {'$last': '$quoteHistory'}
+        'unit': 1,
+        'updateFrequency': 1,
+        # Only the last entry is needed (Quote.lastQuote) — keep the doc light.
+        'quoteHistory': {'$slice': ['$quoteHistory', -1]}
     }})
     return pipeline
 
@@ -40,31 +45,31 @@ def index():
         else:
             ids = listIds(used=True)
 
-        quotesIds = list(db.get_db().quotes.aggregate(_getPipelineForQuoteUrls(ids)))
-        liveQuotes = { e['_id'] : e['url'] for e in quotesIds }
+        quotes = [Quote(**doc) for doc in db.get_db().quotes.aggregate(_getPipelineForQuoteUrls(ids))]
+        liveQuotes = { quote.id : quote.url for quote in quotes }
 
         with Pool(threads) as pool:
             liveQuotes = dict(pool.map(_getQuote, liveQuotes.items()))
 
         response = []
-        for quote in quotesIds:
-            _id = quote['_id']
+        for quote in quotes:
+            _id = quote.id
             liveQuote = liveQuotes[_id]
 
             if isinstance(liveQuote, Exception):
                 if storeQuotes:
                     db.get_db().price_feed_errors.insert_one(dict(
                         pricingId = _id,
-                        name = quote['name'],
+                        name = quote.name,
                         timestamp = datetime.now(),
                         trigger = request.url,
                         error = str(liveQuote)
                     ))
 
-                response.append({'name': quote['name'], 'error': str(liveQuote)})
+                response.append({'name': quote.name, 'error': str(liveQuote)})
             else:
-                lastQuote = quote['lastQuote'] if 'lastQuote' in quote else None
-                stale = lastQuote is not None and lastQuote['timestamp'] == liveQuote.timestamp
+                lastQuote = quote.lastQuote
+                stale = lastQuote is not None and lastQuote.timestamp == liveQuote.timestamp
                 if not stale:
                     if storeQuotes:
                         query = {'_id': _id}
@@ -78,7 +83,7 @@ def index():
                 if stale:
                     responseQuote['stale'] = True
 
-                response.append({'name': quote['name'], 'quote': responseQuote})
+                response.append({'name': quote.name, 'quote': responseQuote})
 
         return Response(json.dumps(response), mimetype="application/json")
 
