@@ -69,13 +69,3 @@ LOGIC / MATH BUGS — financial calculations
     won't reconcile on the current-year report at the moment a new operation is added.
     Use the same comparator on both sides (prefer `[startDate, finalDate)` everywhere).
 ----------------------------------------------------------------------------------------------------------------------
-
-[LOGIC] _parseNumeric silently returns None on invalid input; callers store None into the DB
-    File: flaskr/apps/assets/receipt.py:13-24, used at lines 126, 150, 154, 157
-    On a non-numeric value (e.g. a comma in a locale-sensitive field or a pasted stray character),
-    _parseNumeric returns None. The caller assigns None directly into the operation dict and the
-    receipt POST proceeds. Downstream comparisons like `operation['finalQuantity'] < 0` raise
-    TypeError, OR the operation gets persisted with quantity=None which corrupts every subsequent
-    analyzer that calls .partPrice etc. Either raise ReceiptError on None, or validate at a single
-    boundary with a proper response code.
-----------------------------------------------------------------------------------------------------------------------

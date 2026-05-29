@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit {{ asset.name }}{% endblock %}
+
+{% block plugins_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/jquery.validate.min.js" integrity="sha512-37T7leoNS06R80c8Ulq7cdCDU5MNQBwlYoy1TX/WUsLFC2eYNqtKlV0QjH7r8JpG/S0GUMZwebnVFLPd6SU5yg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.11.1/typeahead.bundle.min.js" integrity="sha512-qOBWNAMfkz+vXXgbh0Wz7qYSLZp6c14R0bZeVX2TdQxWpuKr6yHjBIM69fcF8Ve4GUX6B6AKRQJqiiAmwvmUmQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-tagsinput/0.8.0/bootstrap-tagsinput.min.js" integrity="sha512-9UR1ynHntZdqHnwXKTaOm1s6V9fExqejKvg5XMawEMToW4sSw+3jtLrYfZPijvnwnnE8Uol1O9BcAskoxgec+g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+{% endblock %}
+
+{% block links %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-tagsinput/0.8.0/bootstrap-tagsinput.css" integrity="sha512-xmGTNt20S0t62wHLmQec2DauG9T+owP9e6VU8GigI0anN7OXLip9i7IwEhelasml2osdxX71XcYm6BQunTQeQg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='plugins/typeahead/typeahead.css') }}">
+{% endblock %}
+
+{% block styles %}
+<style>
+.bootstrap-tagsinput {
+  width: 100%;
+  height: calc(2.25rem + 2px);
+}
+</style>
+{% endblock %}
+
+{% block user_scripts %}
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/edit.js') }}"></script>
+
+<script type="text/javascript">
+initialize({
+  headerLabels: {{ header.allLabels | safe }},
+  submitUrl: "{{ url_for('assets.edit', id=asset.id) }}",
+  getNextUrl: function(data){
+    return "{{ url_for('assets.index', label=session['label'], id='_id') | safe }}".replace('_id', data.id);
+  },
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Edit asset</h3>
+        </div>
+        <div class="card-body">
+          <form id="edit-form" method="post" action="" onkeypress="return event.keyCode != 13;">
+            {% if asset.type == 'Deposit' %}
+            <input type="hidden" name="type" value="{{ asset.type | simplify }}"/>
+            <input type="hidden" name="category" value="{{ asset.category }}"/>
+            <div class="row">
+              <div class="col-9">
+                <div class="form-group">
+                  <label for="f-name">Name</label>
+                  <input type="text" id="f-name" name="name" class="form-control" value="{{ asset.name }}" data-lpignore="true" required/>
+                </div>
+              </div>
+              <div class="col-3">
+                <div class="form-group">
+                  <label for="f-currency">Currency</label>
+                  <input type="text" id="f-currency" class="form-control" value="{{ asset.currency.name }}" disabled="disabled" data-lpignore="true"/>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-5">
+                <div class="form-group">
+                  <label for="f-institution">Institution</label>
+                  <input type="text" id="f-institution" name="institution" class="form-control" value="{{ asset.institution }}" data-lpignore="true" required/>
+                </div>
+              </div>
+              <div class="col-7">
+                <div class="form-group">
+                  <label for="f-labels">Tags</label>
+                  <input type="text" id="f-labels" name="labels" class="form-control" value="{{ asset.labels | join(',') }}" data-lpignore="true"/>
+                </div>
+              </div>
+            </div>
+            {% else %}
+            <div class="row">
+              <div class="col-6">
+                <div class="form-group">
+                  <label for="f-price-source">Price source</label>
+                  <input type="text" id="f-price-source" class="form-control" value="{{ pricingName or asset.currency.name }}" disabled="disabled" data-lpignore="true"/>
+                </div>
+              </div>
+              <div class="col-2">
+                <div class="form-group">
+                  <label for="f-currency">Currency</label>
+                  <input type="text" id="f-currency" class="form-control" value="{{ asset.currency.name }}" disabled="disabled" data-lpignore="true"/>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-9">
+                <div class="form-group">
+                  <label for="f-name">Name</label>
+                  <input type="text" id="f-name" name="name" class="form-control" value="{{ asset.name }}" data-lpignore="true" required/>
+                </div>
+              </div>
+              <div class="col-3">
+                <div class="form-group">
+                  <label for="f-ticker">Ticker</label>
+                  <input type="text" id="f-ticker" name="ticker" class="form-control" value="{{ asset.ticker or '' }}" data-lpignore="true"/>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-5">
+                <div class="form-group">
+                  <label for="f-institution">Institution</label>
+                  <input type="text" id="f-institution" name="institution" class="form-control" value="{{ asset.institution }}" data-lpignore="true" required/>
+                </div>
+              </div>
+              <div class="col-3">
+                <div class="form-group">
+                  <label for="f-type">Type</label>
+                  {% set typeValue = asset.type | simplify %}
+                  {% set typeOptions = ['ETF', 'Equity', 'Investment Fund', 'Cryptocurrency'] %}
+                  <select id="f-type" name="type" class="custom-select" required>
+                    {%- if typeValue not in typeOptions %}
+                    <option value="{{ typeValue }}" selected>{{ typeValue }}</option>
+                    {%- endif %}
+                    {%- for option in typeOptions %}
+                    <option value="{{ option }}" {{ 'selected' if option == typeValue }}>{{ option }}</option>
+                    {%- endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="form-group">
+                  <label for="f-labels">Tags</label>
+                  <input type="text" id="f-labels" name="labels" class="form-control" value="{{ asset.labels | join(',') }}" data-lpignore="true"/>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-6 col-sm-4">
+                <div class="form-group">
+                  <label for="f-category">Category</label>
+                  {% set categoryOptions = ['Equities', 'Bonds', 'Gold', 'Cryptocurrency'] %}
+                  <select id="f-category" name="category" class="custom-select" required>
+                    {%- if asset.category not in categoryOptions %}
+                    <option value="{{ asset.category }}" selected>{{ asset.category }}</option>
+                    {%- endif %}
+                    {%- for option in categoryOptions %}
+                    <option value="{{ option }}" {{ 'selected' if option == asset.category }}>{{ option }}</option>
+                    {%- endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="col-6 col-sm-4">
+                <div class="form-group">
+                  <label for="f-subcategory">Subcategory</label>
+                  <input type="text" id="f-subcategory" name="subcategory" class="form-control" value="{{ asset.subcategory or '' }}" data-lpignore="true"/>
+                </div>
+              </div>
+              <div class="col-12 col-sm-4">
+                <div class="form-group">
+                  <label for="f-region">Region</label>
+                  <input type="text" id="f-region" name="region" class="form-control" value="{{ asset.region or '' }}" data-lpignore="true" required/>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-12">
+                <div class="form-group">
+                  <label for="f-link">Reference link</label>
+                  <div class="input-group">
+                    <input type="url" id="f-link" name="link" class="form-control" value="{{ asset.link or '' }}" data-lpignore="true"/>
+                    <span class="input-group-append">
+                      <button type="button" class="btn btn-info" id="f-link-open">Open</button>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+            <div class="row">
+              <div class="col-12">
+                <button class="btn btn-primary" type="submit">Save</button>
+                <a class="btn btn-outline-secondary" href="{{ url_for('assets.index', id=asset.id) }}">Cancel</a>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

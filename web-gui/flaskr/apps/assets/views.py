@@ -26,6 +26,12 @@ def add():
     return add()
 
 
+@assets.route("/edit", methods=['GET', 'POST'])
+def edit():
+    from .edit import edit
+    return edit()
+
+
 @assets.route("/receipt", methods=['GET', 'POST'])
 def receipt():
     from .receipt import receipt

@@ -140,7 +140,7 @@
           </button>
           {%- endif %}
 
-          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href=''">
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('assets.edit', id=asset.id) }}'">
             <i class="fas fa-edit"></i> Edit
           </button>
 
