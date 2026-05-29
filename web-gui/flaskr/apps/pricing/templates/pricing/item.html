@@ -71,7 +71,7 @@
           <h3 class="card-title">Actions</h3>
         </div>
         <div class="card-body">
-          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href=''">
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('pricing.edit', quoteId=item.id) }}'">
             <i class="fas fa-edit"></i> Edit
           </button>
 

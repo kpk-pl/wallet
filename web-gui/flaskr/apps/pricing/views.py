@@ -32,3 +32,9 @@ def index_json():
 def add():
     from .add import add
     return add()
+
+
+@pricing.route("/edit", methods=['GET', 'POST'])
+def edit():
+    from .edit import edit
+    return edit()

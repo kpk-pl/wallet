@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit {{ item.name }}{% endblock %}
+
+{% block user_scripts %}
+<script type="text/javascript" src="{{ url_for('.static', filename='pricing/edit.js') }}"></script>
+<script type="text/javascript">
+(function() {
+  setupEditForm({
+    submitUrl: "{{ url_for('pricing.edit', quoteId=item.id) }}",
+    submitSuccessHandler: function(data) {
+      $(location).attr("href", "{{ url_for('pricing.index', label=header.label, quoteId=item.id) | safe }}");
+    },
+  });
+})();
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary card-tabs">
+        <div class="card-header">
+          <h3 class="card-title">Edit pricing source</h3>
+        </div>
+        <div class="card-body">
+          <div class="tab-content">
+            <form method="post" action="" id="edit-form">
+              <div class="row">
+                <div class="col-9">
+                  <div class="form-group">
+                    <label for="f-name">Name</label>
+                    <input type="text" id="f-name" name="name" class="form-control" value="{{ item.name }}" data-lpignore="true" required/>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="form-group">
+                    <label for="f-ticker">Ticker</label>
+                    <input type="text" id="f-ticker" name="ticker" class="form-control" value="{{ item.ticker or '' }}" data-lpignore="true"/>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-3">
+                  <div class="form-group">
+                    <label for="f-unit">Unit</label>
+                    <input type="text" id="f-unit" name="unit" class="form-control" value="{{ item.unit }}" data-lpignore="true" required/>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="form-group">
+                    <label for="f-updateFreq">Update frequency</label>
+                    <select id="f-updateFreq" name="updateFrequency" class="custom-select" required>
+                      {%- for frequency in data.updateFrequencies %}
+                      <option value="{{ frequency }}" {{ 'selected' if frequency == item.updateFrequency.value }}>{{ frequency }}</option>
+                      {%- endfor %}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Links to
+                  <a href="https://stooq.pl" target="_blank" rel="noopener noreferrer">stooq.pl</a>,
+                  <a href="https://www.biznesradar.pl/" target="_blank" rel="noopener noreferrer">biznesradar.pl</a>,
+                  <a href="https://pl.investing.com/" target="_blank" rel="noopener noreferrer">pl.investing.com</a>,
+                  <a href="https://global.morningstar.com/en-gb" target="_blank" rel="noopener noreferrer">global.morningstar.com</a>,
+                  <a href="https://www.justetf.com/" target="_blank" rel="noopener noreferrer">justetf.com</a> or
+                  <a href="https://docs.kraken.com/rest/#tag/Spot-Market-Data/operation/getTickerInformation" target="_blank" rel="noopener noreferrer">api.kraken.com</a>
+                </label>
+                <div id="urls-list">
+                  {%- for url in item.urls %}
+                  <div class="input-group mb-2 url-row">
+                    <input type="url" name="urls" class="form-control" value="{{ url }}" data-lpignore="true" required/>
+                    <span class="input-group-append">
+                      <button type="button" class="btn btn-outline-secondary btn-url-up" title="Move up"><i class="fas fa-arrow-up"></i></button>
+                      <button type="button" class="btn btn-outline-secondary btn-url-down" title="Move down"><i class="fas fa-arrow-down"></i></button>
+                      <button type="button" class="btn btn-outline-danger btn-url-remove" title="Remove"><i class="fas fa-times"></i></button>
+                    </span>
+                  </div>
+                  {%- endfor %}
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-info" id="btn-url-add"><i class="fas fa-plus"></i> Add link</button>
+              </div>
+              <div class="row">
+                <div class="col-12">
+                  <button class="btn btn-primary" type="submit">Save</button>
+                  <a class="btn btn-outline-secondary" href="{{ url_for('pricing.index', quoteId=item.id) }}">Cancel</a>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
