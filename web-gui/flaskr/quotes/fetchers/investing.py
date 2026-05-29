@@ -14,7 +14,7 @@ class Investing(BaseFetcher):
     def __init__(self, url):
         super(Investing, self).__init__(url)
 
-    def fetch(self):
+    def fetch(self, unit=None):
         result = {}
         if 'equities' in self.url:
             result['type'] = 'Equity'

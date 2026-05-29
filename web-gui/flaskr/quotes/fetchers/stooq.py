@@ -38,7 +38,7 @@ class Stooq(BaseFetcher):
                 return cls.symbol(url)
         return None
 
-    def fetch(self):
+    def fetch(self, unit=None):
         url = 'https://stooq.pl/q/l/?s={}&f=snd2t2c&e=json'.format(self.symbol)
 
         try:
@@ -57,7 +57,9 @@ class Stooq(BaseFetcher):
 
         return Quote(quote = data['close'], timestamp=timestamp, ticker=self.symbol, name = data['name'])
 
-    def fetchHistory(self, fromDate, toDate) -> List[QuoteHistoryItem]:
+    def fetchHistory(self, fromDate, toDate, unit=None) -> List[QuoteHistoryItem]:
+        # `unit` is accepted for a uniform fetcher interface but ignored:
+        # Stooq already returns prices in the symbol's native unit.
         url = 'https://stooq.pl/q/d/l/?s={}&d1={:%Y%m%d}&d2={:%Y%m%d}&i=d'.format(self.symbol, fromDate, toDate)
 
         try:

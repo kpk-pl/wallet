@@ -10,10 +10,11 @@ from .list import listIds
 
 
 def _getQuote(item):
+    _id, (url, unit) = item
     try:
-        return (item[0], Fetcher(item[1]).fetch())
+        return (_id, Fetcher(url).fetch(unit))
     except Exception as e:
-        return (item[0], e)
+        return (_id, e)
 
 
 def _getPipelineForQuoteUrls(ids):
@@ -46,7 +47,7 @@ def index():
             ids = listIds(used=True)
 
         quotes = [Quote(**doc) for doc in db.get_db().quotes.aggregate(_getPipelineForQuoteUrls(ids))]
-        liveQuotes = { quote.id : quote.url for quote in quotes }
+        liveQuotes = { quote.id : (quote.url, quote.unit) for quote in quotes }
 
         with Pool(threads) as pool:
             liveQuotes = dict(pool.map(_getQuote, liveQuotes.items()))

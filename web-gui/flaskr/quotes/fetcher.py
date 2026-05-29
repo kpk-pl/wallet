@@ -4,9 +4,9 @@ class Fetcher:
     def __init__(self, url):
         self.url = url
 
-    def fetch(self):
+    def fetch(self, unit=None):
         fetcher = self.getInstance(self.url)
-        return fetcher.fetch()
+        return fetcher.fetch(unit)
 
     @staticmethod
     def getInstance(url):

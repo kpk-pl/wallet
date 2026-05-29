@@ -14,7 +14,7 @@ class BiznesRadar(BaseFetcher):
     def __init__(self, url):
         super(BiznesRadar, self).__init__(url)
 
-    def fetch(self):
+    def fetch(self, unit=None):
         html = requests.get(self.url).text
         soup = BeautifulSoup(html, 'html.parser')
 

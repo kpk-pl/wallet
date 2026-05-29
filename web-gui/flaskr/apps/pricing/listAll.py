@@ -68,7 +68,7 @@ def postNewItem():
         return ({'error': True, 'code': 3,
                  'message': "No quote fetcher recognises this URL"}, 400)
     try:
-        quote = fetcher.fetch()
+        quote = fetcher.fetch(unit=model.unit)
     except FetchError as e:
         return ({'error': True, 'code': 3,
                  'message': f"Could not fetch initial quote: {e.msg}"}, 400)

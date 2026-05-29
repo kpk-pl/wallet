@@ -12,7 +12,7 @@ class Kraken(BaseFetcher):
     def __init__(self, url):
         super(Kraken, self).__init__(url)
 
-    def fetch(self):
+    def fetch(self, unit=None):
         response = requests.get(self.url, headers={"User-Agent" : "Mozilla/5.0"}).json()
         jsonElement = next(iter(response['result'].values()))
 

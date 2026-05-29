@@ -14,7 +14,7 @@ class Morningstar(BaseFetcher):
     def __init__(self, url):
         super(Morningstar, self).__init__(url)
 
-    def fetch(self):
+    def fetch(self, unit=None):
         result = {}
         if 'etf' in self.url:
             result['type'] = 'ETF'

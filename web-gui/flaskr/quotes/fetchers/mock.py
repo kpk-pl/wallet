@@ -11,7 +11,7 @@ class Mock(BaseFetcher):
     def __init__(self, url):
         super(Mock, self).__init__(url)
 
-    def fetch(self):
+    def fetch(self, unit=None):
         try:
             url = urlparse(self.url)
             params = {key: values[0] for (key, values) in parse_qs(url.query).items()}

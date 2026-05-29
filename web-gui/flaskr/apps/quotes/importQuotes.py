@@ -150,7 +150,7 @@ def historyImport():
         return ({"error": "Unknown import source"}, 400)
 
     try:
-        history = fetcher.fetchHistory(fromDate, toDate)
+        history = fetcher.fetchHistory(fromDate, toDate, unit=quote.unit)
     except FetchError as e:
         return ({"error": e.msg}, 502)
 
