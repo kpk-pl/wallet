@@ -7,21 +7,25 @@ import bson.errors
 from datetime import datetime
 from dateutil import parser
 from flaskr.model import Asset, AssetType, AssetPricingQuotes
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 
-def _parseNumeric(value):
+def _parseNumeric(value, field, errorCode):
     try:
         return int(value)
-    except ValueError:
+    except (ValueError, TypeError):
         pass
 
     try:
         return Decimal128(value)
-    except ValueError:
+    except (ValueError, TypeError, InvalidOperation):
         pass
 
-    return None
+    # Never return None silently: a non-numeric value (a stray character, a
+    # locale comma, an empty paste) used to either crash a downstream
+    # comparison with TypeError or get persisted as quantity=None, corrupting
+    # every analyzer. Reject it here at the single boundary with a 400.
+    raise ReceiptError(errorCode, f"Field '{field}' is not a valid number: {value!r}")
 
 
 def _handleConversions(operation, field):
@@ -136,7 +140,7 @@ def _makeOperation(asset):
         )
 
     if operation['type'] != typing.Operation.Type.earning or asset.type == AssetType.deposit:
-        operation['quantity'] = _parseNumeric(_required("quantity", 102))
+        operation['quantity'] = _parseNumeric(_required("quantity", 102), "quantity", 107)
 
     if asset.type == AssetType.deposit:
         if operation['type'] == typing.Operation.Type.receive:
@@ -160,14 +164,14 @@ def _makeOperation(asset):
     if asset.type == AssetType.deposit:
         operation['price'] = operation['quantity']  # for Deposit type, default unit price is 1
     else:
-        operation['price'] = _parseNumeric(_required("price", 103))
+        operation['price'] = _parseNumeric(_required("price", 103), "price", 108)
 
     provisionSupportTypes = [typing.Operation.Type.buy, typing.Operation.Type.sell, typing.Operation.Type.earning]
     if 'provision' in request.form and request.form['provision'] != "" and operation['type'] in provisionSupportTypes:
-        operation['provision'] = _parseNumeric(request.form['provision'])
+        operation['provision'] = _parseNumeric(request.form['provision'], "provision", 109)
 
     if asset.currency.name != current_app.config['MAIN_CURRENCY']:
-        operation['currencyConversion'] = _parseNumeric(_required('currencyConversion', 104))
+        operation['currencyConversion'] = _parseNumeric(_required('currencyConversion', 104), "currencyConversion", 110)
 
     if asset.hasOrderIds:
         operation['orderId'] = _required('orderId', 105)

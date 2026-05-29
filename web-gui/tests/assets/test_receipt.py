@@ -55,6 +55,62 @@ def test_receipt_failure_when_required_field_missing(clientApp, field, errorCode
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+@pytest.mark.parametrize('clientApp,field,errorCode', [
+    (pytest.lazy_fixture('client'), "quantity", 107),
+    (pytest.lazy_fixture('client'), "price", 108),
+])
+def test_receipt_failure_when_numeric_field_invalid(clientApp, field, errorCode):
+    # A non-numeric value (e.g. a locale comma or stray character) must be
+    # rejected with a clear 400 instead of being silently stored as None.
+    assetId = Asset.createEquity().pricing().commit()
+
+    data = {k: v for (k, v) in MINIMAL_WORKING_RECEIPT_DATA.items()}
+    data[field] = "1,5x"
+    rv = clientApp.post(f"/assets/receipt?id={str(assetId)}", data=data, follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == errorCode
+
+    # Nothing must have been persisted.
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert 'operations' not in dbAsset or len(dbAsset['operations']) == 0
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_failure_when_provision_invalid(client):
+    assetId = Asset.createEquity().pricing().quantity(10).commit()
+
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=dict(
+        type='SELL',
+        date='2021-07-12T12:01:08',
+        quantity=3,
+        price=100,
+        provision="abc",
+    ), follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == 109
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': assetId})
+        assert len(dbAsset['operations']) == 1
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_receipt_failure_when_currency_conversion_invalid(client):
+    pricingId = PricingSource.createSimple().unit("USD").commit()
+    assetId = Asset.createEquity().pricing(pricingId).currency("USD").quantity(10).commit()
+
+    data = {k: v for (k, v) in MINIMAL_WORKING_RECEIPT_DATA.items()}
+    data['currencyConversion'] = "not-a-number"
+    rv = client.post(f"/assets/receipt?id={str(assetId)}", data=data, follow_redirects=True)
+
+    assert rv.status_code == 400
+    assert rv.json['code'] == 110
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_receipt_successfull_first_buy(client):
     assetId = Asset.createEquity().pricing().commit()
 

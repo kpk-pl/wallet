@@ -22,11 +22,6 @@ Wallet aggregated -> display sparklines for the merged items
 Strategy -> Chart with allocation dynamically updated
 
 ----------------------------------------------------------------------------------------------------------------------
-A pricing source should have a possibility to have multiple URIs and/or symbols as well as a possibility to pick
-  up a priority of source for pricing. In general we could have a configurable master priority ladder for all pricing
-  sources and then a particular pricing source could define a preffered one as well.
-
-----------------------------------------------------------------------------------------------------------------------
 Get rid of the stooqSymbol field on quotes. Now that `urls` is the source of truth, it's pure denormalization of
 Stooq.symbol(urls[0]). Audit of the DB: of 24 quotes with a stooqSymbol, 23 match the URL-derived symbol and 0 have a
 symbol without a parseable stooq URL — so it carries no extra info. The one row that diverges (Beta ETF WIG20short:
@@ -93,24 +88,3 @@ LOGIC / MATH BUGS — financial calculations
     analyzer that calls .partPrice etc. Either raise ReceiptError on None, or validate at a single
     boundary with a proper response code.
 ----------------------------------------------------------------------------------------------------------------------
-
-[LOGIC] Aggregating assets changes the cost basis used for profit calculations
-    File: flaskr/analyzers/aggregate.py + flaskr/apps/wallet/wallet.py:59
-    When the wallet is requested with ?aggregation=p (or n), assets are merged and then Profits
-    is run over the merged operations. Running average cost on the merged stream gives a
-    different per-SELL profit than running Profits per-asset and summing. Example: two USD
-    accounts at the same broker each with their own BUY 10@100 and BUY 10@200, then SELL 5 from
-    one of them. Per-asset profit uses that account's avg cost; merged profit uses the combined
-    avg. The aggregated wallet totals won't match the sum of the per-asset Results page values,
-    with no indication to the user. Decide on one canonical view.
-----------------------------------------------------------------------------------------------------------------------
-
-[LOGIC] Subcategory + category name concatenation is ambiguous
-    Files: flaskr/analyzers/categories.py:24, flaskr/apps/wallet/static/wallet/strategyTable.js:88,
-           flaskr/apps/wallet/static/wallet/wallet_historical.js:30
-    Category bucket names are formed as `subcategory + ' ' + category`. Real-world names like
-    subcategory="Mid Cap" + category="Equities" = "Mid Cap Equities" can collide with a single
-    category named "Mid Cap Equities" or any subcategory whose tail matches another category's
-    head. Use an unambiguous separator (e.g. ' / ') or a tuple key.
-----------------------------------------------------------------------------------------------------------------------
-
