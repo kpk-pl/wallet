@@ -19,16 +19,8 @@ def test_stooq_symbol_parsing():
     assert Stooq.symbol(STOOQ_URL) == "cpiypl.m"
 
 
-def test_stooq_identify_from_symbol():
-    assert Stooq.identify([], 'sgln.uk') == 'sgln.uk'
-
-
 def test_stooq_identify_from_url():
     assert Stooq.identify([STOOQ_URL]) == 'cpiypl.m'
-
-
-def test_stooq_symbol_takes_precedence_over_url():
-    assert Stooq.identify([STOOQ_URL], 'sgln.uk') == 'sgln.uk'
 
 
 def test_stooq_identify_none_when_absent():
@@ -80,7 +72,3 @@ def test_identify_order_independent():
     urls = [JUSTETF_URL, STOOQ_URL]
     assert Stooq.identify(urls) == 'cpiypl.m'
     assert JustETF.identify(urls) == 'IE00B4L5Y983'
-
-
-def test_stooq_symbol_wins_over_urls():
-    assert Stooq.identify([JUSTETF_URL], 'sgln.uk') == 'sgln.uk'

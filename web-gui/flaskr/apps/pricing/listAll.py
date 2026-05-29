@@ -5,7 +5,6 @@ from flaskr.model import Quote
 from flaskr.model.quote import QuoteUpdateFrequency
 from flaskr.apps.quotes.list import listIds as listActiveQuoteIds
 from flaskr.quotes import Fetcher as QuotesFetcher, FetchError
-from flaskr.quotes.fetchers.stooq import Stooq
 from pydantic import BaseModel, HttpUrl, ValidationError, Field
 from dataclasses import dataclass
 from typing import Optional
@@ -42,9 +41,6 @@ def postNewItem():
     # only) entry of the `urls` array, which is now the source of truth.
     data['urls'] = [str(model.url)]
     data.pop('url', None)
-
-    if Stooq.validUrl(model.url):
-        data['stooqSymbol'] = Stooq.symbol(model.url)
 
     if model.currencyPairCheck:
         if 'currencyPairFrom' not in request.form.keys() or not model.unit:
@@ -99,7 +95,6 @@ def _getPipeline(includeTrashed = False):
             'url': 1,
             'unit': 1,
             'ticker': 1,
-            'stooqSymbol': 1,
             'updateFrequency': 1,
             'trashed': 1,
             'currencyPair': 1,

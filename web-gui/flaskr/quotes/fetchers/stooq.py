@@ -25,9 +25,7 @@ class Stooq(BaseFetcher):
         return url[s+2 : end]
 
     @classmethod
-    def identify(cls, urls, stooqSymbol=None):
-        if stooqSymbol:
-            return stooqSymbol
+    def identify(cls, urls):
         for url in urls:
             if cls.validUrl(url):
                 return cls.symbol(url)

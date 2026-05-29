@@ -4,7 +4,6 @@ from flaskr import db, header
 from flaskr.model import Quote
 from flaskr.model.quote import QuoteUpdateFrequency
 from flaskr.quotes import Fetcher as QuotesFetcher, FetchError
-from flaskr.quotes.fetchers.stooq import Stooq
 from bson.objectid import ObjectId
 from pydantic import BaseModel, HttpUrl, ValidationError
 from typing import List, Optional
@@ -79,14 +78,6 @@ def edit():
         update['ticker'] = model.ticker
     else:
         unset['ticker'] = ''
-
-    # Keep stooqSymbol in sync with the primary (first) URL, mirroring the add
-    # flow: set it when that URL is a Stooq link, otherwise clear any stale one.
-    primary = model.urls[0]
-    if Stooq.validUrl(primary):
-        update['stooqSymbol'] = Stooq.symbol(primary)
-    else:
-        unset['stooqSymbol'] = ''
 
     db.get_db().quotes.update_one(
         {'_id': ObjectId(quoteId)},

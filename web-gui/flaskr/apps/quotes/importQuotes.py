@@ -22,7 +22,6 @@ def _getPipeline(quoteId):
     pipeline.append({ "$project": {
         '_id': 1,
         'name': 1,
-        'stooqSymbol': 1,
         'urls': 1,
         'url': 1,
         'unit': 1,

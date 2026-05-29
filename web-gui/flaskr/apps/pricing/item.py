@@ -19,7 +19,6 @@ def _getPipeline(quoteId, trimmedDown):
         'url': 1,
         'unit': 1,
         'ticker': 1,
-        'stooqSymbol': 1,
         'trashed': 1,
         'updateFrequency': 1,
         'currencyPair': 1,

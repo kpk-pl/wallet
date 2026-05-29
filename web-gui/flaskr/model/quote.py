@@ -38,7 +38,6 @@ class Quote(BaseModel):
     ticker: Optional[str]
     urls: List[HttpUrl] = Field(default_factory=list)
     updateFrequency: QuoteUpdateFrequency
-    stooqSymbol: Optional[str]
     trashed: bool = False
     currencyPair: Optional[QuoteCurrencyPair]
     quoteHistory: List[QuoteHistoryItem] = Field(default_factory=list)
