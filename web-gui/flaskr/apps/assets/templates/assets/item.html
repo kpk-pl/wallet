@@ -22,8 +22,12 @@
 </script>
 {% if quoteHistory %}
 <script type="text/javascript">
-  const data = {{ quoteHistory.data | tojson }};
+  const data = {{ quoteHistory.data | simplify | tojson }};
+  {% if asset.pricing and asset.pricing.quoteId -%}
   const operations = {{ asset.operations | simplify | tojson }};
+  {%- else -%}
+  const operations = [];
+  {%- endif %}
 
   setupChart('{{ asset.name | safe }}', '{{ asset.currency.name }}', data, operations);
 </script>
