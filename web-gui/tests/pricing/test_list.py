@@ -35,7 +35,7 @@ def test_pricing_add_source(client):
         assert dbPricing == dict(
             _id = ObjectId(rv.json['id']),
             name = MINIMAL_PRICING_SOURCE_DATA['name'],
-            url = MINIMAL_PRICING_SOURCE_DATA['url'],
+            urls = [MINIMAL_PRICING_SOURCE_DATA['url']],
             updateFrequency = MINIMAL_PRICING_SOURCE_DATA['updateFrequency'],
             unit = MINIMAL_PRICING_SOURCE_DATA['unit'],
             quoteHistory = [_MOCK_QUOTE],
@@ -56,7 +56,7 @@ def test_pricing_add_source_pulls_the_latest_quote_from_url(client):
         assert dbPricing == dict(
             _id = ObjectId(rv.json['id']),
             name = data['name'],
-            url = data['url'],
+            urls = [data['url']],
             updateFrequency = data['updateFrequency'],
             unit = data['unit'],
             quoteHistory = [dict(quote=10.1, timestamp=datetime(2022, 1, 12, 14, 30))]
@@ -97,7 +97,7 @@ def test_pricing_add_source_maximal_data(client):
             name = data['name'],
             ticker = data['ticker'],
             unit = data['unit'],
-            url = data['url'],
+            urls = [data['url']],
             updateFrequency = data['updateFrequency'],
             quoteHistory = [_MOCK_QUOTE],
         )
