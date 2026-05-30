@@ -27,6 +27,13 @@
 <script type="text/javascript">
   const defaultCurrency = "{{ config.MAIN_CURRENCY }}";
   const categoryAllocation = JSON.parse({{ allocation | tojson }});
+  const aggregatedSparklinesMap = {
+    {%- for data in assetData %}
+    {%- if data.isAggregated %}
+    "agg-{{ loop.index0 }}": [{% for id in data.asset.ids %}"{{ id }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+    {%- endif %}
+    {%- endfor %}
+  };
 
   $(function(){
     $.getJSON("{{ url_for('wallet.strategy', allocation='true', label=session['label']) | safe }}", updateStrategyAllocation);

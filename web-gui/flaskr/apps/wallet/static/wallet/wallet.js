@@ -36,5 +36,20 @@ $(function(){
 
 function historicalValueDone(data) {
   updateSparklines(data, 3, asset => $('#sparkline-' + asset.id));
+  updateAggregatedSparklines(data, 3);
   updateAllocationCharts(data);
+}
+
+function updateAggregatedSparklines(historicalData, months) {
+  const n = historicalData.t.length;
+  for (const [aggKey, ids] of Object.entries(aggregatedSparklinesMap)) {
+    const group = historicalData.assets.filter(a => ids.includes(a.id));
+    if (group.length === 0) continue;
+    const summed = {
+      value: Array.from({length: n}, (_, i) => group.reduce((s, a) => s + parseFloat(a.value[i] || 0), 0)),
+      profit: Array.from({length: n}, (_, i) => group.reduce((s, a) => s + parseFloat(a.profit[i] || 0), 0)),
+      investedValue: Array.from({length: n}, (_, i) => group.reduce((s, a) => s + parseFloat(a.investedValue[i] || 0), 0)),
+    };
+    updateSparklines({t: historicalData.t, assets: [summed]}, months, () => $('#sparkline-' + aggKey));
+  }
 }
