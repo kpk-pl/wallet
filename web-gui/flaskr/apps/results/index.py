@@ -100,7 +100,7 @@ def index():
         operationsBreakdown = []
         for data in assetData:
             for op, bdown, idx in zip(data.asset.operations, data.profits.breakdown, range(len(data.asset.operations))):
-                if op.date >= timerange['periodStart'] and op.date <= timerange['periodEnd'] and bdown.profit != 0:
+                if op.date >= timerange['periodStart'] and op.date < timerange['periodEnd'] and bdown.profit != 0:
                     operationsBreakdown.append(BreakdownElement(data.asset, op, idx, bdown))
 
 

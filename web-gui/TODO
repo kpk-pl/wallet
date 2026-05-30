@@ -58,14 +58,3 @@ LOGIC / MATH BUGS — financial calculations
     supposed to mean anything (e.g. matching a specific SELL to specific BUYs from the same
     broker order), the Profits analyzer needs the same logic — or `orderId` should be deleted.
 ----------------------------------------------------------------------------------------------------------------------
-
-[LOGIC] Period analyzer half-open vs results-page closed interval mismatch
-    Files: flaskr/analyzers/period.py:77 vs flaskr/apps/results/index.py:98
-    The Period analyzer treats operations with `op.date >= startDate AND op.date < finalDate` as
-    in-scope. The results template loop in index.py uses `op.date <= timerange['periodEnd']`.
-    For the CURRENT year, periodEnd = `min(Jan 1 next year, datetime.now())` — so an operation
-    occurring at the exact `datetime.now()` boundary is shown in the operations table but is NOT
-    included in the analyzer's netProfit/provisions totals. The totals row and the per-row totals
-    won't reconcile on the current-year report at the moment a new operation is added.
-    Use the same comparator on both sides (prefer `[startDate, finalDate)` everywhere).
-----------------------------------------------------------------------------------------------------------------------
