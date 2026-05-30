@@ -1,0 +1,155 @@
+{#
+  Shared parametrized-pricing editor used by both the add and edit pages so the
+  two stay in lock-step. `pricing` is an AssetPricingParametrized model (edit) or
+  none (add); `quotes` is the projected quotesList used for the derived dropdown.
+#}
+
+{% macro interest_period(item, quotes) %}
+<div class="card card-outline card-secondary interest-period mb-2">
+  <div class="card-header py-2 d-flex justify-content-between align-items-center">
+    <span class="font-weight-bold interest-period-title">Period</span>
+    <button type="button" class="btn btn-sm btn-outline-danger p-remove-interest">Remove</button>
+  </div>
+  <div class="card-body py-2">
+    <div class="form-check">
+      <input type="checkbox" class="form-check-input p-fixed-enable" {{ 'checked' if item and item.fixed }}>
+      <label class="form-check-label">Fixed rate</label>
+    </div>
+    <div class="row p-fixed-fields mt-1" style="{{ '' if item and item.fixed else 'display:none;' }}">
+      <div class="col-4">
+        <div class="form-group">
+          <label>Rate <small class="text-muted">(fraction, e.g. 0.017 = 1.7%)</small></label>
+          <input type="number" step="any" class="form-control p-fixed-pct" data-lpignore="true" value="{{ item.fixed.percentage if item and item.fixed else '' }}"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-check mt-2">
+      <input type="checkbox" class="form-check-input p-derived-enable" {{ 'checked' if item and item.derived }}>
+      <label class="form-check-label">Derived rate (sampled from a quote)</label>
+    </div>
+    <div class="p-derived-fields mt-1" style="{{ '' if item and item.derived else 'display:none;' }}">
+      {% set derived = item.derived if item else none %}
+      {% set sample = derived.sample if derived else none %}
+      <div class="row">
+        <div class="col-6">
+          <div class="form-group">
+            <label>Quote source</label>
+            <select class="custom-select p-derived-quote">
+              <option value="" hidden disabled {{ 'selected' if not derived }}></option>
+              {%- for q in quotes %}
+              <option value="{{ q._id }}" {{ 'selected' if derived and (derived.quoteId | string) == (q._id | string) }}>{{ q.name }}{% if q.unit %} [{{ q.unit }}]{% endif %}</option>
+              {%- endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="form-group">
+            <label>Sample interval</label>
+            <select class="custom-select p-derived-interval">
+              {%- for option in ['year', 'month', 'day'] %}
+              <option value="{{ option }}" {{ 'selected' if (sample.interval if sample else 'month') == option }}>{{ option }}</option>
+              {%- endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="form-group">
+            <label>Interval offset</label>
+            <input type="number" step="1" class="form-control p-derived-offset" data-lpignore="true" value="{{ sample.intervalOffset if sample else 0 }}"/>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-3">
+          <div class="form-group">
+            <label>Choose</label>
+            <select class="custom-select p-derived-choose">
+              {%- for option in ['last', 'first'] %}
+              <option value="{{ option }}" {{ 'selected' if (sample.choose if sample else 'last') == option }}>{{ option }}</option>
+              {%- endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="form-group">
+            <label>Multiplier</label>
+            <input type="number" step="any" class="form-control p-derived-multiplier" data-lpignore="true" value="{{ sample.multiplier if sample else 1 }}"/>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="form-group">
+            <label>Clamp below</label>
+            <input type="number" step="any" class="form-control p-derived-clamp" placeholder="optional" data-lpignore="true" value="{{ sample.clampBelow if sample and sample.clampBelow is not none else '' }}"/>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="form-group">
+            <label class="d-block">&nbsp;</label>
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input p-derived-useprev" {{ 'checked' if sample and sample.usePreviousWhenMissing }}>
+              <label class="form-check-label">Use previous when missing</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+
+{% macro pricing_editor(pricing, quotes) %}
+<hr/>
+<h6 class="mb-3">Parametrized pricing</h6>
+<div class="row">
+  <div class="col-3">
+    <div class="form-group">
+      <label for="p-length-count">Periods</label>
+      <input type="number" id="p-length-count" class="form-control" min="1" step="1" value="{{ pricing.length.count if pricing else 10 }}" data-lpignore="true" required/>
+    </div>
+  </div>
+  <div class="col-3">
+    <div class="form-group">
+      <label for="p-length-name">Period unit</label>
+      <select id="p-length-name" class="custom-select" required>
+        {%- for option in ['year', 'month', 'day'] %}
+        <option value="{{ option }}" {{ 'selected' if (pricing.length.name if pricing else 'year') == option }}>{{ option }}</option>
+        {%- endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="col-3">
+    <div class="form-group">
+      <label for="p-length-multiplier">Unit multiplier</label>
+      <input type="number" id="p-length-multiplier" class="form-control" min="1" step="1" value="{{ pricing.length.multiplier if pricing else 1 }}" data-lpignore="true" required/>
+    </div>
+  </div>
+  <div class="col-3">
+    <div class="form-group">
+      <label for="p-profit-distribution">Profit distribution</label>
+      <select id="p-profit-distribution" class="custom-select" required>
+        {%- for option in ['accumulating', 'distributing'] %}
+        <option value="{{ option }}" {{ 'selected' if (pricing.profitDistribution if pricing else 'accumulating') == option }}>{{ option }}</option>
+        {%- endfor %}
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <label class="mb-0">Interest periods</label>
+  <button type="button" class="btn btn-sm btn-secondary" id="p-add-interest">Add period</button>
+</div>
+<div id="p-interest-list">
+  {%- if pricing %}
+  {%- for item in pricing.interest %}
+  {{ interest_period(item, quotes) }}
+  {%- endfor %}
+  {%- endif %}
+</div>
+
+<template id="p-interest-template">
+  {{ interest_period(none, quotes) }}
+</template>
+{% endmacro %}

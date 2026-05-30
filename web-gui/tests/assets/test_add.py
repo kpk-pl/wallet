@@ -3,6 +3,8 @@ import mongomock
 import pymongo
 import tests
 from bson.objectid import ObjectId
+from bson.decimal128 import Decimal128
+from flaskr import model
 from tests.fixtures import client
 from tests.mocks import PricingSource
 
@@ -145,3 +147,75 @@ def test_asset_add_failure_explicit_foreign_currency_not_found(client):
     rv = client.post(f"/assets", data=data, follow_redirects=True)
     assert rv.status_code == 400
     assert rv.json['code'] == 3
+
+
+def _parametrizedPayload(quoteId):
+    return dict(
+        kind = "parametrized",
+        name = "EDO Test",
+        institution = "PKO",
+        type = "Polish Individual Bonds",
+        category = "Bonds",
+        subcategory = "Inflation Linked",
+        currency = "PLN",
+        labels = "longterm,safety",
+        pricing = dict(
+            length = dict(count=10, name="year", multiplier=1),
+            profitDistribution = "accumulating",
+            interest = [
+                dict(fixed=dict(percentage="0.017")),
+                dict(
+                    fixed = dict(percentage="0.01"),
+                    derived = dict(
+                        quoteId = str(quoteId),
+                        sample = dict(interval="month", intervalOffset=-2, choose="last",
+                                      multiplier="0.01", clampBelow="0", usePreviousWhenMissing=True),
+                    ),
+                ),
+            ],
+        ),
+    )
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_asset_add_parametrized(client):
+    quoteId = PricingSource.createSimple().unit("%").commit()
+
+    rv = client.post("/assets", json=_parametrizedPayload(quoteId), follow_redirects=True)
+    assert rv.status_code == 200
+    assert 'id' in rv.json
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        dbAsset = db.wallet.assets.find_one({'_id': ObjectId(rv.json['id'])})
+
+        assert dbAsset['type'] == "Polish Individual Bonds"
+        assert dbAsset['category'] == "Bonds"
+        assert dbAsset['subcategory'] == "Inflation Linked"
+        assert dbAsset['currency'] == {'name': 'PLN'}
+        assert dbAsset['labels'] == ['longterm', 'safety']
+
+        # The default unit multiplier is dropped to match existing documents.
+        assert dbAsset['pricing']['length'] == {'count': 10, 'name': 'year'}
+        assert dbAsset['pricing']['profitDistribution'] == 'accumulating'
+
+        interest = dbAsset['pricing']['interest']
+        assert interest[0] == {'fixed': {'percentage': Decimal128("0.017")}}
+        derived = interest[1]['derived']
+        assert derived['quoteId'] == quoteId
+        assert derived['sample']['intervalOffset'] == -2
+        assert derived['sample']['clampBelow'] == Decimal128("0")
+        assert derived['sample']['usePreviousWhenMissing'] is True
+
+        # The stored document round-trips back through the typed model.
+        asset = model.Asset(**dbAsset)
+        assert isinstance(asset.pricing, model.AssetPricingParametrized)
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_asset_add_parametrized_rejects_empty_interest_period(client):
+    payload = _parametrizedPayload(ObjectId())
+    payload['pricing']['interest'].append({})
+
+    rv = client.post("/assets", json=payload, follow_redirects=True)
+    assert rv.status_code == 400
+    assert rv.json['code'] == 12

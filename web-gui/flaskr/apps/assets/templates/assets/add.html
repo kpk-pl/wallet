@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% import 'assets/_parametrized.html' as parametrized %}
 
 {% block title %}Add asset{% endblock %}
 
@@ -24,6 +25,7 @@
 
 {% block user_scripts %}
 <script type="text/javascript" src="{{ url_for('.static', filename='assets/add.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/parametrized.js') }}"></script>
 
 <script type="text/javascript">
 initialize({
@@ -34,6 +36,14 @@ initialize({
   getQuoteData: function(url){
       return "{{ url_for('quotes.index', url='_url') | safe }}".replace('_url', url);
   },
+  submitUrl: "{{ url_for('assets.index_post') }}",
+  getNextUrl: function(data){
+    return "{{ url_for('assets.index', label=header.label, id='_id') | safe }}".replace('_id', data.id);
+  },
+});
+
+initParametrizedForm({
+  headerLabels: {{ header.allLabels | safe }},
   submitUrl: "{{ url_for('assets.index_post') }}",
   getNextUrl: function(data){
     return "{{ url_for('assets.index', label=header.label, id='_id') | safe }}".replace('_id', data.id);
@@ -55,6 +65,9 @@ initialize({
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#tab-cash" data-toggle="tab">Cash</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#tab-parametrized" data-toggle="tab">Parametrized</a>
             </li>
           </ul>
         </div>
@@ -219,6 +232,97 @@ initialize({
                   </div>
                 </div>
                 <div class="row">
+                  <div class="col-12">
+                    <button class="btn btn-primary" type="submit">Submit</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="tab-pane" id="tab-parametrized">
+              <form id="form-parametrized" method="post" action="" onkeypress="return event.keyCode != 13;">
+                <div class="row">
+                  <div class="col-9">
+                    <div class="form-group">
+                      <label for="p-name">Name</label>
+                      <input type="text" id="p-name" name="name" class="form-control" data-lpignore="true" required/>
+                    </div>
+                  </div>
+                  <div class="col-3">
+                    <div class="form-group">
+                      <label for="p-currency">Currency</label>
+                      <select id="p-currency" name="currency" class="custom-select" required>
+                        {%- for currency in config.SUPPORTED_CURRENCIES %}
+                        <option value="{{ currency }}" {% if currency == config.MAIN_CURRENCY %}selected{% endif %}>{{ currency }}</option>
+                        {%- endfor %}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-5">
+                    <div class="form-group">
+                      <label for="p-institution">Institution</label>
+                      <input type="text" id="p-institution" name="institution" class="form-control" data-lpignore="true" required/>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-group">
+                      <label for="p-type">Type</label>
+                      <select id="p-type" name="type" class="custom-select" required>
+                        <option value="Polish Individual Bonds" selected>Polish Individual Bonds</option>
+                        <option value="Bond">Bond</option>
+                        <option value="Deposit">Deposit</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-3">
+                    <div class="form-group">
+                      <label for="p-labels">Tags</label>
+                      <input type="text" id="p-labels" name="labels" class="form-control" data-lpignore="true"/>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-6 col-sm-4">
+                    <div class="form-group">
+                      <label for="p-category">Category</label>
+                      <select id="p-category" name="category" class="custom-select" required>
+                        <option value="Bonds" selected>Bonds</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Equities">Equities</option>
+                        <option value="Gold">Gold</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-6 col-sm-4">
+                    <div class="form-group">
+                      <label for="p-subcategory">Subcategory</label>
+                      <input type="text" id="p-subcategory" name="subcategory" class="form-control" data-lpignore="true" list="p-subcategory-list"/>
+                      <datalist id="p-subcategory-list">
+                        <option value="Inflation Linked"></option>
+                        <option value="Inflation Protection"></option>
+                      </datalist>
+                    </div>
+                  </div>
+                  <div class="col-12 col-sm-4">
+                    <div class="form-group">
+                      <label for="p-region">Region</label>
+                      <input type="text" id="p-region" name="region" class="form-control" data-lpignore="true"/>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-12">
+                    <div class="form-group">
+                      <label for="p-link">Reference link</label>
+                      <input type="url" id="p-link" name="link" class="form-control" data-lpignore="true"/>
+                    </div>
+                  </div>
+                </div>
+
+                {{ parametrized.pricing_editor(none, data.quotesList) }}
+
+                <div class="row mt-3">
                   <div class="col-12">
                     <button class="btn btn-primary" type="submit">Submit</button>
                   </div>

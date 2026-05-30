@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% import 'assets/_parametrized.html' as parametrized %}
 
 {% block title %}Edit {{ asset.name }}{% endblock %}
 
@@ -24,9 +25,18 @@
 
 {% block user_scripts %}
 <script type="text/javascript" src="{{ url_for('.static', filename='assets/edit.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/parametrized.js') }}"></script>
 
 <script type="text/javascript">
 initialize({
+  headerLabels: {{ header.allLabels | safe }},
+  submitUrl: "{{ url_for('assets.edit', id=asset.id) }}",
+  getNextUrl: function(data){
+    return "{{ url_for('assets.index', label=session['label'], id='_id') | safe }}".replace('_id', data.id);
+  },
+});
+
+initParametrizedForm({
   headerLabels: {{ header.allLabels | safe }},
   submitUrl: "{{ url_for('assets.edit', id=asset.id) }}",
   getNextUrl: function(data){
@@ -45,6 +55,104 @@ initialize({
           <h3 class="card-title">Edit asset</h3>
         </div>
         <div class="card-body">
+          {% if isParametrized %}
+          <form id="form-parametrized" method="post" action="" onkeypress="return event.keyCode != 13;">
+            <div class="row">
+              <div class="col-9">
+                <div class="form-group">
+                  <label for="p-name">Name</label>
+                  <input type="text" id="p-name" name="name" class="form-control" value="{{ asset.name }}" data-lpignore="true" required/>
+                </div>
+              </div>
+              <div class="col-3">
+                <div class="form-group">
+                  <label for="p-currency-display">Currency</label>
+                  <input type="text" id="p-currency-display" class="form-control" value="{{ asset.currency.name }}" disabled="disabled" data-lpignore="true"/>
+                  {# The currency is fixed at creation because operations depend on it. #}
+                  <input type="hidden" id="p-currency" value="{{ asset.currency.name }}"/>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-5">
+                <div class="form-group">
+                  <label for="p-institution">Institution</label>
+                  <input type="text" id="p-institution" name="institution" class="form-control" value="{{ asset.institution }}" data-lpignore="true" required/>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="form-group">
+                  <label for="p-type">Type</label>
+                  {% set typeValue = asset.type | simplify %}
+                  {% set typeOptions = ['Polish Individual Bonds', 'Bond', 'Deposit'] %}
+                  <select id="p-type" name="type" class="custom-select" required>
+                    {%- if typeValue not in typeOptions %}
+                    <option value="{{ typeValue }}" selected>{{ typeValue }}</option>
+                    {%- endif %}
+                    {%- for option in typeOptions %}
+                    <option value="{{ option }}" {{ 'selected' if option == typeValue }}>{{ option }}</option>
+                    {%- endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="col-3">
+                <div class="form-group">
+                  <label for="p-labels">Tags</label>
+                  <input type="text" id="p-labels" name="labels" class="form-control" value="{{ asset.labels | join(',') }}" data-lpignore="true"/>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-6 col-sm-4">
+                <div class="form-group">
+                  <label for="p-category">Category</label>
+                  {% set categoryOptions = ['Bonds', 'Cash', 'Equities', 'Gold'] %}
+                  <select id="p-category" name="category" class="custom-select" required>
+                    {%- if asset.category not in categoryOptions %}
+                    <option value="{{ asset.category }}" selected>{{ asset.category }}</option>
+                    {%- endif %}
+                    {%- for option in categoryOptions %}
+                    <option value="{{ option }}" {{ 'selected' if option == asset.category }}>{{ option }}</option>
+                    {%- endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="col-6 col-sm-4">
+                <div class="form-group">
+                  <label for="p-subcategory">Subcategory</label>
+                  <input type="text" id="p-subcategory" name="subcategory" class="form-control" value="{{ asset.subcategory or '' }}" data-lpignore="true" list="p-subcategory-list"/>
+                  <datalist id="p-subcategory-list">
+                    <option value="Inflation Linked"></option>
+                    <option value="Inflation Protection"></option>
+                  </datalist>
+                </div>
+              </div>
+              <div class="col-12 col-sm-4">
+                <div class="form-group">
+                  <label for="p-region">Region</label>
+                  <input type="text" id="p-region" name="region" class="form-control" value="{{ asset.region or '' }}" data-lpignore="true"/>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-12">
+                <div class="form-group">
+                  <label for="p-link">Reference link</label>
+                  <input type="url" id="p-link" name="link" class="form-control" value="{{ asset.link or '' }}" data-lpignore="true"/>
+                </div>
+              </div>
+            </div>
+
+            {{ parametrized.pricing_editor(asset.pricing, quotesList) }}
+
+            <div class="row mt-3">
+              <div class="col-12">
+                <button class="btn btn-primary" type="submit">Save</button>
+                <a class="btn btn-outline-secondary" href="{{ url_for('assets.index', id=asset.id) }}">Cancel</a>
+              </div>
+            </div>
+          </form>
+          {% else %}
           <form id="edit-form" method="post" action="" onkeypress="return event.keyCode != 13;">
             {% if asset.type == 'Deposit' %}
             <input type="hidden" name="type" value="{{ asset.type | simplify }}"/>
@@ -184,6 +292,7 @@ initialize({
               </div>
             </div>
           </form>
+          {% endif %}
         </div>
       </div>
     </div>
