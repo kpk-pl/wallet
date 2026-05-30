@@ -18,6 +18,21 @@ Quotes from quandl https://stackoverflow.com/questions/55658446/stooq-api-for-no
 ----------------------------------------------------------------------------------------------------------------------
 Storing large arrays of quotes inside quotes collection is not very performant. Quotes should be moved to a separate collection and reference pricing assets. Maybe even use time series mongo DB collections?
 
+[PERF] Denormalize the latest quote onto the quote source document.
+    Compass flags quoteHistory as an unbounded array. The real cost is the working set: WiredTiger
+    loads the WHOLE multi-year array off disk just to satisfy the "give me the latest quote" paths
+    that only $slice it to the last element. With daily/weekly/monthly cadence + the stale-dedup in
+    quotes/index.py, the array is bounded in practice (no 16MB risk for decades), so the cheap,
+    high-payoff fix is NOT a full restructure but denormalization:
+      - Keep a top-level lastQuote: {timestamp, quote} field on the quotes doc.
+      - Write it alongside the $push in flaskr/apps/quotes/index.py:77 (and importQuotes.py:79).
+      - Repoint the "latest only" readers off the $slice(-1) onto the new field:
+            flaskr/apps/pricing/item.py:25, flaskr/apps/pricing/listAll.py:101,
+            flaskr/apps/quotes/index.py:31, plus header.py:44-45 (lastQuote timestamp).
+    Result: latest-quote reads touch a tiny fixed-size field instead of dragging the full history
+    through cache. Leaves history storage (and the wide-window chart read in context.py) untouched.
+    This is the pragmatic alternative to the separate-collection / time-series rewrite above.
+
 ======================================================================================================================
 LOGIC / MATH BUGS — financial calculations
 ======================================================================================================================
