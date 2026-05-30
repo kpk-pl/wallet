@@ -51,6 +51,11 @@ class Context(object):
         if not isinstance(ids, list):
             ids = [ids]
 
+        idsToFetch = list(set(ids) - self.storedIds())
+        if not idsToFetch:
+            # Everything requested is already cached — avoid an empty DB round trip.
+            return
+
         condition = {'$lte': ['$$item.timestamp', self.finalDate]}
         if self.startDate:
             condition = {'$and': [condition, {'$gte': ['$$item.timestamp', self.startDate]}]}
@@ -62,7 +67,7 @@ class Context(object):
 
         pipeline = [
             {'$match':
-                {'_id': {'$in': list(set(ids) - self.storedIds())}},
+                {'_id': {'$in': idsToFetch}},
             },
             {'$addFields': {
                 'relevantQuotes': {'$filter': {

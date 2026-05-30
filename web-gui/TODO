@@ -4,11 +4,6 @@ The results page can have a chart like on wallet too
 Adding a pricing source -> support tags
 ----------------------------------------------------------------------------------------------------------------------
 
-Update the ApexChart on the wallet page so that there is a button to zoom out. This will mean additional pricing
-data needs to be pulled from backend and series modified accordingly.
-https://apexcharts.com/javascript-chart-demos/area-charts/datetime-x-axis/
-----------------------------------------------------------------------------------------------------------------------
-
 Change handling of the "coded" field. Rename it to "Transaction ID". Allow setting this on the asset creation page as
 a checkbox.
 ----------------------------------------------------------------------------------------------------------------------
@@ -16,12 +11,6 @@ a checkbox.
 Stretegy -> button to rebalance all and populate inputs
 ----------------------------------------------------------------------------------------------------------------------
 
-Wallet aggregated -> display sparklines for the merged items
-----------------------------------------------------------------------------------------------------------------------
-
-Strategy -> Chart with allocation dynamically updated
-
-----------------------------------------------------------------------------------------------------------------------
 Quotes from https://www.alphavantage.co/ APIKEY=G8APPXPVB3YNTPEM
 Quotes from https://marketstack.com/
 Quotes from quandl https://stackoverflow.com/questions/55658446/stooq-api-for-non-us-stock-market-data

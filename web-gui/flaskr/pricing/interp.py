@@ -29,22 +29,25 @@ def interp(data:List[QuoteHistoryItem], timeScale:List[datetime], leftFill = Non
             quoteIdx += 1
             thisQuote = data[quoteIdx]
 
+        # `construct` skips pydantic validation: inputs here are already the
+        # correct types (datetime / Decimal), and this runs once per timescale
+        # point per quote, so it is a hot path worth keeping cheap.
         if quoteIdx == 0 and data[0].timestamp > dateIdx:
             # The current timescale point is strictly BEFORE the first data point — use leftFill.
-            result.append(QuoteHistoryItem(timestamp=dateIdx, quote = data[0].quote if leftFill is None else leftFill))
+            result.append(QuoteHistoryItem.construct(timestamp=dateIdx, quote = data[0].quote if leftFill is None else leftFill))
         elif thisQuote.timestamp < dateIdx:
             # The current timescale point is past the last data point — use rightFill.
-            result.append(QuoteHistoryItem(timestamp=dateIdx, quote = data[-1].quote if rightFill is None else rightFill))
+            result.append(QuoteHistoryItem.construct(timestamp=dateIdx, quote = data[-1].quote if rightFill is None else rightFill))
         elif quoteIdx == 0:
             # The current timescale point sits exactly on the first data point — return its quote.
             # (We can't interpolate because there is no previous data point.)
-            result.append(QuoteHistoryItem(timestamp=dateIdx, quote=data[0].quote))
+            result.append(QuoteHistoryItem.construct(timestamp=dateIdx, quote=data[0].quote))
         else:
             prevQuote = data[quoteIdx-1]
             timeTillNow = Decimal(dateIdx.timestamp() - prevQuote.timestamp.timestamp())
             timeBetweenPoints = Decimal(thisQuote.timestamp.timestamp() - prevQuote.timestamp.timestamp())
             linearCoef = timeTillNow / timeBetweenPoints
             linearQuote = linearCoef * (thisQuote.quote - prevQuote.quote) + prevQuote.quote
-            result.append(QuoteHistoryItem(timestamp=dateIdx, quote=linearQuote))
+            result.append(QuoteHistoryItem.construct(timestamp=dateIdx, quote=linearQuote))
 
     return result

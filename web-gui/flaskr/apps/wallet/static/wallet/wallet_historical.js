@@ -62,45 +62,53 @@ function updateAllocationCharts(data){
     totals.profit = totals.profit.map((v, i) => v + assetProfit[i]);
   }
 
+  const valueSeries = [];
+  const investmentSeries = [];
+  const shareSeries = [];
   for (let category in mapping) {
-    apexAssetAllocationCharts.value.appendSeries({
+    valueSeries.push({
       name: category,
       data: mapping[category].value.map((v, i) => { return {x: data.t[i], y: v}; })
     });
-    apexAssetAllocationCharts.investment.appendSeries({
+    investmentSeries.push({
       name: category,
       data: mapping[category].investment.map((v, i) => { return {x: data.t[i], y: v}; })
     });
-    apexAssetAllocationCharts.share.appendSeries({
+    shareSeries.push({
       name: category,
       data: mapping[category].value.map((v, i) => { return {x: data.t[i], y: v/totals.value[i]*100}; })
     });
   }
+  apexAssetAllocationCharts.value.updateSeries(valueSeries, true);
+  apexAssetAllocationCharts.investment.updateSeries(investmentSeries, true);
+  apexAssetAllocationCharts.share.updateSeries(shareSeries, true);
 
-  apexAssetAllocationCharts.summary.appendSeries({
-    name: "Value",
-    type: "area",
-    data: totals.value.map((v, i) => { return {x: data.t[i], y: v}; })
-  });
-  apexAssetAllocationCharts.summary.appendSeries({
-    name: "Investment",
-    type: "line",
-    data: totals.investment.map((v, i) => { return {x: data.t[i], y: v}; })
-  });
+  apexAssetAllocationCharts.summary.updateSeries([
+    {
+      name: "Value",
+      type: "area",
+      data: totals.value.map((v, i) => { return {x: data.t[i], y: v}; })
+    },
+    {
+      name: "Investment",
+      type: "line",
+      data: totals.investment.map((v, i) => { return {x: data.t[i], y: v}; })
+    }
+  ], true);
 
   const netPlAdjust = totals.value[0] + totals.profit[0] - totals.investment[0];
-  apexAssetAllocationCharts.netpl.appendSeries({
+  apexAssetAllocationCharts.netpl.updateSeries([{
     name: "Net P/L",
     data: totals.value.map((v, i) => { return {x: data.t[i], y: (v + totals.profit[i] - totals.provision[i] - totals.investment[i] - netPlAdjust)}; })
-  });
+  }], true);
 
   function safeRatio(nom, denom) {
     return (denom == 0) ? 0 : nom/denom;
   }
 
   const plPercentAdjust = safeRatio(totals.value[0] + totals.profit[0] - totals.investment[0], totals.investment[0]);
-  apexAssetAllocationCharts.plpercent.appendSeries({
+  apexAssetAllocationCharts.plpercent.updateSeries([{
     name: "% P/L",
     data: totals.value.map((v, i) => { return {x: data.t[i], y: (safeRatio(v + totals.profit[i] - totals.provision[i] - totals.investment[i], totals.investment[i]) - plPercentAdjust) * 100}; })
-  });
+  }], true);
 }

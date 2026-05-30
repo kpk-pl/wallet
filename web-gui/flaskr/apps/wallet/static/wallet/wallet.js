@@ -32,7 +32,26 @@ $(function(){
   $("#wallet-filter").on("keyup search input paste cut", function() {
     datatable.search(this.value).draw();
   });
+
+  $("#allocationRange button").on("click", function() {
+    const $btn = $(this);
+    if ($btn.hasClass("active")) return;
+    $("#allocationRange button").removeClass("active");
+    $btn.addClass("active");
+    loadAllocationRange($btn.data("days"));
+  });
 });
+
+function loadAllocationRange(daysBack) {
+  $("#allocationRange button").prop("disabled", true);
+  $("#allocationOverlay").css("display", "flex");
+  $.getJSON(historicalValueUrl(daysBack))
+    .done(updateAllocationCharts)
+    .always(function() {
+      $("#allocationOverlay").hide();
+      $("#allocationRange button").prop("disabled", false);
+    });
+}
 
 function historicalValueDone(data) {
   updateSparklines(data, 3, asset => $('#sparkline-' + asset.id));

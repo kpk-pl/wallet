@@ -26,6 +26,9 @@
 </script>
 <script type="text/javascript">
   const defaultCurrency = "{{ config.MAIN_CURRENCY }}";
+  const historicalValueUrl = function(daysBack) {
+    return "{{ url_for('assets.historicalValue', label=session['label'], investedValue=true) | safe }}" + "&daysBack=" + daysBack;
+  };
   const categoryAllocation = JSON.parse({{ allocation | tojson }});
   const aggregatedSparklinesMap = {
     {%- for data in assetData %}
@@ -37,7 +40,9 @@
 
   $(function(){
     $.getJSON("{{ url_for('wallet.strategy', allocation='true', label=session['label']) | safe }}", updateStrategyAllocation);
-    $.getJSON("{{ url_for('assets.historicalValue', daysBack=360, label=session['label'], investedValue=true) | safe }}", historicalValueDone);
+    $("#allocationOverlay").css("display", "flex");
+    $.getJSON(historicalValueUrl(360), historicalValueDone)
+      .always(function() { $("#allocationOverlay").hide(); });
   });
 </script>
 {% endblock %}
@@ -255,6 +260,12 @@
       <div class="card card-primary card-tabs">
         <div class="card-header d-flex p-0 pt-1">
           <h3 class="card-title p-2 pl-3">Asset allocation</h3>
+          <div class="btn-group btn-group-sm ml-2 my-1" id="allocationRange" role="group" title="Zoom out: pull more history">
+            <button type="button" class="btn btn-default active" data-days="360">1Y</button>
+            <button type="button" class="btn btn-default" data-days="720">2Y</button>
+            <button type="button" class="btn btn-default" data-days="1825">5Y</button>
+            <button type="button" class="btn btn-default" data-days="max">Max</button>
+          </div>
           <ul class="nav nav-tabs ml-auto" role="tablist">
             <li class="nav-item">
               <a class="nav-link active" href="#assetAllocation_tab_netpl" data-toggle="tab">Net P/L</a>
@@ -276,7 +287,10 @@
             </li>
           </ul>
         </div>
-        <div class="card-body">
+        <div class="card-body" style="position: relative;">
+          <div class="overlay" id="allocationOverlay" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.7);">
+            <i class="fas fa-3x fa-sync-alt fa-spin"></i>
+          </div>
           <div class="tab-content">
             <div class="tab-pane active" id="assetAllocation_tab_netpl">
               <div id="assetAllocation_chart_netpl" style="{{ config.STYLING.WALLET_ALLOCATION_CHART }}"></div>
