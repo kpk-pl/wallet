@@ -174,8 +174,11 @@ def test_foreign_currency_with_all_features():
         assert result.value == [D(0), D(0), D(32*5)*D("4.2"), D(33*10)*D("4.3"), D(36*10)*D("4.4"), D(39*6)*D("4.2"), \
                                 D(42*4)*D("4.2"), D(42*4)*D("4.2")]
         assert result.quantity == [D(0), D(0), D(5), D(10), D(10), D(6), D(4), D(4)]
-        assert result.investedValue == [D(0), D(0), D(140), D(290), D(290), D(174), D(116), D(116)]
-        assert result.profit == [D(0), D(0), D(0), D(0), D(0), D(24), D(46), D(46)]
+        # FIFO: lots are 5@unit28 then 5@unit30. SELL 4 removes 4*28=112 (290→178);
+        # SELL 2 removes the last unit28 + one unit30 = 58 (178→120).
+        assert result.investedValue == [D(0), D(0), D(140), D(290), D(290), D(178), D(120), D(120)]
+        # SELL 4 @140 vs cost 112 → +28; SELL 2 @80 vs cost 58 → +22 (cumulative 50).
+        assert result.profit == [D(0), D(0), D(0), D(0), D(0), D(28), D(50), D(50)]
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
@@ -309,9 +312,9 @@ def test_operation_before_startDate_carries_quantity_from_day_zero():
 def test_investedValue_reflects_each_buy_and_sell():
     asset = mocks.Asset(name="A", institution="T", category="C", type="ETF")
     asset.pricing(setup_alpha_pricing()).main_currency("PLN")
-    asset.operation('BUY',  datetime(2022, 3, 10, 17), 5, 5, 20)   # invest 20
-    asset.operation('BUY',  datetime(2022, 3, 11, 17), 5, 10, 30)  # invest 50
-    asset.operation('SELL', datetime(2022, 3, 13, 17), 4, 6, 50)   # avg 5, 50% sold → 25
+    asset.operation('BUY',  datetime(2022, 3, 10, 17), 5, 5, 20)   # lot1: 5 units @ unit 4, invest 20
+    asset.operation('BUY',  datetime(2022, 3, 11, 17), 5, 10, 30)  # lot2: 5 units @ unit 6, invest 50 total
+    asset.operation('SELL', datetime(2022, 3, 13, 17), 4, 6, 50)   # FIFO closes 4 of lot1 (unit 4) → 50 - 16
     asset = asset.model()
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
@@ -327,8 +330,8 @@ def test_investedValue_reflects_each_buy_and_sell():
             D(20),                 # after BUY 1
             D(50),                 # after BUY 2
             D(50),                 # idle
-            D(30),                 # after SELL: 60% of 50
-            D(30), D(30),
+            D(34),                 # after SELL: FIFO removes 4*4=16 of the oldest lot → 34
+            D(34), D(34),
         ]
 
 

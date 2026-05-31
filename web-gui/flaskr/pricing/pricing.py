@@ -3,6 +3,7 @@ from dateutil.relativedelta import relativedelta
 from dataclasses import dataclass, asdict, field
 from bson.objectid import ObjectId
 from flaskr import model
+from flaskr import fifo
 from decimal import Decimal
 from typing import Dict, List, Optional
 from collections import defaultdict
@@ -41,51 +42,6 @@ class _PricingBase(object):
                                      keepOnlyFinalQuote=False)
 
         self._data = None  # Calculation context used for pricing that can also be copied to the debug dict
-
-
-def groupOperationsById(operations: List[model.AssetOperation]) -> Dict[str|None, List[model.AssetOperation]]:
-    operationsById = defaultdict(list)
-
-    for operation in operations:
-        operationsById[operation.orderId].append(operation)
-
-    return operationsById
-
-
-@dataclass
-class _OpenPosition:
-    quantity: Decimal
-    operation: model.AssetOperation
-
-
-def matchOrders(operations: List[model.AssetOperation]) -> Dict[str|None, List[_OpenPosition]]:
-    operationsById = groupOperationsById(operations)
-    result = defaultdict(list)
-
-    for orderId, ops in operationsById.items():
-        for op in ops:
-            bucket = result[orderId]
-            if op.type == model.AssetOperationType.buy:
-                assert(isinstance(op.quantity, Decimal))
-                bucket.append(_OpenPosition(op.quantity, op))
-            elif op.type == model.AssetOperationType.receive:
-                assert(isinstance(op.quantity, Decimal))
-                bucket.append(_OpenPosition(op.quantity, op))
-            elif op.type == model.AssetOperationType.sell:
-                assert(isinstance(op.quantity, Decimal))
-                remainingQuantity = op.quantity
-                while remainingQuantity > 0:
-                    buyOperation = bucket[0]
-                    takenQuantity = min(buyOperation.quantity, remainingQuantity)
-                    buyOperation.quantity -= takenQuantity
-                    remainingQuantity -= takenQuantity
-                    if buyOperation.quantity == 0:
-                        del bucket[0]
-            elif op.type == model.AssetOperationType.earning:
-                # This is noop in this context as we are only pricing current market value of the asset
-                pass
-
-    return result
 
 
 class Pricing(_PricingBase):
@@ -190,17 +146,18 @@ class Pricing(_PricingBase):
         self._data.quantity = self._data.operationsInScope[-1].finalQuantity
         self._data.netValue = None
 
-        operationsById = matchOrders(self._data.operationsInScope)
+        matched = fifo.match(self._data.operationsInScope, strict=False)
 
         self._data.value = Decimal(0)
-        for openPosition in [p for pList in operationsById.values() for p in pList]:
-            quoting = ParametrizedQuoting(asset.pricing, openPosition.operation.date, self._parameterCtx)
+        for lot in matched.lots:
+            if lot.remaining == 0:
+                continue
+            quoting = ParametrizedQuoting(asset.pricing, lot.operation.date, self._parameterCtx)
             keyPoints = quoting.getKeyPoints()
             if not keyPoints:
                 return
-            accumulatedValue = openPosition.operation.price * keyPoints[-1].multiplier
-            assert(openPosition.operation.quantity is not None)
-            self._data.value += accumulatedValue * (openPosition.quantity / openPosition.operation.quantity)
+            accumulatedValue = lot.operation.price * keyPoints[-1].multiplier
+            self._data.value += accumulatedValue * (lot.remaining / lot.openedQuantity)
 
         self._data.netValue = self._data.value
 
@@ -229,13 +186,6 @@ class HistoryResult:
         result.profit = [Decimal(0)] * len(result.timescale) if features['profit'] else None
         result.investedValue = [Decimal(0)] * len(result.timescale) if features['investedValue'] else None
         return result
-
-@dataclass
-class _OpenPositionQuote:
-    quote: Decimal
-    quantity: Decimal
-    operation: model.AssetOperation
-
 
 class HistoryPricing(_PricingBase):
     @dataclass
@@ -383,45 +333,20 @@ class HistoryPricing(_PricingBase):
     def _priceAssetByInterest(self, asset:model.Asset, result):
         value = [Decimal(0.0)] * len(result.timescale)
 
-        operationsById = groupOperationsById(asset.operations)
-        for _, operations in operationsById.items():
-            openPositionsQuotes : List[List[_OpenPositionQuote]] = []
-            # for each day we need to save quotes, operation.quantity and remaining quantity
+        # FIFO matching (per orderId, sells drawing down the oldest open lots) is shared with the
+        # current-value pricing and the profits analyzer, so all three agree on which lot a sale
+        # closed. Each open lot accrues parametrized interest on its remaining quantity over time.
+        matched = fifo.match(asset.operations, strict=False)
+        for lot in matched.lots:
+            quoting = ParametrizedQuoting(asset.pricing, lot.operation.date, self._parameterCtx)
+            keyPoints = quoting.getKeyPoints()
+            if not keyPoints:
+                continue
 
-            for operation in operations:
-                if operation.type == model.AssetOperationType.buy or operation.type == model.AssetOperationType.receive:
-                    assert operation.quantity is not None
-                    quoting = ParametrizedQuoting(asset.pricing, operation.date, self._parameterCtx)
-                    keyPoints = quoting.getKeyPoints()
-                    if not keyPoints:
-                        continue
-
-                    quoteHistory = list(map(lambda kp: model.QuoteHistoryItem(timestamp=kp.timestamp, quote=operation.price*kp.multiplier), keyPoints))
-                    quotes = interp(quoteHistory, self._ctx.timeScale, leftFill = 0.0)
-                    openPositionsQuotes.append([_OpenPositionQuote(quote=b.quote, quantity=operation.quantity, operation=operation) for b in quotes])
-                elif operation.type == model.AssetOperationType.sell:
-                    assert operation.quantity is not None
-                    # from which index in result.timescale this SELL operation takes volume
-                    firstIdx = next((idx for idx, date in enumerate(result.timescale) if date > operation.date), None)
-                    if firstIdx is None:
-                        continue
-
-                    remainingQuantity = operation.quantity
-                    for opq in openPositionsQuotes:
-                        if remainingQuantity == 0:
-                            break
-                        removedQuantity = min(remainingQuantity, opq[firstIdx].quantity)
-                        if removedQuantity == 0:
-                            continue
-                        for item in opq[firstIdx:]:
-                            item.quantity -= removedQuantity
-                        remainingQuantity -= removedQuantity
-
-                elif operation.type == model.AssetOperationType.earning:
-                    # This is noop in this context as profits are already taken into account
-                    pass
-
-            for item in openPositionsQuotes:
-                value = [v + i.quote*i.quantity/i.operation.quantity for i, v in zip(item, value)]
+            quoteHistory = list(map(lambda kp: model.QuoteHistoryItem(timestamp=kp.timestamp, quote=lot.operation.price*kp.multiplier), keyPoints))
+            quotes = interp(quoteHistory, self._ctx.timeScale, leftFill = 0.0)
+            openQuantity = fifo.openQuantityOverTime(matched, lot, result.timescale)
+            value = [v + q.quote * remaining / lot.openedQuantity
+                     for q, remaining, v in zip(quotes, openQuantity, value)]
 
         return value

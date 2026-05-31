@@ -1,11 +1,4 @@
-The results page can have a chart like on wallet too
-----------------------------------------------------------------------------------------------------------------------
-
 Adding a pricing source -> support tags
-----------------------------------------------------------------------------------------------------------------------
-
-Change handling of the "coded" field. Rename it to "Transaction ID". Allow setting this on the asset creation page as
-a checkbox.
 ----------------------------------------------------------------------------------------------------------------------
 
 Stretegy -> button to rebalance all and populate inputs
@@ -18,6 +11,7 @@ Quotes from quandl https://stackoverflow.com/questions/55658446/stooq-api-for-no
 ----------------------------------------------------------------------------------------------------------------------
 Storing large arrays of quotes inside quotes collection is not very performant. Quotes should be moved to a separate collection and reference pricing assets. Maybe even use time series mongo DB collections?
 
+----------------------------------------------------------------------------------------------------------------------
 [PERF] Denormalize the latest quote onto the quote source document.
     Compass flags quoteHistory as an unbounded array. The real cost is the working set: WiredTiger
     loads the WHOLE multi-year array off disk just to satisfy the "give me the latest quote" paths
@@ -33,21 +27,4 @@ Storing large arrays of quotes inside quotes collection is not very performant. 
     through cache. Leaves history storage (and the wide-window chart read in context.py) untouched.
     This is the pragmatic alternative to the separate-collection / time-series rewrite above.
 
-======================================================================================================================
-LOGIC / MATH BUGS — financial calculations
-======================================================================================================================
-
-[LOGIC] Profit is computed by AVERAGE COST while matchingOpenPositions is FIFO — inconsistency
-    File: flaskr/analyzers/profits.py:191-216 (_sell)
-    `breakdown.profit = operation.price - self._running.partPrice(quantity)` where
-    `partPrice = self.price * quantity / self.quantity` is the running AVERAGE cost basis.
-    But the loop right below it (lines 201-209) walks preceding breakdowns in chronological order
-    and decrements `remainingOpenQuantity` FIFO, then exposes those matches in
-    `matchingOpenPositions` (used by the results template to show which BUYs were closed).
-    Worked example: BUY 10@100, BUY 5@150 (avg=$116.67), SELL 8@120.
-        - avg-cost profit shown:  120*8 - 116.67*8 = +26.67
-        - FIFO profit (what tax wants): closes 8 of first BUY -> 120*8 - 100*8 = +160
-    The results page tells the user they sold their oldest 8 shares (FIFO matching) but charges
-    them avg-cost P/L. For Polish Belka tax (FIFO is mandated), the per-operation profit number
-    is wrong. Pick one method and use it consistently in both places.
 ----------------------------------------------------------------------------------------------------------------------

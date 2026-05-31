@@ -7,6 +7,7 @@ from datetime import datetime
 from dataclasses import dataclass, field, asdict
 from collections import defaultdict
 import flaskr.model as model
+from flaskr import fifo
 from decimal import Decimal
 from typing import List, Optional
 
@@ -108,11 +109,19 @@ class Profits:
 
     def __call__(self, asset:model.Asset, debug=None):
         self._result = self.Result()
+        self._operations = asset.operations
+        # Deposits keep the original per-orderId average-cost handling (their native unit cost
+        # is always 1, so FIFO would only churn foreign-currency P&L). Every other asset type
+        # is matched FIFO so that realised profit agrees with the matched lots that are shown.
+        self._isDeposit = asset.type == model.AssetType.deposit
         # Cost basis is tracked per orderId so that a SELL only draws down (and reports as
         # closed) BUYs from the same broker order. Operations without an orderId share a
         # single bucket (key None), preserving the original whole-asset behaviour.
         self._runningByOrder = defaultdict(RunningTotals)
-        self._operations = asset.operations
+        # Non-deposit FIFO matching is computed once up front; the running aggregate below holds
+        # the residual cost basis of the still-open lots (for avgPrice / netInvestment display).
+        self._fifo = fifo.match(asset.operations, strict=True) if not self._isDeposit else None
+        self._agg = RunningTotals()
         self._debug = debug if isinstance(debug, dict) else None
         # if isinstance(debug, dict):
             # debug.update(asdict(self._data))
@@ -120,15 +129,15 @@ class Profits:
         if self._debug is not None:
             self._debug["running"] = []
 
-        for operation in asset.operations:
+        for index, operation in enumerate(asset.operations):
             if operation.type is model.AssetOperationType.buy:
-                breakdown = self._buy(operation, asset.type)
+                breakdown = self._buy(operation, asset.type, index)
             elif operation.type is model.AssetOperationType.sell:
-                breakdown = self._sell(operation, asset.type)
+                breakdown = self._sell(operation, asset.type, index)
             elif operation.type is model.AssetOperationType.receive:
-                breakdown = self._receive(operation, asset.type)
+                breakdown = self._receive(operation, asset.type, index)
             elif operation.type is model.AssetOperationType.earning:
-                breakdown = self._earning(operation, asset.type)
+                breakdown = self._earning(operation, asset.type, index)
             else:
                 raise NotImplementedError(f"Did not implement profits for operation type {operation.type}")
 
@@ -160,8 +169,12 @@ class Profits:
         return self._result
 
     def _aggregate(self) -> RunningTotals:
-        # Whole-asset running totals, summed across every orderId bucket. Used for the
-        # asset-level breakdown fields (avg price, quantity, investment) and total provisions.
+        # Whole-asset running totals. For deposits these are summed across every orderId bucket
+        # (average cost). For FIFO assets the single residual aggregate maintained alongside the
+        # FIFO matches already holds the open lots' cost basis.
+        if not self._isDeposit:
+            return self._agg
+
         total = RunningTotals()
         for running in self._runningByOrder.values():
             total.quantity += running.quantity
@@ -171,21 +184,34 @@ class Profits:
             total.provision += running.provision
         return total
 
-    def _buy(self, operation:model.AssetOperation, assetType:model.AssetType):
+    @staticmethod
+    def _lotCost(lot:fifo.Lot) -> tuple[Decimal, Decimal]:
+        # Native and default-currency cost basis of a whole lot. A RECEIVE is a free grant
+        # (price 0 cost basis) even when it carries a nominal price, matching the average-cost path.
+        if lot.operation.type is model.AssetOperationType.receive:
+            return Decimal(0), Decimal(0)
+        conversion = _valueOr(lot.operation.currencyConversion, Decimal(1))
+        return lot.operation.price, lot.operation.price * conversion
+
+    def _buy(self, operation:model.AssetOperation, assetType:model.AssetType, index:int):
         breakdown = self.Result.Breakdown()
-        running = self._runningByOrder[operation.orderId]
+        conversion = _valueOr(operation.currencyConversion, Decimal(1))
 
-        running.quantity += operation.quantity
-        running.price += operation.price
-        running.netPrice += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
-        running.investment += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
-
-        if assetType == model.AssetType.deposit:
+        if self._isDeposit:
+            running = self._runningByOrder[operation.orderId]
+            running.quantity += operation.quantity
+            running.price += operation.price
+            running.netPrice += operation.price * conversion
+            running.investment += operation.price * conversion
             breakdown.provisions = _valueOr(operation.provision, Decimal(0))
+            breakdown.remainingOpenQuantity = operation.quantity
         else:
-            running.provision += _valueOr(operation.provision, Decimal(0))
-
-        breakdown.remainingOpenQuantity = operation.quantity
+            self._agg.quantity += operation.quantity
+            self._agg.price += operation.price
+            self._agg.netPrice += operation.price * conversion
+            self._agg.investment += operation.price * conversion
+            self._agg.provision += _valueOr(operation.provision, Decimal(0))
+            breakdown.remainingOpenQuantity = self._fifo.remainingByIndex[index]
 
         if self._result.investmentStart is None:
             self._result.investmentStart = operation.date
@@ -193,21 +219,30 @@ class Profits:
         return breakdown
 
     # a RECEIVE is essentially a BUY with a price 0
-    def _receive(self, operation:model.AssetOperation, assetType:model.AssetType):
+    def _receive(self, operation:model.AssetOperation, assetType:model.AssetType, index:int):
         breakdown = self.Result.Breakdown()
-        running = self._runningByOrder[operation.orderId]
 
-        running.quantity += operation.quantity
-        running.provision += _valueOr(operation.provision, Decimal(0))
-
-        breakdown.remainingOpenQuantity = operation.quantity
+        if self._isDeposit:
+            running = self._runningByOrder[operation.orderId]
+            running.quantity += operation.quantity
+            running.provision += _valueOr(operation.provision, Decimal(0))
+            breakdown.remainingOpenQuantity = operation.quantity
+        else:
+            self._agg.quantity += operation.quantity
+            self._agg.provision += _valueOr(operation.provision, Decimal(0))
+            breakdown.remainingOpenQuantity = self._fifo.remainingByIndex[index]
 
         if self._result.investmentStart is None:
             self._result.investmentStart = operation.date
 
         return breakdown
 
-    def _sell(self, operation:model.AssetOperation, assetType:model.AssetType):
+    def _sell(self, operation:model.AssetOperation, assetType:model.AssetType, index:int):
+        if self._isDeposit:
+            return self._sellDeposit(operation)
+        return self._sellFifo(operation, index)
+
+    def _sellDeposit(self, operation:model.AssetOperation):
         breakdown = self.Result.Breakdown()
         running = self._runningByOrder[operation.orderId]
         quantity = operation.quantity
@@ -235,11 +270,44 @@ class Profits:
 
         return breakdown
 
-    def _earning(self, operation:model.AssetOperation, assetType:model.AssetType):
+    def _sellFifo(self, operation:model.AssetOperation, index:int):
         breakdown = self.Result.Breakdown()
-        running = self._runningByOrder[operation.orderId]
+        conversion = _valueOr(operation.currencyConversion, Decimal(1))
+        sellResult = self._fifo.sellByIndex[index]
+
+        costNative = Decimal(0)
+        costNet = Decimal(0)
+        drawnProvision = Decimal(0)
+        for matched in sellResult.matches:
+            lot = matched.lot
+            lotNative, lotNet = self._lotCost(lot)
+            costNative += lotNative * matched.quantity / lot.openedQuantity
+            costNet += lotNet * matched.quantity / lot.openedQuantity
+            drawnProvision += _valueOr(lot.operation.provision, Decimal(0)) * matched.quantity / lot.openedQuantity
+            breakdown.matchingOpenPositions.append(
+                self.Result.Breakdown.MatchingOpenPosition(operation=lot.operation, quantity=matched.quantity))
+
+        breakdown.profit = operation.price - costNative
+        breakdown.netProfit = operation.price * conversion - costNet
+        breakdown.provisions = _valueOr(operation.provision, Decimal(0)) + drawnProvision
+
+        # Draw the matched lots' cost basis out of the residual aggregate.
+        self._agg.quantity -= operation.quantity
+        self._agg.price -= costNative
+        self._agg.netPrice -= costNet
+        self._agg.investment -= costNet
+        self._agg.provision -= drawnProvision
+
+        if operation.finalQuantity == 0:
+            self._result.investmentStart = None
+
+        return breakdown
+
+    def _earning(self, operation:model.AssetOperation, assetType:model.AssetType, index:int):
+        breakdown = self.Result.Breakdown()
 
         if assetType == model.AssetType.deposit:
+            running = self._runningByOrder[operation.orderId]
             running.quantity += operation.quantity
             running.price += operation.price
             running.netPrice += operation.price * _valueOr(operation.currencyConversion, Decimal(1))

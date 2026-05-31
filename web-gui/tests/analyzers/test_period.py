@@ -157,9 +157,10 @@ def test_buys_and_sells():
     assert result.initialQuantity == D(0)
     assert result.finalNetValue == D(15*15)
     assert result.finalQuantity == D(15)
-    # 10.5 - average buy price
-    assert result.profits.netProfit == D(80) - D("10.5") * D(5)
-    assert result.profits.totalNetProfit == D(80) - D("10.5") * D(5) + (D(15)-D("10.5")) * D(15)
+    # FIFO: SELL 5 closes the oldest lot (unit 10), so realised profit is 80 - 10*5 = 30
+    assert result.profits.netProfit == D(80) - D(10) * D(5)
+    # final value 15*15, minus the remaining FIFO cost basis (160), plus realised (30)
+    assert result.profits.totalNetProfit == D(15 * 15) - D(160) + (D(80) - D(10) * D(5))
     assert result.profits.provisions == D(0)
     assert not result.profits.isZero()
 
@@ -212,8 +213,9 @@ def test_provisions_are_all_in_the_requested_timerange():
     assert result.initialQuantity == D(10)
     assert result.finalNetValue == D(150)
     assert result.finalQuantity == D(10)
-    # 10.5 - average buy price, 12 - sell price, 15 - current price
-    assert result.profits.netProfit == D("1.5") * D(10)
-    assert result.profits.totalNetProfit == D("1.5") * D(10) + D("4.5") * D(10)
+    # FIFO: SELL 10 closes the oldest lot (cost 100), so realised profit is 120 - 100 = 20
+    assert result.profits.netProfit == D(120) - D(100)
+    # unrealised on the remaining lot (150 value - 110 cost) plus realised (20)
+    assert result.profits.totalNetProfit == (D(150) - D(110)) + (D(120) - D(100))
     assert result.profits.provisions == D(7) + D(6)
     assert not result.profits.isZero()

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from tests import mocks
 from flaskr import model
-from flaskr.pricing import Pricing, Context, ParametrizedQuoting
+from flaskr.pricing import Pricing, Context, ParametrizedQuoting, HistoryPricing
 from decimal import Decimal as D, localcontext
 from bson import Decimal128, ObjectId
 
@@ -155,6 +155,23 @@ def test_price_fixed_after_sell_operation(sellQuantity):
         expectedPrice = ASSET_INITIAL_PRICE * (D(1) + D(30) / D(365) * ASSET_INITIAL_FIXED_INTEREST) * D(10 - sellQuantity) / D(10)
         assert value == expectedPrice
         assert quantity == D(10 - sellQuantity)
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_history_interest_matches_pricing_after_partial_sell():
+    """Current-value pricing and the last point of the historical interest series share the
+    same FIFO drawdown, so for an asset with a partial sell they must agree at finalDate."""
+    sellDate = ASSET_OPERATION_DATE + timedelta(days=15)
+    assetId = setup_asset().operation('SELL', sellDate, 4, 6, float(ASSET_INITIAL_PRICE)).commit()
+    finalDate = ASSET_OPERATION_DATE + relativedelta(years=1)
+
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        asset = model.Asset(**db.wallet.assets.find_one({'_id': assetId}))
+
+        currentValue, _ = Pricing(ctx=Context(finalDate, db=db.wallet))(asset)
+        history = HistoryPricing(ctx=Context(startDate=ASSET_OPERATION_DATE, finalDate=finalDate, db=db.wallet))(asset)
+
+        assert history.value[-1] == currentValue
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])

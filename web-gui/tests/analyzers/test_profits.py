@@ -119,39 +119,39 @@ def test_equity_default_currency():
             quantity = D(50),
         ),
         Profits.Result.Breakdown(
-            profit = D(20),
-            netProfit = D(20),
-            provisions = D("2.5") + D("0.2"),  # previous total BUY provisions were 1 for 50 quantity. Selling 20% of total quantity
-            avgPrice = D(3),
-            avgNetPrice = D(3),
-            netInvestment = D(120),  # sold 20% (10 out of 50) of everything out of 150 previous netInvestment
+            profit = D(30),  # FIFO: closes 10 of the oldest BUY (unit 2), 50 - 2*10 = 30
+            netProfit = D(30),
+            provisions = D("2.5"),  # only the SELL provision; the oldest BUY carried no provision
+            avgPrice = D("3.25"),  # remaining 15@2 + 25@4 = 130 over 40
+            avgNetPrice = D("3.25"),
+            netInvestment = D(130),
             quantity = D(40),
         ),
         Profits.Result.Breakdown(
             profit = D("5.5"),
             netProfit = D("5.5"),
             provisions = D("0.2"),
-            avgPrice = D(3),
-            avgNetPrice = D(3),
-            netInvestment = D(120),
+            avgPrice = D("3.25"),
+            avgNetPrice = D("3.25"),
+            netInvestment = D(130),
             quantity = D(40),
         ),
         Profits.Result.Breakdown(
             profit = D(0),
             netProfit = D(0),
             provisions = D(0),
-            avgPrice = D("1.5"),
-            avgNetPrice = D("1.5"),
-            netInvestment = D(120),
+            avgPrice = D("1.625"),  # RECEIVE adds 40 free units: 130 cost basis over 80
+            avgNetPrice = D("1.625"),
+            netInvestment = D(130),
             quantity = D(80),
         ),
         Profits.Result.Breakdown(
-            profit = D(26),  # average price was 1.5 (1.5*20 = 30) and selling for 56
-            netProfit = D(26),
-            provisions = D("11.4"),  # 1.2 from SELL operation and 25% out of all remaining provisions (40 from RECEIVE and 0.8 remaining from BUY)
-            avgPrice = D("1.5"),
-            avgNetPrice = D("1.5"),
-            netInvestment = D(90),  # sold 20 out of 80 which is 25% (25% of 120 is 30)
+            profit = D(6),  # FIFO: 15 left of first BUY (unit 2) + 5 of second BUY (unit 4) = 50 cost; 56 - 50
+            netProfit = D(6),
+            provisions = D("1.4"),  # 1.2 from SELL + 0.2 drawn from the second BUY's provision (1 * 5/25)
+            avgPrice = D(80) / D(60),  # remaining 20@4 + 40@0 = 80 over 60
+            avgNetPrice = D(80) / D(60),
+            netInvestment = D(80),
             quantity = D(60),
         )
     ]
@@ -170,7 +170,10 @@ def test_equity_default_currency():
         assert result.avgNetPrice is not None
         assert result.avgNetPrice == avgPrice
         assert result.quantity == quantity
-        assert result.breakdown[-1].netInvestment == result.quantity * result.avgNetPrice
+        # netInvestment is the exact residual cost basis; avgNetPrice is derived from it, so a
+        # non-terminating average (e.g. 80/60) only matches after quantizing both sides.
+        _q = D("0.00000001")
+        assert result.breakdown[-1].netInvestment.quantize(_q) == (result.quantity * result.avgNetPrice).quantize(_q)
         assert len(result.breakdown) == opNumber + 1
 
         # don't compare remainingOpenQuantity and matchingOpenPositions
@@ -183,16 +186,16 @@ def test_equity_default_currency():
     checkToOperation(0, D(0), D(0), D(2), D(25))
     checkToOperation(1, D(0), D(1), D(3), D(50))
 
-    # average BUY price is 3, selling 10 pieces for 50, so profit is 50-3*10 == 20
-    checkToOperation(2, D(20), D("3.5"), D(3), D(40))
+    # FIFO: selling 10 closes the oldest BUY (unit 2), so profit is 50 - 2*10 == 30
+    checkToOperation(2, D(30), D("3.5"), D("3.25"), D(40))
 
-    # profit is previous 20 + 5.5 distributed dividend now
-    checkToOperation(3, D("25.5"), D("3.7"), D(3), D(40))
+    # profit is previous 30 + 5.5 distributed dividend now
+    checkToOperation(3, D("35.5"), D("3.7"), D("3.25"), D(40))
 
     # average price is reduced because a RECEIVE operation is basically being given for free
-    checkToOperation(4, D("25.5"), D("43.7"), D("1.5"), D(80))
+    checkToOperation(4, D("35.5"), D("43.7"), D("1.625"), D(80))
 
-    checkToOperation(5, D("51.5"), D("44.9"), D("1.5"), D(60))
+    checkToOperation(5, D("41.5"), D("44.9"), D(80) / D(60), D(60))
 
 
 def test_equity_with_conversion_rate():
@@ -260,12 +263,12 @@ def test_equity_with_conversion_rate():
             quantity = D(20)
         ),
         Profits.Result.Breakdown(
-            profit = D("8.75"),
-            netProfit = D("18.25"),
+            profit = D("2.5"),  # FIFO closes the only priced lot (the BUY, native cost 12.5): 15 - 12.5
+            netProfit = D("5.75"),  # 15*2.05 - 25 (BUY net cost)
             provisions = D("2.2"),
-            avgPrice = D("0.625"),
-            avgNetPrice = D("1.25"),
-            netInvestment = D("12.5"),
+            avgPrice = D(0),  # only the free RECEIVE lot remains
+            avgNetPrice = D(0),
+            netInvestment = D(0),
             quantity = D(10)
         )
     ]
@@ -297,7 +300,8 @@ def test_equity_with_conversion_rate():
     checkToOperation(0, D(0), D(0), D(0), D("1.25"), D("2.5"), D(10))
     checkToOperation(1, D("7.5"), D("13.5"), D("0.2"), D("1.25"), D("2.5"), D(10))
     checkToOperation(2, D("7.5"), D("13.5"), D("0.2"), D("0.625"), D("1.25"), D(20))
-    checkToOperation(3, D("16.25"), D("31.75"), D("2.4"), D("0.625"), D("1.25"), D(10))
+    # FIFO closes the priced BUY lot, leaving only the free RECEIVE lot -> residual cost basis 0
+    checkToOperation(3, D(10), D("19.25"), D("2.4"), D(0), D(0), D(10))
 
 
 def test_deposit_default_currency():
@@ -698,9 +702,9 @@ def test_receive_then_sell_realises_full_proceeds_as_profit():
     assert result.quantity == D(5)
 
 
-def test_sell_after_receive_plus_buy_uses_running_average_cost():
-    """RECEIVE 5@0 then BUY 5@100 → avg cost 10/share.  SELL 3@40 takes a
-    cost basis of 3*10=30 (avg), so profit=10."""
+def test_sell_after_receive_plus_buy_uses_fifo_cost_basis():
+    """RECEIVE 5@0 then BUY 5@100.  Under FIFO a SELL 3@40 closes the oldest lot
+    first — the free RECEIVE shares — so its cost basis is 0 and profit=40."""
     asset = makeAsset()
     asset.operations = [
         _op(AssetOperationType.receive, datetime(2020, 1, 1),   0,  5, 5),
@@ -710,9 +714,9 @@ def test_sell_after_receive_plus_buy_uses_running_average_cost():
 
     result = Profits(currentDate=datetime(2020, 12, 31))(asset)
 
-    # avg = (0 + 100) / 10 = 10. SELL 3 → cost basis = 30. profit = 40-30 = 10.
-    assert result.profit == D(10)
-    assert result.netProfit == D(10)
+    # FIFO closes 3 of the free RECEIVE lot (cost 0). profit = 40 - 0 = 40.
+    assert result.profit == D(40)
+    assert result.netProfit == D(40)
 
 
 def test_sell_split_across_two_buys_records_FIFO_matching_positions():
@@ -957,9 +961,9 @@ def test_avg_price_stays_constant_after_partial_sells():
 
 
 def test_sell_with_orderId_uses_only_its_own_order_cost_basis():
-    """When operations carry orderIds, a SELL must draw its cost basis from the
-    average cost of *its own order* — not the blended average across all orders —
-    and must report only that order's BUYs as the matched open positions."""
+    """When operations carry orderIds, a SELL must draw its cost basis (FIFO) from
+    *its own order* — not across all orders — and must report only that order's BUYs
+    as the matched open positions. (Order B is a single lot, so FIFO == its own cost.)"""
     asset = makeAsset()
     asset.hasOrderIds = True
     asset.operations = [
@@ -1027,3 +1031,110 @@ def test_netInvestment_equals_quantity_times_avgNetPrice_after_each_op():
             f"netInvestment invariant broken at op {i}: "
             f"{b.netInvestment} != {b.quantity} * {b.avgNetPrice}"
         )
+
+
+# --- FIFO cost-basis tests: profit must be FIFO, consistent with matchingOpenPositions ---
+
+def test_fifo_worked_example():
+    """Profit and matched lots come from the same FIFO drawdown. Prices are TOTALS:
+    BUY 10 @ unit 100 (total 1000), BUY 5 @ unit 150 (total 750), SELL 8 (total 960).
+    FIFO closes 8 of the first lot: 960 - 100*8 = +160 (average cost would give +26.67)."""
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 1000, 10, 10),
+        _op(AssetOperationType.buy,  datetime(2020, 2, 1),  750,  5, 15),
+        _op(AssetOperationType.sell, datetime(2020, 3, 1),  960,  8,  7),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    sell = result.breakdown[2]
+    assert sell.profit == D(160)
+    assert result.profit == D(160)
+
+    # the matched lot and the profit are derived from the same FIFO drawdown
+    assert len(sell.matchingOpenPositions) == 1
+    assert sell.matchingOpenPositions[0].operation.date == datetime(2020, 1, 1)
+    assert sell.matchingOpenPositions[0].quantity == D(8)
+    assert result.breakdown[0].remainingOpenQuantity == D(2)
+    assert result.breakdown[1].remainingOpenQuantity == D(5)
+
+
+def test_fifo_multi_lot_sell_spans_lots():
+    """A SELL larger than the oldest lot draws the remainder from the next one."""
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 1000, 10, 10),
+        _op(AssetOperationType.buy,  datetime(2020, 2, 1),  750,  5, 15),
+        _op(AssetOperationType.sell, datetime(2020, 3, 1), 1560, 12,  3),  # unit 130
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    sell = result.breakdown[2]
+    # cost = all of lot1 (1000) + 2 of lot2 (750*2/5 = 300) = 1300
+    assert sell.profit == D(1560) - D(1300)
+    assert [(m.operation.date, m.quantity) for m in sell.matchingOpenPositions] == [
+        (datetime(2020, 1, 1), D(10)),
+        (datetime(2020, 2, 1), D(2)),
+    ]
+    assert result.breakdown[0].remainingOpenQuantity == D(0)
+    assert result.breakdown[1].remainingOpenQuantity == D(3)
+
+
+def test_fifo_cross_order_isolation():
+    """FIFO is chronological within an order and never crosses orders."""
+    asset = makeAsset()
+    asset.hasOrderIds = True
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10, orderId="A"),  # unit 10
+        _op(AssetOperationType.buy,  datetime(2020, 1, 2), 200, 10, 20, orderId="A"),  # unit 20
+        _op(AssetOperationType.buy,  datetime(2020, 1, 3), 1000, 10, 30, orderId="B"),  # unit 100
+        _op(AssetOperationType.sell, datetime(2020, 2, 1), 450, 15, 15, orderId="A"),  # within A
+        _op(AssetOperationType.sell, datetime(2020, 3, 1), 600,  5, 10, orderId="B"),  # within B
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    # SELL A closes all of A1 (cost 100) + 5 of A2 (200*5/10 = 100) = 200 -> 450 - 200 = 250
+    sellA = result.breakdown[3]
+    assert sellA.profit == D(250)
+    assert [(m.operation.orderId, m.quantity) for m in sellA.matchingOpenPositions] == [("A", D(10)), ("A", D(5))]
+
+    # SELL B closes 5 of B1 (1000*5/10 = 500) -> 600 - 500 = 100, untouched by order A
+    sellB = result.breakdown[4]
+    assert sellB.profit == D(100)
+    assert [(m.operation.orderId, m.quantity) for m in sellB.matchingOpenPositions] == [("B", D(5))]
+
+
+def test_fifo_currency_conversion_uses_lot_and_sell_rates():
+    """netProfit draws cost at the matched lot's conversion rate and proceeds at the sell's."""
+    asset = makeAsset(currency_name="USD")
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10, currencyConversion=2),  # net 200
+        _op(AssetOperationType.buy,  datetime(2020, 2, 1), 100, 10, 20, currencyConversion=3),  # net 300
+        _op(AssetOperationType.sell, datetime(2020, 3, 1),  75,  5, 15, currencyConversion=4),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    sell = result.breakdown[2]
+    # FIFO closes 5 of the first lot: native cost 100*5/10 = 50, net cost 200*5/10 = 100
+    assert sell.profit == D(75) - D(50)
+    assert sell.netProfit == D(75) * D(4) - D(100)  # proceeds at sell rate 4, cost at lot rate 2
+
+
+def test_fifo_provisions_drawn_from_matched_lots():
+    """Provisions are drawn from the specific FIFO-matched lot, not blended across lots."""
+    asset = makeAsset()
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10, provision=10),
+        _op(AssetOperationType.buy,  datetime(2020, 2, 1), 100, 10, 20, provision=20),
+        _op(AssetOperationType.sell, datetime(2020, 3, 1), 100,  5, 15, provision=1),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    sell = result.breakdown[2]
+    # 5 drawn from the first lot only: 1 (SELL) + 10*5/10 = 6  (blended avg would give 8.5)
+    assert sell.provisions == D(6)
