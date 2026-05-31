@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, url_for, json
+from flask import Flask, request, url_for, json, redirect
 
 
 def create_app(test_config=None):
@@ -42,6 +42,10 @@ def create_app(test_config=None):
 
     from flaskr.apps.pricing.views import pricing
     app.register_blueprint(pricing, url_prefix="/pricing")
+
+    @app.route("/")
+    def index():
+        return redirect(url_for("wallet.index"))
 
     @app.template_filter()
     def withSign(value):
