@@ -5,6 +5,7 @@
 
 from datetime import datetime
 from dataclasses import dataclass, field, asdict
+from collections import defaultdict
 import flaskr.model as model
 from decimal import Decimal
 from typing import List, Optional
@@ -107,7 +108,10 @@ class Profits:
 
     def __call__(self, asset:model.Asset, debug=None):
         self._result = self.Result()
-        self._running = RunningTotals()
+        # Cost basis is tracked per orderId so that a SELL only draws down (and reports as
+        # closed) BUYs from the same broker order. Operations without an orderId share a
+        # single bucket (key None), preserving the original whole-asset behaviour.
+        self._runningByOrder = defaultdict(RunningTotals)
         self._operations = asset.operations
         self._debug = debug if isinstance(debug, dict) else None
         # if isinstance(debug, dict):
@@ -128,20 +132,21 @@ class Profits:
             else:
                 raise NotImplementedError(f"Did not implement profits for operation type {operation.type}")
 
-            breakdown.avgPrice = self._running.avgPrice()
-            breakdown.avgNetPrice = self._running.avgNetPrice()
-            breakdown.netInvestment = self._running.investment
-            breakdown.quantity = self._running.quantity
+            aggregate = self._aggregate()
+            breakdown.avgPrice = aggregate.avgPrice()
+            breakdown.avgNetPrice = aggregate.avgNetPrice()
+            breakdown.netInvestment = aggregate.investment
+            breakdown.quantity = aggregate.quantity
 
             self._result.breakdown.append(breakdown)
 
             if self._debug is not None:
-                self._debug["running"].append(asdict(self._running))
+                self._debug["running"].append(asdict(aggregate))
 
         if self._result.breakdown:
             self._result.profit = sum([b.profit for b in self._result.breakdown])
             self._result.netProfit = sum([b.netProfit for b in self._result.breakdown])
-            self._result.provisions = sum([b.provisions for b in self._result.breakdown]) + self._running.provision
+            self._result.provisions = sum([b.provisions for b in self._result.breakdown]) + self._aggregate().provision
             self._result.avgPrice = self._result.breakdown[-1].avgPrice
             self._result.avgNetPrice = self._result.breakdown[-1].avgNetPrice
             self._result.quantity = self._result.breakdown[-1].quantity
@@ -154,18 +159,31 @@ class Profits:
 
         return self._result
 
+    def _aggregate(self) -> RunningTotals:
+        # Whole-asset running totals, summed across every orderId bucket. Used for the
+        # asset-level breakdown fields (avg price, quantity, investment) and total provisions.
+        total = RunningTotals()
+        for running in self._runningByOrder.values():
+            total.quantity += running.quantity
+            total.price += running.price
+            total.netPrice += running.netPrice
+            total.investment += running.investment
+            total.provision += running.provision
+        return total
+
     def _buy(self, operation:model.AssetOperation, assetType:model.AssetType):
         breakdown = self.Result.Breakdown()
+        running = self._runningByOrder[operation.orderId]
 
-        self._running.quantity = operation.finalQuantity
-        self._running.price += operation.price
-        self._running.netPrice += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
-        self._running.investment += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
+        running.quantity += operation.quantity
+        running.price += operation.price
+        running.netPrice += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
+        running.investment += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
 
         if assetType == model.AssetType.deposit:
             breakdown.provisions = _valueOr(operation.provision, Decimal(0))
         else:
-            self._running.provision += _valueOr(operation.provision, Decimal(0))
+            running.provision += _valueOr(operation.provision, Decimal(0))
 
         breakdown.remainingOpenQuantity = operation.quantity
 
@@ -177,9 +195,10 @@ class Profits:
     # a RECEIVE is essentially a BUY with a price 0
     def _receive(self, operation:model.AssetOperation, assetType:model.AssetType):
         breakdown = self.Result.Breakdown()
+        running = self._runningByOrder[operation.orderId]
 
-        self._running.quantity = operation.finalQuantity
-        self._running.provision += _valueOr(operation.provision, Decimal(0))
+        running.quantity += operation.quantity
+        running.provision += _valueOr(operation.provision, Decimal(0))
 
         breakdown.remainingOpenQuantity = operation.quantity
 
@@ -190,16 +209,17 @@ class Profits:
 
     def _sell(self, operation:model.AssetOperation, assetType:model.AssetType):
         breakdown = self.Result.Breakdown()
+        running = self._runningByOrder[operation.orderId]
         quantity = operation.quantity
 
-        breakdown.profit = operation.price - self._running.partPrice(quantity)
-        breakdown.netProfit =  operation.price * _valueOr(operation.currencyConversion, Decimal(1)) - self._running.partNetPrice(quantity)
-        breakdown.provisions = _valueOr(operation.provision, Decimal(0)) + self._running.partProvision(quantity)
+        breakdown.profit = operation.price - running.partPrice(quantity)
+        breakdown.netProfit =  operation.price * _valueOr(operation.currencyConversion, Decimal(1)) - running.partNetPrice(quantity)
+        breakdown.provisions = _valueOr(operation.provision, Decimal(0)) + running.partProvision(quantity)
 
-        self._running.scaleTo(operation.finalQuantity)
+        running.scaleTo(running.quantity - quantity)
 
         for precedingBreakdown, precedingOperation in zip(self._result.breakdown, self._operations):
-            if precedingBreakdown.remainingOpenQuantity is not None:
+            if precedingBreakdown.remainingOpenQuantity is not None and precedingOperation.orderId == operation.orderId:
                 closingQuantity = min(precedingBreakdown.remainingOpenQuantity, quantity)
                 if closingQuantity > 0:
                     breakdown.matchingOpenPositions.append(self.Result.Breakdown.MatchingOpenPosition(operation=precedingOperation, quantity=closingQuantity))
@@ -217,12 +237,13 @@ class Profits:
 
     def _earning(self, operation:model.AssetOperation, assetType:model.AssetType):
         breakdown = self.Result.Breakdown()
+        running = self._runningByOrder[operation.orderId]
 
         if assetType == model.AssetType.deposit:
-            self._running.quantity = operation.finalQuantity
-            self._running.price += operation.price
-            self._running.netPrice += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
-            self._running.investment += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
+            running.quantity += operation.quantity
+            running.price += operation.price
+            running.netPrice += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
+            running.investment += operation.price * _valueOr(operation.currencyConversion, Decimal(1))
 
             breakdown.remainingOpenQuantity = operation.price
 

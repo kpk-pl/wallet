@@ -51,14 +51,3 @@ LOGIC / MATH BUGS — financial calculations
     them avg-cost P/L. For Polish Belka tax (FIFO is mandated), the per-operation profit number
     is wrong. Pick one method and use it consistently in both places.
 ----------------------------------------------------------------------------------------------------------------------
-
-[LOGIC] Profits.matchOrders (FIFO by orderId) is never used by the Profits analyzer
-    Files: flaskr/pricing/pricing.py:61-88 (matchOrders) vs flaskr/analyzers/profits.py:201
-    `matchOrders` groups operations by `orderId` and does FIFO matching only within each group,
-    and is consumed by Pricing._byInterest (parametrized assets) and HistoryPricing.
-    The Profits analyzer uses a different scheme: chronological matching across ALL operations,
-    ignoring orderId. Result: per-asset profit numbers, parametrized valuations, and historical
-    pricing all use different conventions for what counts as an "open position." If `orderId` is
-    supposed to mean anything (e.g. matching a specific SELL to specific BUYs from the same
-    broker order), the Profits analyzer needs the same logic — or `orderId` should be deleted.
-----------------------------------------------------------------------------------------------------------------------

@@ -18,7 +18,7 @@ def makeAsset(type:AssetType=AssetType.equity, currency_name:str="TST"):
     )
 
 
-def _op(type, date, price, quantity, finalQuantity, provision=None, currencyConversion=None):
+def _op(type, date, price, quantity, finalQuantity, provision=None, currencyConversion=None, orderId=None):
     kwargs = dict(
         date=date,
         type=type,
@@ -31,6 +31,8 @@ def _op(type, date, price, quantity, finalQuantity, provision=None, currencyConv
         kwargs["provision"] = D(str(provision))
     if currencyConversion is not None:
         kwargs["currencyConversion"] = D(str(currencyConversion))
+    if orderId is not None:
+        kwargs["orderId"] = orderId
     return AssetOperation(**kwargs)
 
 
@@ -952,6 +954,60 @@ def test_avg_price_stays_constant_after_partial_sells():
     assert result.avgPrice == D(10)  # all the way through
     for b in result.breakdown:
         assert b.avgPrice == D(10)
+
+
+def test_sell_with_orderId_uses_only_its_own_order_cost_basis():
+    """When operations carry orderIds, a SELL must draw its cost basis from the
+    average cost of *its own order* — not the blended average across all orders —
+    and must report only that order's BUYs as the matched open positions."""
+    asset = makeAsset()
+    asset.hasOrderIds = True
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10, orderId="A"),  # unit 10
+        _op(AssetOperationType.buy,  datetime(2020, 2, 1), 300, 10, 20, orderId="B"),  # unit 30
+        _op(AssetOperationType.sell, datetime(2020, 3, 1), 400, 10, 10, orderId="B"),  # unit 40
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    sell = result.breakdown[2]
+    # cost basis is order B's avg (30/share), NOT the blended 20/share:
+    # 400 - 30*10 = 100   (blended would have been 400 - 20*10 = 200)
+    assert sell.profit == D(100)
+    assert result.profit == D(100)
+
+    # only order B's BUY is closed; order A is untouched
+    assert len(sell.matchingOpenPositions) == 1
+    assert sell.matchingOpenPositions[0].operation.orderId == "B"
+    assert sell.matchingOpenPositions[0].quantity == D(10)
+    assert result.breakdown[0].remainingOpenQuantity == D(10)  # order A still fully open
+    assert result.breakdown[1].remainingOpenQuantity == D(0)   # order B fully closed
+
+    # asset-level running totals are still the aggregate across orders:
+    # 10 shares of order A left at unit 10
+    assert result.quantity == D(10)
+    assert result.avgPrice == D(10)
+
+
+def test_sell_matches_oldest_buy_within_same_order_fifo():
+    """Within a single order, matching is still chronological/FIFO across that
+    order's BUYs."""
+    asset = makeAsset()
+    asset.hasOrderIds = True
+    asset.operations = [
+        _op(AssetOperationType.buy,  datetime(2020, 1, 1), 100, 10, 10, orderId="A"),
+        _op(AssetOperationType.buy,  datetime(2020, 2, 1), 200, 10, 20, orderId="A"),
+        _op(AssetOperationType.sell, datetime(2020, 3, 1), 300, 15,  5, orderId="A"),
+    ]
+
+    result = Profits(currentDate=datetime(2020, 12, 31))(asset)
+
+    sell = result.breakdown[2]
+    assert len(sell.matchingOpenPositions) == 2
+    assert sell.matchingOpenPositions[0].operation.date == datetime(2020, 1, 1)
+    assert sell.matchingOpenPositions[0].quantity == D(10)
+    assert sell.matchingOpenPositions[1].operation.date == datetime(2020, 2, 1)
+    assert sell.matchingOpenPositions[1].quantity == D(5)
 
 
 def test_netInvestment_equals_quantity_times_avgNetPrice_after_each_op():
