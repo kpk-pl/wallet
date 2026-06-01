@@ -11,7 +11,8 @@ $(function(){
     order: [[8, "desc"]],
     info: false,
     autoWidth: false,
-    responsive: true,
+    responsive: false,
+    scrollX: true,
     buttons: [{
       extend: "colvis", className: "btn-sm py-0"
     }],

@@ -19,7 +19,8 @@ $(function () {
     order: [[2, "asc"]],
     info: false,
     autoWidth: false,
-    responsive: true,
+    responsive: false,
+    scrollX: true,
     columns: [
       {"data": function(row){
         return '<a href="' + settings.assetUri.replace('ASSET_ID', row.id) + '">' + row.name + "</a>";
@@ -47,6 +48,13 @@ $(function () {
     adjustedValue: {column: 6, format: x => x.toFixed(2)},
   });
 
+  // The Asset adjustments card starts collapsed, so the table is hidden when
+  // the DataTable initializes and can't measure column widths for scrollX.
+  // Recompute them once the card is expanded to keep the header aligned.
+  $('#assetAdjustmentTable').closest('.card').on('expanded.lte.cardwidget', function () {
+    assetAdjustmentTableElement.columns.adjust();
+  });
+
   let strategyTableElement = $('#strategyTable').DataTable({
     paging: false,
     searching: false,
@@ -54,7 +62,8 @@ $(function () {
     order: [[1, "desc"]],
     info: false,
     autoWidth: false,
-    responsive: true,
+    responsive: false,
+    scrollX: true,
     buttons: [
       { extend: "colvis", className: "btn-sm py-0" },
     ],

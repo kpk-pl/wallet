@@ -34,15 +34,15 @@
         <form method="" action="" class="form-horizontal">
           <div class="card-body">
             <div class="form-group row">
-              <label for="f-timerange" class="col-sm-2 col-form-label">Time range</label>
-              <div class="col-sm-9">
+              <label for="f-timerange" class="col-auto col-sm-2 col-form-label">Time range</label>
+              <div class="col">
                 <select id="f-timerange" name="timerange" class="custom-select" required>
                   {%- for name in resultsTimeranges() %}
                   <option value="{{ name }}" {{ 'selected="selected"' if timerange.name == name }}>{{ name }}</option>
                   {%- endfor %}
                 </select>
               </div>
-              <div class="col-1">
+              <div class="col-auto">
                 <button class="btn btn-primary float-right" type="submit" onclick="submitTimerangeForm(event)">Apply</button>
               </div>
             </div>
@@ -54,10 +54,10 @@
   <div class="row">
     <div class="col-12">
       <div class="card card-primary">
-        <div class="card-header">
-          <h3 class="card-title">{{ timerange.name }} results</h3>
-          <div class="card-tools">
-            <span id="resultsTableElements" class="px-2"></span>
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title flex-grow-1 text-truncate mb-0" style="min-width: 0;">{{ timerange.name }} results</h3>
+          <div class="card-tools flex-shrink-0 ml-2 d-flex align-items-center">
+            <span id="resultsTableElements" class="px-2 text-nowrap d-flex align-items-center"></span>
             <input id="resultsTableFilter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
             <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
           </div>
@@ -154,10 +154,10 @@
   <div class="row">
     <div class="col-12">
       <div class="card card-primary">
-        <div class="card-header">
-          <h3 class="card-title">Operations breakdown</h3>
-          <div class="card-tools">
-            <span id="breakdownTableElements" class="px-2"></span>
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title flex-grow-1 text-truncate mb-0" style="min-width: 0;">Operations breakdown</h3>
+          <div class="card-tools flex-shrink-0 ml-2 d-flex align-items-center">
+            <span id="breakdownTableElements" class="px-2 text-nowrap d-flex align-items-center"></span>
             <input id="breakdownTableFilter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
             <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i>
             </button>

@@ -10,6 +10,7 @@ $(function(){
     "info": false,
     "autoWidth": false,
     "responsive": false,
+    "scrollX": true,
     "columnDefs": [
       { "type": "string", "targets": [0] },
       { "type": "num-fmt", "className": "text-right", "targets": [1, 2, 4] },

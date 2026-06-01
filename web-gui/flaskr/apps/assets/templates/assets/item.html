@@ -37,7 +37,7 @@
 {% block content %}
 <div class="container-fluid">
   <div class="row">
-    <div class="col-5">
+    <div class="col-12 col-lg-5">
       <div class="card card-primary">
         <div class="card-header">
           <h3 class="card-title">Info</h3>
@@ -80,7 +80,7 @@
         </div>
       </div>
     </div>
-    <div class="col-4">
+    <div class="col-12 col-lg-4">
       <div class="card card-primary">
         <div class="card-header">
           <h3 class="card-title">Status</h3>
@@ -132,7 +132,7 @@
         </div>
       </div>
     </div>
-    <div class="col-3">
+    <div class="col-12 col-lg-3">
       <div class="card card-secondary">
         <div class="card-header">
           <h3 class="card-title">Actions</h3>
@@ -169,9 +169,9 @@
   <div class="row">
     <div class="col-12">
       <div class="card card-primary">
-        <div class="card-header">
-          <h3 class="card-title">Graph</h3>
-          <div class="card-tools">
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title flex-grow-1 text-truncate mb-0" style="min-width: 0;">Graph</h3>
+          <div class="card-tools flex-shrink-0 ml-2 d-flex align-items-center">
             <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i>
             </button>
           </div>
@@ -188,14 +188,15 @@
   <div class="row">
     <div class="col-12">
       <div class="card card-primary">
-        <div class="card-header">
-          <h3 class="card-title">Operations</h3>
-          <div class="card-tools">
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title flex-grow-1 text-truncate mb-0" style="min-width: 0;">Operations</h3>
+          <div class="card-tools flex-shrink-0 ml-2 d-flex align-items-center">
             <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i>
             </button>
           </div>
         </div>
         <div class="card-body">
+          <div class="table-responsive">
           <table class="table table-bordered">
             {% set operationsHaveOrderIds = (asset.operations | selectattr('orderId') | list | count) -%}
             <thead>
@@ -263,6 +264,7 @@
               {%- endfor %}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>

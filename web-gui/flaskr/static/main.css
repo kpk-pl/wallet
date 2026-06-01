@@ -43,3 +43,26 @@ img.link {
 .smaller {
   font-size: smaller;
 }
+
+/* DataTables gives its buttons container a bottom margin and full width, which
+   pushes the colvis button up out of alignment with the search box and icons in
+   a card header. Neutralise it so it centers with the other tools. */
+.card-tools .dt-buttons {
+  margin-bottom: 0;
+  width: auto;
+}
+
+/* On narrow screens, let the collapsed top menu overlay the page
+   instead of pushing the title bar and content down. */
+@media (max-width: 767.98px) {
+  .main-header .navbar-collapse {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    background-color: #fff;
+    padding: 0.5rem 1rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+}

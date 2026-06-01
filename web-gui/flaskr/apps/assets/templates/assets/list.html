@@ -27,10 +27,10 @@
   <div class="row">
     <div class="col-12">
       <div class="card card-primary d-flex p-0">
-        <div class="card-header">
-          <h3 class="card-title">Assets</h3>
-          <div class="card-tools">
-            <span id="tableElements" class="px-2"></span>
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title flex-grow-1 text-truncate mb-0" style="min-width: 0;">Assets</h3>
+          <div class="card-tools flex-shrink-0 ml-2 d-flex align-items-center">
+            <span id="tableElements" class="px-2 text-nowrap d-flex align-items-center"></span>
             <input id="asset-filter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
             <a href="{{ url_for('assets.add') }}">
               <button class="btn btn-tool" type="button" title="Add new asset"><i class="fas fa-plus-circle"></i></button>
