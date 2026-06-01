@@ -6,9 +6,9 @@ from typing import Optional
 
 
 class Quote(BaseModel):
-    name: Optional[str]
-    ticker: Optional[str]
+    name: Optional[str] = None
+    ticker: Optional[str] = None
     quote: Decimal
     timestamp: datetime
-    currency: Optional[str]
-    type: Optional[str]
+    currency: Optional[str] = None
+    type: Optional[str] = None

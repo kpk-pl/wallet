@@ -1,9 +1,9 @@
 from __future__ import annotations
-from pydantic import BaseModel, PositiveInt
+from pydantic import BaseModel, PositiveInt, ConfigDict
 from enum import Enum
 from typing import List, Optional, Union
 from decimal import Decimal
-from .types import PyObjectId
+from .types import PyObjectId, BsonDecimal
 
 
 class AssetPricingQuotes(BaseModel):
@@ -21,8 +21,8 @@ class AssetPricingParametrizedLength(BaseModel):
     name: AssetPricingParametrizedLengthName
     multiplier: PositiveInt = 1
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
+
 
 class AssetPricingParametrizedProfitDistribution(str, Enum):
     distributing = "distributing"
@@ -30,7 +30,7 @@ class AssetPricingParametrizedProfitDistribution(str, Enum):
 
 
 class AssetPricingParametrizedInterestItemFixed(BaseModel):
-    percentage: Decimal
+    percentage: BsonDecimal
 
 
 class AssetPricingParametrizedInterestItemDerivedSampleChoose(str, Enum):
@@ -42,12 +42,11 @@ class AssetPricingParametrizedInterestItemDerivedSample(BaseModel):
     interval: AssetPricingParametrizedLengthName
     intervalOffset: int = 0
     choose: AssetPricingParametrizedInterestItemDerivedSampleChoose
-    multiplier: Decimal = "1"
-    clampBelow: Optional[Decimal]
+    multiplier: BsonDecimal = Decimal(1)
+    clampBelow: Optional[BsonDecimal] = None
     usePreviousWhenMissing: bool = False
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class AssetPricingParametrizedInterestItemDerived(BaseModel):
@@ -56,8 +55,8 @@ class AssetPricingParametrizedInterestItemDerived(BaseModel):
 
 
 class AssetPricingParametrizedInterestItem(BaseModel):
-    fixed: Optional[AssetPricingParametrizedInterestItemFixed]
-    derived: Optional[AssetPricingParametrizedInterestItemDerived]
+    fixed: Optional[AssetPricingParametrizedInterestItemFixed] = None
+    derived: Optional[AssetPricingParametrizedInterestItemDerived] = None
 
 
 class AssetPricingParametrized(BaseModel):
@@ -65,8 +64,7 @@ class AssetPricingParametrized(BaseModel):
     profitDistribution: AssetPricingParametrizedProfitDistribution
     interest: List[AssetPricingParametrizedInterestItem]
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 AssetPricing = Union[AssetPricingQuotes, AssetPricingParametrized]

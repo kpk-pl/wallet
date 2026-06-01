@@ -6,8 +6,9 @@ from bson.decimal128 import Decimal128
 from decimal import Decimal
 from flaskr import db, header, model
 from flaskr.model import PyObjectId
+from flaskr.model.types import HttpUrlStr
 from flaskr.model.assetPricing import AssetPricingParametrized
-from pydantic import BaseModel, HttpUrl, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from typing import Optional
 
 
@@ -54,16 +55,16 @@ def listAll():
 
 class PostBody(BaseModel):
     name: str
-    ticker: Optional[str]
-    currency: Optional[str] = Field(exclude=True)
+    ticker: Optional[str] = None
+    currency: Optional[str] = Field(default=None, exclude=True)
     type: str
     institution: str
     category: str
-    subcategory: Optional[str]
-    region: Optional[str]
-    link: Optional[HttpUrl]
-    priceQuoteId: Optional[PyObjectId] = Field(exclude=True)
-    labels: Optional[str] = Field(exclude=True)
+    subcategory: Optional[str] = None
+    region: Optional[str] = None
+    link: Optional[HttpUrlStr] = None
+    priceQuoteId: Optional[PyObjectId] = Field(default=None, exclude=True)
+    labels: Optional[str] = Field(default=None, exclude=True)
 
 
 class ParametrizedPostBody(BaseModel):
@@ -71,11 +72,11 @@ class ParametrizedPostBody(BaseModel):
     institution: str
     type: str
     category: str
-    subcategory: Optional[str]
-    region: Optional[str]
-    link: Optional[HttpUrl]
+    subcategory: Optional[str] = None
+    region: Optional[str] = None
+    link: Optional[HttpUrlStr] = None
     currency: str
-    labels: Optional[str]
+    labels: Optional[str] = None
     pricing: AssetPricingParametrized
 
 
@@ -125,7 +126,7 @@ def post():
     except ValidationError:
         return ({"error": True, "message": "Invalid request", "code": 10})
 
-    data = form.dict(exclude_none=True)
+    data = form.model_dump(exclude_none=True)
     if form.labels:
         data['labels'] = form.labels.split(',')
 
@@ -165,7 +166,7 @@ def _postParametrized():
     if err:
         return err
 
-    pricing = _toBson(form.pricing.dict(exclude_none=True))
+    pricing = _toBson(form.pricing.model_dump(exclude_none=True))
     # Existing documents omit the default unit multiplier; keep new ones consistent.
     if pricing.get('length', {}).get('multiplier') == 1:
         pricing['length'].pop('multiplier', None)

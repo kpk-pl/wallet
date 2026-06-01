@@ -80,7 +80,7 @@ def index():
                         }}}
                         db.get_db().quotes.update_one(query, update)
 
-                responseQuote = simplifyModel(liveQuote.dict(exclude_none=True))
+                responseQuote = simplifyModel(liveQuote.model_dump(exclude_none=True))
                 if stale:
                     responseQuote['stale'] = True
 
@@ -92,5 +92,5 @@ def index():
 def indexUrl():
     if request.method == 'GET':
         quote = Fetcher(request.args.get('url')).fetch()
-        responseJson = json.dumps(simplifyModel(quote.dict(exclude_none=True)))
+        responseJson = json.dumps(simplifyModel(quote.model_dump(exclude_none=True)))
         return Response(responseJson, mimetype="application/json")

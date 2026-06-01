@@ -8,7 +8,7 @@ def simplifyModel(model):
     elif isinstance(model, dict):
         return {key: simplifyModel(value) for key,value in model.items()}
     elif isinstance(model, BaseModel):
-        return simplifyModel(model.dict())
+        return simplifyModel(model.model_dump())
     elif isinstance(model, Decimal):
         return str(model)
     elif isinstance(model, Enum):

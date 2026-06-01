@@ -5,7 +5,8 @@ from flaskr.model import Quote
 from flaskr.model.quote import QuoteUpdateFrequency
 from flaskr.apps.quotes.list import listIds as listActiveQuoteIds
 from flaskr.quotes import Fetcher as QuotesFetcher, FetchError
-from pydantic import BaseModel, HttpUrl, ValidationError, Field
+from pydantic import BaseModel, ValidationError, Field
+from flaskr.model.types import HttpUrlStr
 from dataclasses import dataclass
 from typing import Optional
 
@@ -13,10 +14,10 @@ from typing import Optional
 class PostData(BaseModel):
     name: str
     unit: str
-    ticker: Optional[str]
-    url: HttpUrl
+    ticker: Optional[str] = None
+    url: HttpUrlStr
     updateFrequency: QuoteUpdateFrequency
-    currencyPairCheck: bool = Field(False, exclude=True)
+    currencyPairCheck: bool = Field(default=False, exclude=True)
 
 
 @dataclass
@@ -35,7 +36,7 @@ def postNewItem():
     except ValidationError:
         return ({'error': True, 'code': 1, 'message': "Invalid request"}, 400)
 
-    data = model.dict(exclude_none=True)
+    data = model.model_dump(exclude_none=True)
 
     # The submit form still collects a single URL; store it as the first (and
     # only) entry of the `urls` array, which is now the source of truth.

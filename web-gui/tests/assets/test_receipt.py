@@ -5,6 +5,7 @@ import tests
 import datetime
 from bson.objectid import ObjectId
 from bson.decimal128 import Decimal128
+from pytest_lazy_fixtures import lf
 from tests.fixtures import client
 from tests.mocks import PricingSource, Asset
 
@@ -40,10 +41,10 @@ def test_receipt_successfull_minimal_working_data(client):
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 @pytest.mark.parametrize('clientApp,field,errorCode', [
-    (pytest.lazy_fixture('client'), "type", 101),
-    (pytest.lazy_fixture('client'), "date", 100),
-    (pytest.lazy_fixture('client'), "quantity", 102),
-    (pytest.lazy_fixture('client'), "price", 103),
+    (lf('client'), "type", 101),
+    (lf('client'), "date", 100),
+    (lf('client'), "quantity", 102),
+    (lf('client'), "price", 103),
 ])
 def test_receipt_failure_when_required_field_missing(clientApp, field, errorCode):
     assetId = Asset.createEquity().pricing().commit()
@@ -56,8 +57,8 @@ def test_receipt_failure_when_required_field_missing(clientApp, field, errorCode
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 @pytest.mark.parametrize('clientApp,field,errorCode', [
-    (pytest.lazy_fixture('client'), "quantity", 107),
-    (pytest.lazy_fixture('client'), "price", 108),
+    (lf('client'), "quantity", 107),
+    (lf('client'), "price", 108),
 ])
 def test_receipt_failure_when_numeric_field_invalid(clientApp, field, errorCode):
     # A non-numeric value (e.g. a locale comma or stray character) must be
@@ -215,10 +216,10 @@ def test_receipt_failure_sell_more_than_have(client):
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 @pytest.mark.parametrize('clientApp,type', [
-    (pytest.lazy_fixture('client'), "BUY"),
-    (pytest.lazy_fixture('client'), "SELL"),
-    (pytest.lazy_fixture('client'), "RECEIVE"),
-    (pytest.lazy_fixture('client'), "EARNING"),
+    (lf('client'), "BUY"),
+    (lf('client'), "SELL"),
+    (lf('client'), "RECEIVE"),
+    (lf('client'), "EARNING"),
 ])
 def test_receipt_supports_conversion_rate_for_foreign_currency(clientApp, type):
     pricingId = PricingSource.createSimple().unit("USD").commit()
@@ -240,10 +241,10 @@ def test_receipt_supports_conversion_rate_for_foreign_currency(clientApp, type):
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 @pytest.mark.parametrize('clientApp,type', [
-    (pytest.lazy_fixture('client'), "BUY"),
-    (pytest.lazy_fixture('client'), "SELL"),
-    (pytest.lazy_fixture('client'), "RECEIVE"),
-    (pytest.lazy_fixture('client'), "EARNING"),
+    (lf('client'), "BUY"),
+    (lf('client'), "SELL"),
+    (lf('client'), "RECEIVE"),
+    (lf('client'), "EARNING"),
 ])
 def test_receipt_failure_no_conversion_rate_for_foreign_currency(clientApp, type):
     pricingId = PricingSource.createSimple().unit("USD").commit()
@@ -259,10 +260,10 @@ def test_receipt_failure_no_conversion_rate_for_foreign_currency(clientApp, type
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 @pytest.mark.parametrize('clientApp,type', [
-    (pytest.lazy_fixture('client'), "BUY"),
-    (pytest.lazy_fixture('client'), "SELL"),
-    (pytest.lazy_fixture('client'), "RECEIVE"),
-    (pytest.lazy_fixture('client'), "EARNING"),
+    (lf('client'), "BUY"),
+    (lf('client'), "SELL"),
+    (lf('client'), "RECEIVE"),
+    (lf('client'), "EARNING"),
 ])
 def test_receipt_failure_no_orderid_when_required(clientApp, type):
     assetId = Asset.createEquity().pricing().hasOrderIds().quantity(10).commit()
@@ -277,10 +278,10 @@ def test_receipt_failure_no_orderid_when_required(clientApp, type):
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 @pytest.mark.parametrize('clientApp,type', [
-    (pytest.lazy_fixture('client'), "BUY"),
-    (pytest.lazy_fixture('client'), "SELL"),
-    (pytest.lazy_fixture('client'), "RECEIVE"),
-    (pytest.lazy_fixture('client'), "EARNING"),
+    (lf('client'), "BUY"),
+    (lf('client'), "SELL"),
+    (lf('client'), "RECEIVE"),
+    (lf('client'), "EARNING"),
 ])
 def test_receipt_successfull_for_orderid(clientApp, type):
     assetId = Asset.createEquity().pricing().hasOrderIds().quantity(10).commit()
@@ -406,8 +407,8 @@ def test_receipt_failure_receive_not_supported_for_deposit(client):
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 @pytest.mark.parametrize('clientApp,price', [
-    (pytest.lazy_fixture('client'), "12.5"),
-    (pytest.lazy_fixture('client'), "-7.5"),
+    (lf('client'), "12.5"),
+    (lf('client'), "-7.5"),
 ])
 def test_receipt_successfull_earning(clientApp, price):
     assetId = Asset.createEquity().pricing().quantity(10).commit()
@@ -452,8 +453,8 @@ def test_receipt_earning_does_not_contain_quantity(client):
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 @pytest.mark.parametrize('clientApp,quantity', [
-    (pytest.lazy_fixture('client'), "13"),
-    (pytest.lazy_fixture('client'), "-7"),
+    (lf('client'), "13"),
+    (lf('client'), "-7"),
 ])
 def test_receipt_earning_for_deposit_needs_quantity(clientApp, quantity):
     assetId = Asset.createDeposit().quantity(12).commit()

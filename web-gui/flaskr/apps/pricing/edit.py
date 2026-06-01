@@ -5,16 +5,17 @@ from flaskr.model import Quote
 from flaskr.model.quote import QuoteUpdateFrequency
 from flaskr.quotes import Fetcher as QuotesFetcher, FetchError
 from bson.objectid import ObjectId
-from pydantic import BaseModel, HttpUrl, ValidationError
+from pydantic import BaseModel, ValidationError
+from flaskr.model.types import HttpUrlStr
 from typing import List, Optional
 
 
 class EditData(BaseModel):
     name: str
     unit: str
-    ticker: Optional[str]
+    ticker: Optional[str] = None
     updateFrequency: QuoteUpdateFrequency
-    urls: List[HttpUrl]
+    urls: List[HttpUrlStr]
 
 
 def edit():

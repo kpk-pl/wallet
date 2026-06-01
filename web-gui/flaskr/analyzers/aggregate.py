@@ -57,11 +57,11 @@ def _shouldAggregate(aggregationType: AggregationType, entry: WalletAsset) -> bo
 def _renamespacedOps(entry: WalletAsset) -> List[AssetOperation]:
     # AggregatedAsset operations were namespaced on a prior merge — pass through (still copied).
     if isinstance(entry, AggregatedAsset):
-        return [op.copy() for op in entry.operations]
+        return [op.model_copy() for op in entry.operations]
 
     prefix = f"{entry.institution}:"
     return [
-        op.copy(update={'orderId': prefix + op.orderId}) if op.orderId else op.copy()
+        op.model_copy(update={'orderId': prefix + op.orderId}) if op.orderId else op.model_copy()
         for op in entry.operations
     ]
 
@@ -85,7 +85,7 @@ def _merge(lhs: WalletAsset, rhs: WalletAsset) -> AggregatedAsset:
                 finalQuantity = finalQuantity + op.quantity
         elif op.quantity is not None:
             finalQuantity = typing.Operation.adjustQuantity(op.type, finalQuantity, op.quantity)
-        recomputed.append(op.copy(update={'finalQuantity': finalQuantity}))
+        recomputed.append(op.model_copy(update={'finalQuantity': finalQuantity}))
 
     labels = sorted(set(lhs.labels) | set(rhs.labels))
 

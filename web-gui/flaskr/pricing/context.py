@@ -22,7 +22,7 @@ def _dayByDay(start, finish, alignTimescale = None):
 class Context(object):
     class StorageType(BaseModel):
         id: model.PyObjectId = Field(alias='_id')
-        currencyPair: Optional[model.QuoteCurrencyPair]
+        currencyPair: Optional[model.QuoteCurrencyPair] = None
         quotes: List[model.QuoteHistoryItem] = Field(default_factory=list)
 
 

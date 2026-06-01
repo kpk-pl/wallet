@@ -1,3 +1,5 @@
+from urllib.parse import quote_plus
+
 import pymongo
 from flask import current_app, g
 
@@ -13,8 +15,8 @@ def get_db():
             url = 'mongodb://{}:{}'.format(current_app.config["MONGO_HOST"],
                                            current_app.config["MONGO_PORT"])
         else:
-            url = 'mongodb://{}:{}@{}:{}'.format(user,
-                                                 password,
+            url = 'mongodb://{}:{}@{}:{}'.format(quote_plus(user),
+                                                 quote_plus(password),
                                                  current_app.config["MONGO_HOST"],
                                                  current_app.config["MONGO_PORT"])
 

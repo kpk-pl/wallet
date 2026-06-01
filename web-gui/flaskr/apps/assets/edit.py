@@ -4,7 +4,8 @@ from flaskr import db, header
 from flaskr.model import Asset, AssetPricingQuotes
 from flaskr.model.assetPricing import AssetPricingParametrized
 from bson.objectid import ObjectId
-from pydantic import BaseModel, HttpUrl, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError
+from flaskr.model.types import HttpUrlStr
 from typing import Optional
 from .add import _quotesListPipeline
 from .list import _toBson
@@ -12,14 +13,14 @@ from .list import _toBson
 
 class EditBody(BaseModel):
     name: str
-    ticker: Optional[str]
+    ticker: Optional[str] = None
     type: str
     institution: str
     category: str
-    subcategory: Optional[str]
-    region: Optional[str]
-    link: Optional[HttpUrl]
-    labels: Optional[str] = Field(exclude=True)
+    subcategory: Optional[str] = None
+    region: Optional[str] = None
+    link: Optional[HttpUrlStr] = None
+    labels: Optional[str] = Field(default=None, exclude=True)
 
 
 class ParametrizedEditBody(BaseModel):
@@ -27,10 +28,10 @@ class ParametrizedEditBody(BaseModel):
     institution: str
     type: str
     category: str
-    subcategory: Optional[str]
-    region: Optional[str]
-    link: Optional[HttpUrl]
-    labels: Optional[str]
+    subcategory: Optional[str] = None
+    region: Optional[str] = None
+    link: Optional[HttpUrlStr] = None
+    labels: Optional[str] = None
     pricing: AssetPricingParametrized
 
 
@@ -140,7 +141,7 @@ def _editParametrized(assetId, doc):
         if item.fixed is None and item.derived is None:
             return ({"error": True, "message": f"Interest period {idx + 1} needs a fixed and/or a derived rate", "code": 12}, 400)
 
-    pricing = _toBson(form.pricing.dict(exclude_none=True))
+    pricing = _toBson(form.pricing.model_dump(exclude_none=True))
     # Existing documents omit the default unit multiplier; keep edits consistent.
     if pricing.get('length', {}).get('multiplier') == 1:
         pricing['length'].pop('multiplier', None)

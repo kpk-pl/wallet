@@ -806,7 +806,7 @@ def test_oversell_assert_is_defensive_backstop():
     accidentally removed."""
     asset = makeAsset()
     asset.operations = [_op(AssetOperationType.buy, datetime(2020, 1, 1), 100, 10, 10)]
-    bad_sell = AssetOperation.construct(
+    bad_sell = AssetOperation.model_construct(
         date=datetime(2020, 2, 1),
         type=AssetOperationType.sell,
         price=D(150),
