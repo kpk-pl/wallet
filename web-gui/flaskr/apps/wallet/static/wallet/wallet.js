@@ -58,6 +58,11 @@ function historicalValueDone(data) {
   updateSparklines(data, 3, asset => $('#sparkline-' + asset.id));
   updateAggregatedSparklines(data, 3);
   updateAllocationCharts(data);
+
+  // Sparklines are injected asynchronously and widen the change column, so the
+  // scrollX header (a cloned table) drifts out of sync with the body. Recompute
+  // the column widths once the cells have their final content.
+  $('#openAssets').DataTable().columns.adjust();
 }
 
 function updateAggregatedSparklines(historicalData, months) {
