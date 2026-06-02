@@ -1,6 +1,5 @@
-from flask import render_template, request, Response, json
+from flask import render_template, request, Response, json, current_app
 from bson.objectid import ObjectId
-from pymongo.errors import OperationFailure
 from flaskr import db, header
 from flaskr.model import Quote
 from flaskr.quotes.fetchers.justetf import JustETF
@@ -83,14 +82,10 @@ def importQuotes():
             db.get_db().quotes.update_one(query, update, session=session);
 
 
-        try:
+        if current_app.config['MONGO_SESSIONS']:
             with db.get_db().client.start_session() as session:
                 session.with_transaction(callback)
-        except OperationFailure as e:
-            # Standalone MongoDB deployments don't support multi-document
-            # transactions; fall back to sequential (non-atomic) updates.
-            if e.code != 20:  # IllegalOperation: "Transaction numbers are only allowed..."
-                raise
+        else:
             callback()
 
         return ({"ok": True}, 200)

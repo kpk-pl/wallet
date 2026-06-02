@@ -13,7 +13,7 @@ def create_app(test_config=None):
         MONGO_PASS = os.environ.get("MONGO_PASS", ""),
         MONGO_HOST = os.environ.get("MONGO_HOST", "127.0.0.1"),
         MONGO_PORT = os.environ.get("MONGO_PORT", "27017"),
-        MONGO_SESSIONS = True,
+        MONGO_SESSIONS = os.environ.get("MONGO_SESSIONS", "true").lower() not in ("false", "0", "no", ""),
     )
 
     app.config.from_file('config.json', load=json.load)
