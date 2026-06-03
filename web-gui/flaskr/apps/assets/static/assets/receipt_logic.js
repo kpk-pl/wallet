@@ -14,9 +14,18 @@ function setupForm(settings) {
 
   $("form").validate({
     submitHandler: function(){
-      $.post(formSettings.submitUrl, $('form').serialize(), function(data) {
-        $(location).attr("href", formSettings.nextUrl);
-      });
+      $.post(formSettings.submitUrl, $('form').serialize())
+        .done(function(data) {
+          $(location).attr("href", formSettings.nextUrl);
+        })
+        .fail(function(data) {
+          $(document).Toasts('create', {
+            class: 'bg-danger',
+            title: 'Error',
+            subtitle: `Code ${data.responseJSON.code}`,
+            body: data.responseJSON.message,
+          });
+        });
     },
     rules: {
       date: { isDate: true },
