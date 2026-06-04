@@ -89,6 +89,18 @@ $(function () {
     rebalancingChange: {column: 7, format: x => x.toFixed(2)}
   });
 
+  // With scrollX the header is a cloned table, so its column widths don't
+  // follow the body when the viewport reflows. Switching between portrait and
+  // landscape on mobile changes the available width but doesn't reliably
+  // trigger DataTables' own resize adjustment, leaving the header misaligned.
+  // Re-measure both tables once the new orientation has settled.
+  $(window).on('orientationchange', function () {
+    setTimeout(function () {
+      strategyTableElement.columns.adjust();
+      assetAdjustmentTableElement.columns.adjust();
+    }, 200);
+  });
+
   $.getJSON(settings.strategyUri)
     .done(function(data) { updateStrategyAllocation(data); })
     .fail(function(data){

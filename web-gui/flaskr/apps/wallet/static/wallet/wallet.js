@@ -26,6 +26,17 @@ $(function(){
 
   datatable.buttons().container().appendTo("#tableElements");
 
+  // With scrollX the header is a cloned table whose column widths don't follow
+  // the body when the viewport reflows. Switching between portrait and
+  // landscape on mobile changes the available width but doesn't reliably
+  // trigger DataTables' own resize adjustment, leaving the header misaligned.
+  // Re-measure once the new orientation has settled.
+  $(window).on('orientationchange', function () {
+    setTimeout(function () {
+      datatable.columns.adjust();
+    }, 200);
+  });
+
   if (categoryAllocation) {
     let categoryChart = new CategoryChart(categoryAllocation, defaultCurrency).makeChart(document.getElementById('allocationChart'));
   }
