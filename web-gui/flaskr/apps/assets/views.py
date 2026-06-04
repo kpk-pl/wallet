@@ -38,6 +38,12 @@ def receipt():
     return receipt()
 
 
+@assets.route("/receipt/edit", methods=['GET', 'POST'])
+def receiptEdit():
+    from .receipt import receiptEdit
+    return receiptEdit()
+
+
 @assets.route("/trash", methods=['POST'])
 def trash():
     from .trash import trash

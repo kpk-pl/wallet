@@ -259,6 +259,9 @@
                     <i class="fa-solid fa-dollar-sign fa-fw"></i>
                   {%- endif %}
                   </a>
+                  <a href="{{ url_for('assets.receiptEdit', id=asset.id, index=asset.operations|length - loop.index) }}" class="imagelink ml-2" title="Edit operation">
+                    <i class="fas fa-edit fa-fw"></i>
+                  </a>
                 </td>
               </tr>
               {%- endfor %}

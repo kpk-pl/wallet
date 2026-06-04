@@ -4,9 +4,11 @@ from flaskr.session import Session
 from bson.objectid import ObjectId
 from bson.decimal128 import Decimal128
 import bson.errors
+import copy
 from datetime import datetime
 from dateutil import parser
 from flaskr.model import Asset, AssetType, AssetPricingQuotes
+from pydantic import ValidationError
 from decimal import Decimal, InvalidOperation
 
 
@@ -307,3 +309,127 @@ def receipt():
                 return session.with_transaction(_receiptPost)
         else:
             return _receiptPost(None)
+
+
+def _loadAssetForEdit():
+    """Shared validation for the operation-edit GET/POST: resolve the asset and
+    the targeted operation index from the query string."""
+    id = request.args.get('id')
+    if not id:
+        raise ReceiptError(1, "No asset id provided")
+
+    try:
+        query = {'_id': ObjectId(id)}
+    except bson.errors.InvalidId:
+        raise ReceiptError(2, "Invalid asset id")
+
+    index = request.args.get('index')
+    try:
+        index = int(index)
+    except (ValueError, TypeError):
+        raise ReceiptError(3, "Invalid operation index")
+
+    assets = list(db.get_db().assets.aggregate([{'$match': query}]))
+    if not assets:
+        raise ReceiptError(4, "Unknown asset id")
+
+    asset = Asset(**assets[0])
+    if index < 0 or index >= len(asset.operations):
+        raise ReceiptError(5, "Operation index out of range")
+
+    return query, assets[0], asset, index
+
+
+def _makeEditedFields(asset, index):
+    """Parse the editable subset of an operation (date, price, conversion rate,
+    provision & tax). Type and volume are intentionally immutable here because
+    changing them would invalidate the running finalQuantity of later
+    operations."""
+    operation = asset.operations[index]
+    date = parser.parse(_required("date", 100))
+
+    # Operations are stored in date-ascending order — an invariant enforced by
+    # the Asset model and assumed by every downstream consumer (pricing,
+    # history, analyzers). Editing a date must keep the edited operation between
+    # its neighbours, so reject an out-of-order date here with a clear message.
+    previous = asset.operations[index - 1] if index > 0 else None
+    following = asset.operations[index + 1] if index + 1 < len(asset.operations) else None
+    if previous is not None and date < previous.date:
+        raise ReceiptError(
+            106,
+            f"Operation date {date.isoformat()} is earlier than the preceding "
+            f"operation ({previous.date.isoformat()}). Operations must stay in "
+            "chronological order."
+        )
+    if following is not None and date > following.date:
+        raise ReceiptError(
+            106,
+            f"Operation date {date.isoformat()} is later than the following "
+            f"operation ({following.date.isoformat()}). Operations must stay in "
+            "chronological order."
+        )
+
+    fields = {'date': date}
+
+    # Deposits keep price == quantity (an invariant of the Asset model), and the
+    # volume is not editable here, so price stays fixed for them.
+    if asset.type != AssetType.deposit:
+        fields['price'] = _parseNumeric(_required("price", 103), "price", 108)
+
+    provisionSupportTypes = [typing.Operation.Type.buy, typing.Operation.Type.sell, typing.Operation.Type.earning]
+    if operation.type.value in provisionSupportTypes:
+        if 'provision' in request.form and request.form['provision'] != "":
+            fields['provision'] = _parseNumeric(request.form['provision'], "provision", 109)
+        else:
+            fields['provision'] = Decimal128("0")
+
+    if asset.currency.name != current_app.config['MAIN_CURRENCY']:
+        fields['currencyConversion'] = _parseNumeric(_required('currencyConversion', 104), "currencyConversion", 110)
+
+    if asset.hasOrderIds:
+        fields['orderId'] = _required('orderId', 105)
+
+    return fields
+
+
+def _editGet():
+    try:
+        _, _, asset, index = _loadAssetForEdit()
+    except ReceiptError as e:
+        return (e.response(), 400)
+
+    return render_template("assets/editReceipt.html",
+                           asset=asset,
+                           operation=asset.operations[index],
+                           index=index,
+                           header=header.data())
+
+
+def _editPost():
+    try:
+        query, doc, asset, index = _loadAssetForEdit()
+        fields = _makeEditedFields(asset, index)
+    except ReceiptError as e:
+        return (e.response(), 400)
+
+    # Re-validate the whole asset with the edited operation applied so the change
+    # can never leave the document inconsistent (date ordering, deposit
+    # price==quantity, required currency conversion, ...).
+    candidate = copy.deepcopy(doc)
+    candidate['operations'][index].update(fields)
+    try:
+        Asset(**candidate)
+    except ValidationError as e:
+        return ({"error": True, "message": str(e), "code": 120}, 400)
+
+    update = {f'operations.{index}.{key}': value for key, value in fields.items()}
+    db.get_db().assets.update_one(query, {'$set': update})
+
+    return ({"ok": True}, 200)
+
+
+def receiptEdit():
+    if request.method == 'GET':
+        return _editGet()
+    elif request.method == 'POST':
+        return _editPost()

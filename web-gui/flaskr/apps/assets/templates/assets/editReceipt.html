@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit operation for {{ asset.name }}{% endblock %}
+
+{% block links %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.39.0/css/tempusdominus-bootstrap-4.min.css" crossorigin="anonymous" />
+{% endblock %}
+
+{% block plugins_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/jquery.validate.min.js" integrity="sha512-37T7leoNS06R80c8Ulq7cdCDU5MNQBwlYoy1TX/WUsLFC2eYNqtKlV0QjH7r8JpG/S0GUMZwebnVFLPd6SU5yg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='jquery.validate.methods.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js" integrity="sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.39.0/js/tempusdominus-bootstrap-4.min.js" crossorigin="anonymous"></script>
+{% endblock %}
+
+{% block user_scripts %}
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/receipt.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('.static', filename='assets/receipt_logic.js') }}"></script>
+<script type="text/javascript">
+setupDatetimePicker('{{ operation.date.strftime("%Y-%m-%d %H:%M:%S") }}');
+setupForm({
+  initQuantity: {{ asset.operations[index - 1].finalQuantity if index > 0 else 0 }},
+  currency: '{{ asset.currency.name }}',
+  type: '{{ asset.type.value }}',
+  submitUrl: "{{ url_for('assets.receiptEdit', id=asset.id, index=index) }}",
+  nextUrl: "{{ url_for('assets.index', id=asset.id) }}"
+});
+$(function(){
+  // Populate the derived "value"/"cost" fields from the prefilled inputs, the
+  // same way the receipt form does once the user starts typing.
+  $("#f-provision").trigger('input');
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title flex-grow-1 text-truncate mb-0" style="min-width: 0;">{{ asset.name }}</h3>
+          <div class="card-tools flex-shrink-0 ml-2 d-flex align-items-center">
+            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <dl class="row">
+            <dt class="col-sm-3">Name</dt>
+            <dd class="col-sm-9">{{ asset.name }}</dd>
+            <dt class="col-sm-3">Type</dt>
+            <dd class="col-sm-9">{{ asset.type | simplify }}</dd>
+            {% if asset.ticker -%}
+            <dt class="col-sm-3">Ticker</dt>
+            <dd class="col-sm-9">{{ asset.ticker }}</dd>
+            {%- endif %}
+            <dt class="col-sm-3">Institution</dt>
+            <dd class="col-sm-9">{{ asset.institution }}</dd>
+            {%- if asset.link %}
+            <dt class="col-sm-3">Link</dt>
+            <dd class="col-sm-9"><a href="{{ asset.link }}" target="_blank" rel="noopener noreferrer">{{ asset.link }}</a></dd>
+            {%- endif %}
+            <dt class="col-sm-3">Labels</dt>
+            <dd class="col-sm-9">
+              {%- for label in asset.labels -%}
+                <span class="badge badge-success mr-1">{{ label }}</span>
+              {%- endfor -%}
+            </dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="container-sm">
+  <div class="row">
+    <div class="col-12">
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Edit operation</h3>
+        </div>
+        <form method="post" action="">
+          <div class="card-body">
+            <div class="row">
+              <div class="col">
+                <div class="form-group">
+                  <label for="f-type">Type</label>
+                  {# Type is fixed: changing it would invalidate the running volume of later operations. #}
+                  <select id="f-type" class="custom-select" disabled="disabled">
+                    <option value="BUY" {{ 'selected' if operation.type.value == 'BUY' }}>{{ 'BUY' | operationDisplayString(asset.type) }}</option>
+                    <option value="SELL" {{ 'selected' if operation.type.value == 'SELL' }}>{{ 'SELL' | operationDisplayString(asset.type) }}</option>
+                    {%- if asset.type != 'Deposit' %}
+                    <option value="RECEIVE" {{ 'selected' if operation.type.value == 'RECEIVE' }}>{{ 'RECEIVE' | operationDisplayString(asset.type) }}</option>
+                    {%- endif %}
+                    <option value="EARNING" {{ 'selected' if operation.type.value == 'EARNING' }}>{{ 'EARNING' | operationDisplayString(asset.type) }}</option>
+                  </select>
+                </div>
+              </div>
+              {%- if asset.hasOrderIds %}
+              <div class="col">
+                <div class="form-group">
+                  <label for="f-orderId">Order ID</label>
+                  <input type="text" id="f-orderId" name="orderId" required class="form-control" value="{{ operation.orderId or '' }}" data-lpignore="true"/>
+                </div>
+              </div>
+              {% endif %}
+              <div class="col">
+                <div class="form-group">
+                  <label for="f-date">Transaction time</label>
+                  <div class="input-group date" id="f-date-group" data-target-input="nearest">
+                    <input type="text" id="f-date" name="date" class="form-control datetimepicker-input" data-target="#f-date-group" required/>
+                    <div class="input-group-append" data-target="#f-date-group" data-toggle="datetimepicker">
+                      <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-6" id="c-quantity">
+                <div class="form-group" id="g-quantity">
+                  <label for="f-quantity">{{ 'Value' if asset.type == 'Deposit' else 'Volume' }}</label>
+                  <div class="input-group">
+                    {%- if asset.type == 'Deposit' %}
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">{{ asset.currency.name }}</span>
+                    </div>
+                    {%- endif %}
+                    {# Volume is fixed: editing it would invalidate the running volume of later operations. #}
+                    <input type="text" id="f-quantity" name="quantity" class="form-control" value="{{ operation.quantity if operation.quantity is not none else '' }}" disabled="disabled" data-lpignore="true"/>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6" id="c-quantity-after">
+                <div class="form-group" id="g-quantity-after">
+                  <label for="f-quantity-after">{{ 'Value' if asset.type == 'Deposit' else 'Volume' }} after operation</label>
+                  <div class="input-group">
+                    {%- if asset.type == 'Deposit' %}
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">{{ asset.currency.name }}</span>
+                    </div>
+                    {%- endif %}
+                    <input type="text" id="f-quantity-after" name="finalQuantity" class="form-control" disabled="disabled" value="{{ operation.finalQuantity }}" data-lpignore="true"/>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {%- if asset.type != 'Deposit' %}
+            <div class="row">
+              <div class="col" id="c-unit-price">
+                <div class="form-group" id="g-unit-price">
+                  <label for="f-unit-price" id="l-unit-price">Unit price</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">{{ asset.currency.name }}</span>
+                    </div>
+                    <input type="number" value="{{ operation.unitPrice }}" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-unit-price" name="unit-price" required/>
+                  </div>
+                </div>
+              </div>
+              <div class="col" id="c-price">
+                <div class="form-group" id="g-price">
+                  <label for="f-price" id="l-price">Total price</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">{{ asset.currency.name }}</span>
+                    </div>
+                    <input type="number" value="{{ operation.price }}" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-price" name="price" required/>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {%- endif %}
+
+            {% if asset.currency.name != config.MAIN_CURRENCY -%}
+            <div class="row">
+              <div class="col">
+                <div class="form-group" id="g-conversion">
+                  <label for="f-conversion">Currency rate {{ asset.currency.name }}/{{ config.MAIN_CURRENCY }}</label>
+                  <input type="number" value="{{ operation.currencyConversion }}" step="any" id="f-conversion" class="form-control" name="currencyConversion" required/>
+                </div>
+              </div>
+              <div class="col" id="c-value">
+                <div class="form-group" id="g-value">
+                  <label for="f-value" id="l-value">Assets value</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">{{ config.MAIN_CURRENCY }}</span>
+                    </div>
+                    <input type="number" class="form-control" id="f-value" name="value" disabled="disabled" value="{{ operation.baseCurrencyPrice }}"/>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {%- endif %}
+            <div class="row">
+              <div class="col">
+                <div class="form-group" id="g-provision">
+                  <label for="f-provision">Provision and tax</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">{{ config.MAIN_CURRENCY }}</span>
+                    </div>
+                    <input type="number" value="{{ operation.provision if operation.provision else 0 }}" step="any" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control" id="f-provision" name="provision" />
+                  </div>
+                </div>
+              </div>
+              <div class="col">
+                <div class="form-group" id="g-cost">
+                  <label for="f-cost">{{ 'Deposit value' if asset.type == 'Deposit' else 'Transaction value' }}</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">{{ config.MAIN_CURRENCY }}</span>
+                    </div>
+                    <input type="number" class="form-control" id="f-cost" name="cost" disabled="disabled" value="0" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-primary" type="submit">Save</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('assets.index', id=asset.id) }}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
