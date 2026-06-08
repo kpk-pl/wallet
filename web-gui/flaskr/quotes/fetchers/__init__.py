@@ -1,5 +1,6 @@
 from .mock import Mock
 from .investing import Investing
+from .investing_economic import InvestingEconomic
 from .biznesradar import BiznesRadar
 from .stooq import Stooq
 from .kraken import Kraken

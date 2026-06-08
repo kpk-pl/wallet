@@ -11,6 +11,7 @@ class Fetcher:
     @staticmethod
     def getInstance(url):
         return Stooq.tryCreate(url) or \
+            InvestingEconomic.tryCreate(url) or \
             Investing.tryCreate(url) or \
             BiznesRadar.tryCreate(url) or \
             Morningstar.tryCreate(url) or \
