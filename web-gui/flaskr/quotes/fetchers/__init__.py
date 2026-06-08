@@ -5,3 +5,5 @@ from .stooq import Stooq
 from .kraken import Kraken
 from .morningstar import Morningstar
 from .justetf import JustETF
+from .yahoo import Yahoo
+from .bis import BIS

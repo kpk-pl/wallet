@@ -19,6 +19,81 @@
       location.href='{{ url_for('pricing.index') }}'
     })
   }
+
+  function onRefresh(btn) {
+    const $btn = $(btn);
+    $btn.prop('disabled', true);
+    $.ajax({
+      url: '{{ url_for('quotes.index', id=item.id) }}',
+      type: 'put'
+    })
+    .done(function(data){
+      // PUT /quotes returns a per-source array; a failed fetch comes back as
+      // {name, error} rather than an HTTP error, so surface it instead of
+      // reloading into a silently-unchanged page.
+      const entry = Array.isArray(data) ? data[0] : null;
+      if (entry && entry.error) {
+        $btn.prop('disabled', false);
+        $(document).Toasts('create', {
+          class: 'bg-warning',
+          title: 'Could not refresh quote',
+          body: entry.error,
+          autohide: true,
+          delay: 8000,
+        });
+      } else {
+        // A toast shown now would be wiped by the reload, so stash the
+        // outcome and let the post-reload handler raise it once the page
+        // (with its fresh quote + chart) has loaded.
+        const quote = entry && entry.quote;
+        sessionStorage.setItem('pricingRefreshToast', JSON.stringify({
+          stale: !!(quote && quote.stale),
+          value: quote ? quote.quote : null,
+        }));
+        location.reload(true);
+      }
+    })
+    .fail(function(){
+      $btn.prop('disabled', false);
+      $(document).Toasts('create', {
+        class: 'bg-warning',
+        title: 'Warning',
+        body: 'Could not update the quote due to internal server error',
+      });
+    });
+  }
+
+  // Raise the success toast stashed by onRefresh before the page reloaded.
+  $(function () {
+    const raw = sessionStorage.getItem('pricingRefreshToast');
+    if (!raw) return;
+    sessionStorage.removeItem('pricingRefreshToast');
+
+    let info = {};
+    try { info = JSON.parse(raw); } catch (e) { /* ignore malformed flag */ }
+
+    const unit = '{{ item.unit | safe }}';
+    if (info.stale) {
+      $(document).Toasts('create', {
+        class: 'bg-info',
+        title: 'Quote refreshed',
+        body: 'No new data — quote is unchanged.',
+        autohide: true,
+        delay: 5000,
+      });
+    } else {
+      const value = (info.value !== null && info.value !== undefined)
+        ? (info.value + (unit ? ' ' + unit : ''))
+        : null;
+      $(document).Toasts('create', {
+        class: 'bg-success',
+        title: 'Quote updated',
+        body: value ? ('New quote: ' + value) : 'Quote updated successfully.',
+        autohide: true,
+        delay: 5000,
+      });
+    }
+  });
 </script>
 
 {% if quoteHistory %}
@@ -71,6 +146,12 @@
           <h3 class="card-title">Actions</h3>
         </div>
         <div class="card-body">
+          {% if not item.trashed -%}
+          <button class="btn btn-outline-secondary btn-block" type="button" onclick="onRefresh(this)">
+            <i class="fas fa-sync-alt"></i> Refresh quote
+          </button>
+          {%- endif %}
+
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('pricing.edit', quoteId=item.id) }}'">
             <i class="fas fa-edit"></i> Edit
           </button>

@@ -15,5 +15,7 @@ class Fetcher:
             BiznesRadar.tryCreate(url) or \
             Morningstar.tryCreate(url) or \
             JustETF.tryCreate(url) or \
+            Yahoo.tryCreate(url) or \
+            BIS.tryCreate(url) or \
             Kraken.tryCreate(url) or \
             Mock.tryCreate(url)
