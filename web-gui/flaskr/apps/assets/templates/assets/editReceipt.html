@@ -22,7 +22,7 @@ setupForm({
   initQuantity: {{ asset.operations[index - 1].finalQuantity if index > 0 else 0 }},
   currency: '{{ asset.currency.name }}',
   type: '{{ asset.type.value }}',
-  submitUrl: "{{ url_for('assets.receiptEdit', id=asset.id, index=index) }}",
+  submitUrl: "{{ url_for('assets.receiptEdit', id=asset.id, index=index) | safe }}",
   nextUrl: "{{ url_for('assets.index', id=asset.id) }}"
 });
 $(function(){
