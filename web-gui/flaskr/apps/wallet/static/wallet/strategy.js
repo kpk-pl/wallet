@@ -90,16 +90,20 @@ $(function () {
   });
 
   // With scrollX the header is a cloned table, so its column widths don't
-  // follow the body when the viewport reflows. Switching between portrait and
-  // landscape on mobile changes the available width but doesn't reliably
-  // trigger DataTables' own resize adjustment, leaving the header misaligned.
-  // Re-measure both tables once the new orientation has settled.
-  $(window).on('orientationchange', function () {
-    setTimeout(function () {
+  // follow the body when the viewport reflows. Resizing the window (e.g.
+  // crossing the lg breakpoint, where the Target allocation column expands to
+  // full width) or rotating a mobile device changes the available width but
+  // doesn't reliably trigger DataTables' own resize adjustment, leaving the
+  // header misaligned. Re-measure both tables once the new layout has settled.
+  let strategyResizeTimer;
+  function adjustStrategyColumns() {
+    clearTimeout(strategyResizeTimer);
+    strategyResizeTimer = setTimeout(function () {
       strategyTableElement.columns.adjust();
       assetAdjustmentTableElement.columns.adjust();
     }, 200);
-  });
+  }
+  $(window).on('resize orientationchange', adjustStrategyColumns);
 
   $.getJSON(settings.strategyUri)
     .done(function(data) { updateStrategyAllocation(data); })
