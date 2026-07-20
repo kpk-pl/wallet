@@ -1,8 +1,8 @@
 from ..model import Quote
 from .base import BaseFetcher, FetchError
+from curl_cffi import requests as cffi_requests
 from decimal import Decimal
 import dateutil.parser
-import subprocess
 import json
 import re
 
@@ -17,12 +17,11 @@ class InvestingEconomic(BaseFetcher):
     scraping rendered HTML. The latest released figure lives at
     state.economicCalendarEventStore.closestOccurrences.latest_release.
 
-    investing.com's WAF blocks the `requests`/urllib TLS fingerprint (403),
-    so we fetch via the system `curl`, whose TLS signature gets through.
+    investing.com sits behind Cloudflare, which blocks the plain
+    `requests`/urllib and stock-`curl` TLS fingerprints (403). We fetch via
+    curl_cffi impersonating Chrome, whose JA3/JA4 TLS signature gets through.
     """
 
-    _UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-           "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
     _NEXT_DATA_RE = re.compile(
         r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.S)
 
@@ -35,15 +34,12 @@ class InvestingEconomic(BaseFetcher):
 
     def _fetchPage(self):
         try:
-            proc = subprocess.run(
-                ["curl", "-sSf", "-A", self._UA, self.url],
-                capture_output=True, text=True, timeout=30)
-        except (subprocess.TimeoutExpired, OSError) as e:
+            resp = cffi_requests.get(
+                self.url, impersonate="chrome", timeout=30)
+            resp.raise_for_status()
+        except cffi_requests.RequestsError as e:
             raise FetchError(self.url, e)
-        if proc.returncode != 0:
-            raise FetchError(self.url,
-                             f"curl failed (exit {proc.returncode}): {proc.stderr.strip()}")
-        return proc.stdout
+        return resp.text
 
     def fetch(self, unit=None):
         html = self._fetchPage()
