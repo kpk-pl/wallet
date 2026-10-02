@@ -3,12 +3,17 @@ import zipfile
 from datetime import datetime
 
 from bson.json_util import dumps, JSONOptions, JSONMode
-from flask import send_file
+from flask import abort, send_file
 
 from flaskr import db
+from flaskr import labels as access
 
 
 def backup():
+    if access.isRestricted():
+        # A backup is a dump of the whole database, including hidden assets.
+        abort(403)
+
     database = db.get_db()
     jsonOptions = JSONOptions(json_mode=JSONMode.CANONICAL)
 

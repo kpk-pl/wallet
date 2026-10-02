@@ -5,6 +5,7 @@ from bson.objectid import ObjectId
 from bson.decimal128 import Decimal128
 from decimal import Decimal
 from flaskr import db, header, model
+from flaskr import labels as access
 from flaskr.model import PyObjectId
 from flaskr.model.types import HttpUrlStr
 from flaskr.model.assetPricing import AssetPricingParametrized
@@ -20,8 +21,7 @@ def _getPipeline(label = None, includeTrashed = False):
     if not includeTrashed:
         match = { 'trashed': { '$ne' : True } }
 
-    if label is not None:
-        match['labels'] = label
+    match.update(access.assetMatch(label))
 
     if match:
         pipeline.append({'$match': match})
@@ -127,8 +127,13 @@ def post():
         return ({"error": True, "message": "Invalid request", "code": 10})
 
     data = form.model_dump(exclude_none=True)
-    if form.labels:
-        data['labels'] = form.labels.split(',')
+    labels = form.labels.split(',') if form.labels else []
+    try:
+        labels = access.labelsForWrite(labels)
+    except access.LabelsError as e:
+        return ({"error": True, "message": str(e), "code": 13}, 400)
+    if labels:
+        data['labels'] = labels
 
     if not form.currency and not form.priceQuoteId:
         return ({"error": True, "message": "No currency source found", "code": 1}, 400)
@@ -185,10 +190,13 @@ def _postParametrized():
         data['region'] = form.region
     if form.link:
         data['link'] = str(form.link)
-    if form.labels:
-        labels = [label.strip() for label in form.labels.split(',') if label.strip()]
-        if labels:
-            data['labels'] = labels
+    labels = [label.strip() for label in form.labels.split(',') if label.strip()] if form.labels else []
+    try:
+        labels = access.labelsForWrite(labels)
+    except access.LabelsError as e:
+        return ({"error": True, "message": str(e), "code": 13}, 400)
+    if labels:
+        data['labels'] = labels
 
     # Validate the whole asset (pricing + type consistency) before persisting.
     try:

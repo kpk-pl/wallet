@@ -72,7 +72,7 @@
             {% endif %}
             <dt class="col-sm-3">Labels</dt>
             <dd class="col-sm-9">
-              {%- for label in asset.labels -%}
+              {%- for label in asset.labels | visibleLabels -%}
                 <span class="badge badge-success mr-1">{{ label }}</span>
               {%- endfor -%}
             </dd>

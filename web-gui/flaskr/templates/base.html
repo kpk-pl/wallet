@@ -59,11 +59,13 @@
             </a>
           </li>
           {%- endif -%}
+          {%- if not restrictedView %}
           <li class="nav-item pl-2">
             <a href="{{ url_for('wallet.backup') }}" title="Download DB backup (zip)" data-toggle="tooltip">
               <i class="fas fa-fw fa-database" style="color: gray"></i>
             </a>
           </li>
+          {%- endif %}
         </ul>
       </div>
     </nav>

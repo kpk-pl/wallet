@@ -98,7 +98,7 @@ initParametrizedForm({
               <div class="col-3">
                 <div class="form-group">
                   <label for="p-labels">Tags</label>
-                  <input type="text" id="p-labels" name="labels" class="form-control" value="{{ asset.labels | join(',') }}" data-lpignore="true"/>
+                  <input type="text" id="p-labels" name="labels" class="form-control" value="{{ asset.labels | visibleLabels | join(',') }}" data-lpignore="true"/>
                 </div>
               </div>
             </div>
@@ -181,7 +181,7 @@ initParametrizedForm({
               <div class="col-7">
                 <div class="form-group">
                   <label for="f-labels">Tags</label>
-                  <input type="text" id="f-labels" name="labels" class="form-control" value="{{ asset.labels | join(',') }}" data-lpignore="true"/>
+                  <input type="text" id="f-labels" name="labels" class="form-control" value="{{ asset.labels | visibleLabels | join(',') }}" data-lpignore="true"/>
                 </div>
               </div>
             </div>
@@ -239,7 +239,7 @@ initParametrizedForm({
               <div class="col-4">
                 <div class="form-group">
                   <label for="f-labels">Tags</label>
-                  <input type="text" id="f-labels" name="labels" class="form-control" value="{{ asset.labels | join(',') }}" data-lpignore="true"/>
+                  <input type="text" id="f-labels" name="labels" class="form-control" value="{{ asset.labels | visibleLabels | join(',') }}" data-lpignore="true"/>
                 </div>
               </div>
             </div>

@@ -1,5 +1,6 @@
 from flask import render_template, request, current_app
 from flaskr import db, header, typing
+from flaskr import labels as access
 from flaskr.session import Session
 from bson.objectid import ObjectId
 from bson.decimal128 import Decimal128
@@ -55,6 +56,7 @@ def _receiptGet():
     assets = list(db.get_db().assets.aggregate(pipeline))
     if not assets:
         return ({"error": "Could not find asset"}, 404)
+    access.requireAssetVisible(assets[0])
 
     asset = Asset(**assets[0])
     data = dict()
@@ -79,15 +81,15 @@ def _receiptGet():
             data['lastCurrencyRate'] = lastQuote
 
 
-    data['depositAccounts'] = list(db.get_db().assets.aggregate([
-        {'$match': {
-            'trashed': {'$ne': True},
-            'type': 'Deposit',
-            'category': 'Cash',
-            '_id': {'$ne': asset.id},
-            'currency.name': {'$in': [asset.currency.name, current_app.config['MAIN_CURRENCY']]},
-        }}
-    ]))
+    depositMatch = {
+        'trashed': {'$ne': True},
+        'type': 'Deposit',
+        'category': 'Cash',
+        '_id': {'$ne': asset.id},
+        'currency.name': {'$in': [asset.currency.name, current_app.config['MAIN_CURRENCY']]},
+    }
+    depositMatch.update(access.assetMatch())
+    data['depositAccounts'] = list(db.get_db().assets.aggregate([{'$match': depositMatch}]))
 
     suggestedDate = datetime.now()
     operationDates = list(set([op.date.time() for op in asset.operations]))
@@ -199,7 +201,7 @@ def _makeBillingOperation(asset, operation, session):
 
     billingAssets = list(db.get_db().assets.aggregate([{'$match': query}], session=session))
 
-    if not billingAssets:
+    if not billingAssets or not access.isAssetVisible(billingAssets[0]):
         raise ReceiptError(203, "Unknown billing asset id")
 
     billingAsset = Asset(**billingAssets[0])
@@ -278,7 +280,7 @@ def _receiptPost(session):
         {'$match': query},
     ], session=session))
 
-    if not assets:
+    if not assets or not access.isAssetVisible(assets[0]):
         return ({"error": True, "message": "Unknown asset id", "code": 3}, 400)
 
     asset = Asset(**assets[0])
@@ -330,7 +332,7 @@ def _loadAssetForEdit():
         raise ReceiptError(3, "Invalid operation index")
 
     assets = list(db.get_db().assets.aggregate([{'$match': query}]))
-    if not assets:
+    if not assets or not access.isAssetVisible(assets[0]):
         raise ReceiptError(4, "Unknown asset id")
 
     asset = Asset(**assets[0])

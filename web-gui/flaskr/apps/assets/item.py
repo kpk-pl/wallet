@@ -1,5 +1,6 @@
 from flask import render_template, request
 from flaskr import db, header
+from flaskr import labels as access
 from flaskr.analyzers import Profits
 from flaskr.model import Asset, QuoteHistoryItem, AssetPricingParametrized
 from flaskr.pricing.context import Context
@@ -63,6 +64,9 @@ def item():
         assetId = request.args.get('id')
         if not assetId:
             return ('', 400)
+
+        # Check visibility first so a hidden asset is rejected before any pricing work.
+        access.requireAssetVisible(db.get_db().assets.find_one({'_id': ObjectId(assetId)}, {'labels': 1}))
 
         assets = list(db.get_db().assets.aggregate(_getPipelineForAssetDetails(assetId)))
         if not assets:

@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
-from flaskr import db
+from flaskr import db, labels
 from flaskr.model import PriceFeedError
 from flask import request
 
@@ -83,7 +83,7 @@ class HeaderData:
         self.showLabels = showLabels
 
         labelsResult = list(db.get_db().assets.aggregate(_allLabelsPipeline()))
-        self.allLabels = labelsResult[0]['allLabels'] if labelsResult else []
+        self.allLabels = labels.visibleLabels(labelsResult[0]['allLabels'] if labelsResult else [])
 
         self.lastQuoteUpdate = HeaderLastQuoteUpdate.create()
 

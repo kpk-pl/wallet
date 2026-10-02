@@ -1,6 +1,7 @@
 from __future__ import annotations
 from flask import render_template, request, jsonify
 from flaskr import db, header
+from flaskr import labels as access
 from flaskr.model import Asset, AssetPricingQuotes
 from flaskr.model.assetPricing import AssetPricingParametrized
 from bson.objectid import ObjectId
@@ -43,6 +44,7 @@ def edit():
     doc = db.get_db().assets.find_one({'_id': ObjectId(assetId)})
     if not doc:
         return ('', 404)
+    access.requireAssetVisible(doc)
 
     if request.method == 'GET':
         asset = Asset(**doc)
@@ -81,6 +83,10 @@ def edit():
         return ({"error": True, "message": "Invalid request", "code": 10}, 400)
 
     labels = [l.strip() for l in form.labels.split(',') if l.strip()] if form.labels else []
+    try:
+        labels = access.labelsForWrite(labels, existing=doc.get('labels'))
+    except access.LabelsError as e:
+        return ({"error": True, "message": str(e), "code": 13}, 400)
 
     update = {
         'name': form.name,
@@ -167,6 +173,10 @@ def _editParametrized(assetId, doc):
             unset[fieldName] = ''
 
     labels = [l.strip() for l in form.labels.split(',') if l.strip()] if form.labels else []
+    try:
+        labels = access.labelsForWrite(labels, existing=doc.get('labels'))
+    except access.LabelsError as e:
+        return ({"error": True, "message": str(e), "code": 13}, 400)
     if labels:
         update['labels'] = labels
     else:

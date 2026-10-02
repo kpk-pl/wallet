@@ -1,6 +1,7 @@
 from flask import render_template, request, json
 
 from flaskr import db, header
+from flaskr import labels as access
 from flaskr.session import Session
 
 
@@ -19,7 +20,9 @@ def strategy_edit():
     if request.method == 'GET':
         session = Session(['label'])
 
-        strategy = list(db.get_db().strategy.aggregate(_lastStrategy(session.label())))
+        strategy = []
+        if session.label() is not None or not access.isRestricted():
+            strategy = list(db.get_db().strategy.aggregate(_lastStrategy(session.label())))
         if strategy:
             strategy = strategy[0]
         else:

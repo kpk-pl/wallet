@@ -79,7 +79,7 @@
                   </a>
                 </td>
                 <td data-title="Labels">
-                  {%- for label in asset.labels | sort %}
+                  {%- for label in asset.labels | visibleLabels | sort %}
                   <span class="badge badge-{{ 'success' if label == header.label else 'secondary'}} mr-1">{{ label }}</span>
                   {%- endfor -%}
                 </td>
