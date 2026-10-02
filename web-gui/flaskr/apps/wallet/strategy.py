@@ -2,6 +2,7 @@ from flask import render_template, request, Response, json
 
 from datetime import datetime
 from flaskr import db, header
+from flaskr import labels as access
 from flaskr.session import Session
 from flaskr.pricing import Pricing
 from flaskr.analyzers.categories import Categories, CategoryEntry
@@ -19,8 +20,7 @@ def _getPipelineFilters(label = None):
         "operations": { "$exists": True, "$not": { "$size": 0 } }
     }
 
-    if label is not None:
-        match['labels'] = label
+    match.update(access.assetMatch(label))
 
     pipeline.append({ "$match" : match })
     pipeline.append({ "$addFields" : {
@@ -69,7 +69,9 @@ class StrategyAssetData:
 def _response(shouldAllocate=False, label=None):
     response = {'label': label}
 
-    strategy = list(db.get_db().strategy.aggregate(_lastStrategyPipeline(label)))
+    strategy = []
+    if label is not None or not access.isRestricted():
+        strategy = list(db.get_db().strategy.aggregate(_lastStrategyPipeline(label)))
     if strategy:
         response['strategy'] = strategy[0]
 
@@ -115,9 +117,10 @@ def strategy():
         return render_template("wallet/strategy.html", header=header.data(showLabels = True))
 
     elif request.method == 'POST':
-        label = request.args.get('label')
-        if not label:
-            label = None
+        label = access.resolveLabel(request.args.get('label'))
+        if label is None and access.isRestricted():
+            # The unlabelled strategy belongs to the full view.
+            return {'error': True, 'message': "Select a tag to edit its strategy"}, 403
 
         data = json.loads(request.data.decode('utf-8'))
 
@@ -136,9 +139,7 @@ def strategy():
 def strategy_json():
     if request.method == 'GET':
         shouldAllocate = request.args.get('allocation') == 'true'
-        label = request.args.get('label')
-        if not label:
-            label = None
+        label = access.resolveLabel(request.args.get('label'))
 
         try:
             response = _response(shouldAllocate, label)

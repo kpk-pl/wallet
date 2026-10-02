@@ -1,4 +1,5 @@
 from flask import request, session
+from flaskr import labels
 
 
 class Session:
@@ -14,6 +15,8 @@ class Session:
 
     def _readField(self, name):
         value = request.args.get(name)
+        if name == 'label':
+            value = labels.resolveLabel(value)
         if value:
             session[name] = value
         else:

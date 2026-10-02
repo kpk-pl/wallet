@@ -1,5 +1,6 @@
 from flask import render_template, request
 from flaskr import db, header
+from flaskr import labels as access
 from flaskr.session import Session
 from flaskr.analyzers import Profits, Period
 from flaskr.model import Asset, AssetOperation
@@ -17,8 +18,7 @@ def _getPipeline(startDate, finalDate, label = None):
         "operations.0.date": { '$lte': finalDate }
     }
 
-    if label is not None:
-        match['labels'] = label
+    match.update(access.assetMatch(label))
 
     pipeline.append({ "$match" : match })
     pipeline.append({ "$addFields" : {

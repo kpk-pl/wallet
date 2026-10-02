@@ -23,6 +23,19 @@ services:
     depends_on:
       - mongo
     restart: unless-stopped
+  # Optional restricted view: the same GUI on another port, limited to some tags.
+  # See "Restricted views" in README.md.
+  # web-gui-restricted:
+  #   build: web-gui
+  #   environment:
+  #     MONGO_HOST: mongo
+  #     MONGO_PORT: 27017
+  #     ALLOWED_LABELS: "kids,retirement"
+  #   ports:
+  #     - "5001:80"
+  #   depends_on:
+  #     - mongo
+  #   restart: unless-stopped
   quote-updater:
     #    image: amplication/scheduler
     # build:
