@@ -197,6 +197,9 @@ def test_edit_controls_are_hidden(client):
     rv = client.get("/wallet/strategy")
     assert b'/wallet/strategy/edit' not in rv.data
 
+    rv = client.get("/wallet/strategy?label=kids")
+    assert b'/wallet/strategy/edit' in rv.data
+
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_receipt_offers_and_accepts_only_allowed_billing_deposits(client):
@@ -263,12 +266,18 @@ def test_strategy_scoped_to_labels(client):
     rv = client.get("/wallet/strategy?label=kids", headers=json)
     assert rv.get_json()['strategy']['assetTypes'] == [{'name': 'kidsStrategy'}]
 
-    for url in ["/wallet/strategy", "/wallet/strategy?label=kids", "/wallet/strategy?label=secret"]:
+    # The unlabelled strategy and strategies of hidden tags stay untouchable.
+    for url in ["/wallet/strategy", "/wallet/strategy?label=secret"]:
         assert client.post(url, data="[]").status_code == 403, url
-    assert client.get("/wallet/strategy/edit?label=kids").status_code == 403
+    for url in ["/wallet/strategy/edit", "/wallet/strategy/edit?label=secret"]:
+        assert client.get(url).status_code == 403, url
+
+    assert client.get("/wallet/strategy/edit?label=kids").status_code == 200
+    assert client.post("/wallet/strategy?label=kids", data="[]").status_code == 201
 
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
-        assert db.wallet.strategy.count_documents({}) == 2
+        assert db.wallet.strategy.count_documents({'label': None}) == 1
+        assert db.wallet.strategy.count_documents({'label': 'kids'}) == 2
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
@@ -280,6 +289,8 @@ def test_single_allowed_label_is_always_selected(singleLabelClient):
     rv = singleLabelClient.get("/wallet/strategy", headers={"Accept": "application/json"})
     assert rv.status_code == 200
     assert rv.get_json()['strategy']['assetTypes'] == [{'name': 'kidsStrategy'}]
+
+    assert singleLabelClient.post("/wallet/strategy", data="[]").status_code == 201
 
     rv = singleLabelClient.get("/assets/")
     assert rv.status_code == 200

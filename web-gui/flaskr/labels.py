@@ -2,8 +2,8 @@
 
 An instance started with ``ALLOWED_LABELS=a,b`` only shows assets tagged with
 at least one of those labels. It is read-only except for recording new
-operations on those assets: assets, operations and strategies cannot be
-edited, pricing and quotes are hidden, and backup and automatic quote updates
+operations on those assets and editing strategies of the allowed labels:
+assets and operations cannot be edited, pricing and quotes are hidden, and backup and automatic quote updates
 are disabled. Without the variable the app behaves as before.
 
 This is a convenience for sharing a narrower view (e.g. a second port for a

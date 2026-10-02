@@ -32,9 +32,9 @@ A restricted instance:
 
 - shows, prices and reports only assets with at least one allowed tag; other tags are hidden,
 - offers only the allowed tags as filters (a single allowed tag is always selected),
-- only lets you record new operations on those assets: adding, editing or trashing assets, editing
-  operations and editing strategies are disabled,
-- shows only strategies saved for allowed tags,
+- only lets you record new operations on those assets and edit strategies of the allowed tags: adding,
+  editing or trashing assets and editing operations are disabled,
+- shows only strategies saved for allowed tags (the untagged strategy belongs to the full view),
 - hides the Pricing and Quotes sections, which also rejects automatic quote updates sent to it,
 - disables the database backup.
 

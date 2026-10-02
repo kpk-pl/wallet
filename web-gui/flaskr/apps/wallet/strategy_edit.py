@@ -1,4 +1,4 @@
-from flask import render_template, request, json
+from flask import abort, render_template, request, json
 
 from flaskr import db, header
 from flaskr import labels as access
@@ -17,10 +17,11 @@ def _lastStrategy(label = None):
 
 
 def strategy_edit():
-    access.forbidInRestrictedView()
-
     if request.method == 'GET':
         session = Session(['label'])
+        if session.label() is None and access.isRestricted():
+            # The unlabelled strategy belongs to the full view.
+            abort(403)
 
         strategy = list(db.get_db().strategy.aggregate(_lastStrategy(session.label())))
         if strategy:

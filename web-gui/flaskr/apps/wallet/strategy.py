@@ -117,8 +117,10 @@ def strategy():
         return render_template("wallet/strategy.html", header=header.data(showLabels = True))
 
     elif request.method == 'POST':
-        access.forbidInRestrictedView()
         label = access.resolveLabel(request.args.get('label'))
+        if label is None and access.isRestricted():
+            # The unlabelled strategy belongs to the full view.
+            return {'error': True, 'message': "Select a tag to edit its strategy"}, 403
 
         data = json.loads(request.data.decode('utf-8'))
 
