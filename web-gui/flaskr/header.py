@@ -92,6 +92,9 @@ class HeaderData:
         self.priceFeedErrors = []
 
     def loadPriceFeedErrors(self, days: int = 7):
+        if labels.isRestricted():
+            # Price feeds belong to the hidden Pricing/Quotes sections.
+            return
         self.priceFeedErrors = _recentPriceFeedErrors(days=days)
 
     def asDict(self):

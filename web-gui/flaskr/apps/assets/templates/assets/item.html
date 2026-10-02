@@ -64,7 +64,11 @@
             <dd class="col-sm-9">{{ asset.currency.name }}</dd>
             {%- if asset.pricing and asset.pricing.quoteId %}
             <dt class="col-sm-3">Pricing</dt>
+            {%- if restrictedView %}
+            <dd class="col-sm-9">{{ quoteHistory.name }}</dd>
+            {%- else %}
             <dd class="col-sm-9"><a href="{{ url_for('pricing.index', quoteId=asset.pricing.quoteId) }}">{{ quoteHistory.name }}</a></dd>
+            {%- endif %}
             {%- endif %}
             {% if asset.link -%}
             <dt class="col-sm-3">Link</dt>
@@ -144,6 +148,7 @@
           </button>
           {%- endif %}
 
+          {%- if not restrictedView %}
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="location.href='{{ url_for('assets.edit', id=asset.id) }}'">
             <i class="fas fa-edit"></i> Edit
           </button>
@@ -158,6 +163,7 @@
           <button class="btn btn-outline-secondary btn-block" type="button" onclick="onTrash()">
             <i class="fa fa-trash"></i> Move to trash
           </button>
+          {%- endif %}
           {%- endif %}
         </div>
       </div>
@@ -259,9 +265,11 @@
                     <i class="fa-solid fa-dollar-sign fa-fw"></i>
                   {%- endif %}
                   </a>
+                  {%- if not restrictedView %}
                   <a href="{{ url_for('assets.receiptEdit', id=asset.id, index=asset.operations|length - loop.index) }}" class="imagelink ml-2" title="Edit operation">
                     <i class="fas fa-edit fa-fw"></i>
                   </a>
+                  {%- endif %}
                 </td>
               </tr>
               {%- endfor %}

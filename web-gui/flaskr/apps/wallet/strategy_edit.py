@@ -17,12 +17,12 @@ def _lastStrategy(label = None):
 
 
 def strategy_edit():
+    access.forbidInRestrictedView()
+
     if request.method == 'GET':
         session = Session(['label'])
 
-        strategy = []
-        if session.label() is not None or not access.isRestricted():
-            strategy = list(db.get_db().strategy.aggregate(_lastStrategy(session.label())))
+        strategy = list(db.get_db().strategy.aggregate(_lastStrategy(session.label())))
         if strategy:
             strategy = strategy[0]
         else:

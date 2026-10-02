@@ -1,8 +1,10 @@
 """Restricted views: limit an app instance to a subset of asset labels.
 
-An instance started with ``ALLOWED_LABELS=a,b`` only ever shows, edits and
-creates assets tagged with at least one of those labels. Without the variable
-the app behaves as before and every label is available.
+An instance started with ``ALLOWED_LABELS=a,b`` only shows assets tagged with
+at least one of those labels. It is read-only except for recording new
+operations on those assets: assets, operations and strategies cannot be
+edited, pricing and quotes are hidden, and backup and automatic quote updates
+are disabled. Without the variable the app behaves as before.
 
 This is a convenience for sharing a narrower view (e.g. a second port for a
 family member). It is not access control: anyone who can reach the
@@ -96,30 +98,13 @@ def visibleLabels(labels):
     return [label for label in labels if label in allowed]
 
 
-class LabelsError(ValueError):
-    pass
+def forbidInRestrictedView():
+    """Reject an action that a restricted instance does not offer."""
+    if isRestricted():
+        abort(403)
 
 
-def labelsForWrite(submitted, existing=None):
-    """Compute the labels to store after an add or edit.
-
-    On a restricted instance the user may only use allowed labels, the asset
-    must keep at least one of them (otherwise it would vanish from this view),
-    and labels hidden from this view are preserved untouched.
-    Raises LabelsError with a user-facing message when the input is invalid.
-    """
-    allowed = allowedLabels()
-    if allowed is None:
-        return list(submitted or [])
-
-    submitted = list(dict.fromkeys(submitted or []))
-
-    forbidden = [label for label in submitted if label not in allowed]
-    if forbidden:
-        raise LabelsError(f"Tags not available in this view: {', '.join(forbidden)}")
-
-    if not submitted:
-        raise LabelsError(f"At least one of these tags is required: {', '.join(allowed)}")
-
-    hidden = [label for label in (existing or []) if label not in allowed]
-    return submitted + hidden
+def hideInRestrictedView():
+    """Pretend a whole section does not exist on a restricted instance."""
+    if isRestricted():
+        abort(404)

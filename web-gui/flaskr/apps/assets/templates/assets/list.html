@@ -32,9 +32,11 @@
           <div class="card-tools flex-shrink-0 ml-2 d-flex align-items-center">
             <span id="tableElements" class="px-2 text-nowrap d-flex align-items-center"></span>
             <input id="asset-filter" class="form-control form-control-sm datatables-filter-custom" type="text" placeholder="Search" data-lpignore="true"/>
+            {%- if not restrictedView %}
             <a href="{{ url_for('assets.add') }}">
               <button class="btn btn-tool" type="button" title="Add new asset"><i class="fas fa-plus-circle"></i></button>
             </a>
+            {%- endif %}
             <a href="{{ url_for_self(all='true') }}">
               <button class="btn btn-tool" type="button" title="Show trashed"><i class="fas fa-dumpster"></i></button>
             </a>

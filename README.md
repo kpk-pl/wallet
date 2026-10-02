@@ -32,13 +32,14 @@ A restricted instance:
 
 - shows, prices and reports only assets with at least one allowed tag; other tags are hidden,
 - offers only the allowed tags as filters (a single allowed tag is always selected),
-- lets you add and edit those assets, but new and edited assets must keep at least one allowed tag
-  (tags not visible in the view are preserved),
+- only lets you record new operations on those assets: adding, editing or trashing assets, editing
+  operations and editing strategies are disabled,
 - shows only strategies saved for allowed tags,
+- hides the Pricing and Quotes sections, which also rejects automatic quote updates sent to it,
 - disables the database backup.
 
-Quotes and pricing sources stay visible. This is a convenience, not access control: anyone who can reach
-an unrestricted instance still sees everything.
+Point the `quote-updater` at the unrestricted instance. This is a convenience, not access control: anyone
+who can reach an unrestricted instance still sees everything.
 
 ## Credits
 

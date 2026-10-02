@@ -5,6 +5,12 @@ from flask_accept import accept, accept_fallback
 pricing = Blueprint('pricing', __name__, template_folder='templates', static_folder="static")
 
 
+@pricing.before_request
+def _hideInRestrictedView():
+    from flaskr import labels
+    labels.hideInRestrictedView()
+
+
 @pricing.route("/", methods=['GET', 'POST'])
 @accept_fallback
 def index():

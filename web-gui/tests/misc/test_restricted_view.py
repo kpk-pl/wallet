@@ -2,7 +2,6 @@ import pytest
 import mongomock
 import pymongo
 import tests
-from bson.objectid import ObjectId
 from flaskr import create_app, labels
 from tests.mocks import Asset
 
@@ -141,43 +140,62 @@ def test_historical_value_covers_only_allowed_assets(client):
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
-@pytest.mark.parametrize("url", ["/assets/?id={}", "/assets/edit?id={}", "/assets/receipt?id={}",
-                                 "/assets/receipt/edit?id={}&index=0"])
+@pytest.mark.parametrize("url", ["/assets/?id={}", "/assets/receipt?id={}"])
 def test_hidden_asset_pages_are_not_found(client, url):
     ids = _commitThree()
 
     if url != "/assets/?id={}":  # the details page uses a $lookup mongomock lacks
         assert client.get(url.format(ids['kids'])).status_code == 200
-    assert client.get(url.format(ids['private'])).status_code in (400, 404)
-    assert client.get(url.format(ids['unlabelled'])).status_code in (400, 404)
+    assert client.get(url.format(ids['private'])).status_code == 404
+    assert client.get(url.format(ids['unlabelled'])).status_code == 404
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
-def test_hidden_asset_cannot_be_modified(client):
+def test_operation_can_be_recorded_only_for_visible_asset(client):
     ids = _commitThree()
+    form = dict(date="2020-01-01", type="BUY", quantity="1", price="1")
 
-    rv = client.post(f"/assets/trash?id={ids['private']}")
-    assert rv.status_code == 404
-    assert 'trashed' not in _storedAsset(ids['private'])
-
-    rv = client.post(f"/assets/receipt?id={ids['private']}",
-                     data=dict(date="2020-01-01", type="BUY", quantity="1", price="1"))
+    rv = client.post(f"/assets/receipt?id={ids['private']}", data=form)
     assert rv.status_code == 400
     assert len(_storedAsset(ids['private'])['operations']) == 1
 
-    rv = client.post(f"/assets/edit?id={ids['private']}",
-                     data=dict(name="X", type="Equity", institution="X", category="Equities", labels="kids"))
-    assert rv.status_code == 404
-    assert _storedAsset(ids['private'])['name'] == "Private fund"
+    rv = client.post(f"/assets/receipt?id={ids['kids']}", data=form)
+    assert rv.status_code == 200
+    assert len(_storedAsset(ids['kids'])['operations']) == 2
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
-def test_visible_asset_can_be_trashed(client):
+def test_assets_cannot_be_added_edited_or_trashed(client):
     ids = _commitThree()
+    form = dict(name="X", type="Equity", institution="X", category="Equities", region="World",
+                currency="PLN", labels="kids")
 
-    rv = client.post(f"/assets/trash?id={ids['kids']}")
-    assert rv.status_code == 200
-    assert _storedAsset(ids['kids'])['trashed'] is True
+    for method, url in [("get", "/assets/add"),
+                        ("post", "/assets/"),
+                        ("get", f"/assets/edit?id={ids['kids']}"),
+                        ("post", f"/assets/edit?id={ids['kids']}"),
+                        ("post", f"/assets/trash?id={ids['kids']}"),
+                        ("get", f"/assets/receipt/edit?id={ids['kids']}&index=0"),
+                        ("post", f"/assets/receipt/edit?id={ids['kids']}&index=0")]:
+        rv = getattr(client, method)(url, data=form if method == "post" else None)
+        assert rv.status_code == 403, (method, url)
+
+    stored = _storedAsset(ids['kids'])
+    assert stored['name'] == "Kids fund"
+    assert 'trashed' not in stored
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        assert db.wallet.assets.count_documents({}) == 4
+
+
+@mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
+def test_edit_controls_are_hidden(client):
+    _commitThree()
+
+    rv = client.get("/assets/")
+    assert b'/assets/add' not in rv.data
+
+    rv = client.get("/wallet/strategy")
+    assert b'/wallet/strategy/edit' not in rv.data
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
@@ -201,44 +219,24 @@ def test_receipt_offers_and_accepts_only_allowed_billing_deposits(client):
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
-def test_edit_keeps_hidden_tags_and_rejects_disallowed_ones(client):
-    ids = _commitThree()
-    form = dict(name="Shared fund", type="Equity", institution="Bank of Mocks", category="Equities", region="World")
-
-    rv = client.get(f"/assets/edit?id={ids['mixed']}")
-    assert rv.status_code == 200
-    assert b'secret' not in rv.data
-
-    rv = client.post(f"/assets/edit?id={ids['mixed']}", data=dict(form, labels="kids,retirement"))
-    assert rv.status_code == 200
-    assert _storedAsset(ids['mixed'])['labels'] == ["kids", "retirement", "secret"]
-
-    rv = client.post(f"/assets/edit?id={ids['mixed']}", data=dict(form, labels="kids,other"))
-    assert rv.status_code == 400
-    assert rv.get_json()['code'] == 13
-
-    # Removing every allowed tag would make the asset disappear from this view.
-    rv = client.post(f"/assets/edit?id={ids['mixed']}", data=dict(form, labels=""))
-    assert rv.status_code == 400
-    assert rv.get_json()['code'] == 13
-    assert _storedAsset(ids['mixed'])['labels'] == ["kids", "retirement", "secret"]
+@pytest.mark.parametrize("method,url", [("get", "/pricing/"), ("get", "/pricing/add"), ("get", "/quotes/"),
+                                        ("put", "/quotes/"), ("get", "/quotes/import"),
+                                        ("get", "/pricing/static/pricing/add.js")])
+def test_pricing_and_quotes_are_hidden(client, method, url):
+    rv = getattr(client, method)(url)
+    assert rv.status_code == 404
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
-def test_add_requires_allowed_tag(client):
-    form = dict(name="New", type="Equity", institution="Bank", category="Equities", currency="PLN")
+def test_pricing_tab_and_feed_errors_are_hidden(client):
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        import datetime
+        db.wallet.price_feed_errors.insert_one(dict(name="Feed", timestamp=datetime.datetime.now(), error="boom"))
 
-    rv = client.post("/assets/", data=form)
-    assert rv.status_code == 400
-    assert rv.get_json()['code'] == 13
-
-    rv = client.post("/assets/", data=dict(form, labels="kids,secret"))
-    assert rv.status_code == 400
-    assert rv.get_json()['code'] == 13
-
-    rv = client.post("/assets/", data=dict(form, labels="kids"))
+    rv = client.get("/wallet/")
     assert rv.status_code == 200
-    assert _storedAsset(ObjectId(rv.get_json()['id']))['labels'] == ["kids"]
+    assert b'/pricing/' not in rv.data
+    assert b'id="priceFeedErrorIndicator"' not in rv.data
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
@@ -265,18 +263,17 @@ def test_strategy_scoped_to_labels(client):
     rv = client.get("/wallet/strategy?label=kids", headers=json)
     assert rv.get_json()['strategy']['assetTypes'] == [{'name': 'kidsStrategy'}]
 
-    rv = client.post("/wallet/strategy", data="[]")
-    assert rv.status_code == 403
+    for url in ["/wallet/strategy", "/wallet/strategy?label=kids", "/wallet/strategy?label=secret"]:
+        assert client.post(url, data="[]").status_code == 403, url
+    assert client.get("/wallet/strategy/edit?label=kids").status_code == 403
 
-    rv = client.post("/wallet/strategy?label=secret", data="[]")
-    assert rv.status_code == 403
-
-    rv = client.post("/wallet/strategy?label=kids", data="[]")
-    assert rv.status_code == 201
+    with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
+        assert db.wallet.strategy.count_documents({}) == 2
 
 
 @mongomock.patch(servers=[tests.MONGO_TEST_SERVER])
 def test_single_allowed_label_is_always_selected(singleLabelClient):
+    _commitThree()
     with pymongo.MongoClient(tests.MONGO_TEST_SERVER) as db:
         db.wallet.strategy.insert_one(dict(creationDate=1, label='kids', assetTypes=[{'name': 'kidsStrategy'}]))
 
@@ -284,5 +281,6 @@ def test_single_allowed_label_is_always_selected(singleLabelClient):
     assert rv.status_code == 200
     assert rv.get_json()['strategy']['assetTypes'] == [{'name': 'kidsStrategy'}]
 
-    rv = singleLabelClient.post("/wallet/strategy", data="[]")
-    assert rv.status_code == 201
+    rv = singleLabelClient.get("/assets/")
+    assert rv.status_code == 200
+    assert b'badge-success mr-1">kids' in rv.data

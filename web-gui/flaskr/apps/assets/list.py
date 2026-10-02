@@ -127,13 +127,8 @@ def post():
         return ({"error": True, "message": "Invalid request", "code": 10})
 
     data = form.model_dump(exclude_none=True)
-    labels = form.labels.split(',') if form.labels else []
-    try:
-        labels = access.labelsForWrite(labels)
-    except access.LabelsError as e:
-        return ({"error": True, "message": str(e), "code": 13}, 400)
-    if labels:
-        data['labels'] = labels
+    if form.labels:
+        data['labels'] = form.labels.split(',')
 
     if not form.currency and not form.priceQuoteId:
         return ({"error": True, "message": "No currency source found", "code": 1}, 400)
@@ -190,13 +185,10 @@ def _postParametrized():
         data['region'] = form.region
     if form.link:
         data['link'] = str(form.link)
-    labels = [label.strip() for label in form.labels.split(',') if label.strip()] if form.labels else []
-    try:
-        labels = access.labelsForWrite(labels)
-    except access.LabelsError as e:
-        return ({"error": True, "message": str(e), "code": 13}, 400)
-    if labels:
-        data['labels'] = labels
+    if form.labels:
+        labels = [label.strip() for label in form.labels.split(',') if label.strip()]
+        if labels:
+            data['labels'] = labels
 
     # Validate the whole asset (pricing + type consistency) before persisting.
     try:
