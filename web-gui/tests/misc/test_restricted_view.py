@@ -6,14 +6,17 @@ from flaskr import create_app, labels
 from tests.mocks import Asset
 
 
+def _makeApp(allowedLabels):
+    return create_app({"TESTING": True,
+                       "MONGO_HOST": tests.MONGO_TEST_HOST,
+                       "MONGO_PORT": str(tests.MONGO_TEST_PORT),
+                       "MONGO_SESSIONS": False,
+                       "ALLOWED_LABELS": allowedLabels,
+                       })
+
+
 def _makeClient(allowedLabels):
-    app = create_app({"TESTING": True,
-                      "MONGO_HOST": tests.MONGO_TEST_HOST,
-                      "MONGO_PORT": str(tests.MONGO_TEST_PORT),
-                      "MONGO_SESSIONS": False,
-                      "ALLOWED_LABELS": allowedLabels,
-                      })
-    return app.test_client()
+    return _makeApp(allowedLabels).test_client()
 
 
 @pytest.fixture
@@ -64,6 +67,25 @@ def test_parse_allowed_labels():
     assert labels.parseAllowedLabels(" , ") is None
     assert labels.parseAllowedLabels("b, a,,b ") == ["a", "b"]
     assert labels.parseAllowedLabels(["x"]) == ["x"]
+
+
+def test_asset_match_rejects_label_outside_allowed_set():
+    from werkzeug.exceptions import Forbidden
+
+    app = _makeApp("kids, retirement")
+    with app.test_request_context():
+        # Resolved/allowed labels narrow the query ...
+        assert labels.assetMatch("kids") == {'labels': 'kids'}
+        assert labels.assetMatch() == {'labels': {'$in': ["kids", "retirement"]}}
+        # ... while a label outside the set can never widen it, even if a caller
+        # forgot to run it through resolveLabel first.
+        with pytest.raises(Forbidden):
+            labels.assetMatch("secret")
+
+    unrestricted = _makeApp(None)
+    with unrestricted.test_request_context():
+        assert labels.assetMatch("secret") == {'labels': 'secret'}
+        assert labels.assetMatch() == {}
 
 
 def test_allowed_labels_are_read_from_environment(monkeypatch):

@@ -63,12 +63,17 @@ def resolveLabel(label):
 def assetMatch(label=None):
     """Mongo ``$match`` fragment selecting assets visible under ``label``.
 
-    ``label`` must already be resolved with :func:`resolveLabel`.
+    A label outside the allowed set is rejected with 403 rather than silently
+    widening the view, so this is safe even if the caller forgot to run the
+    label through :func:`resolveLabel` first.
     """
+    allowed = allowedLabels()
+
     if label is not None:
+        if allowed is not None and label not in allowed:
+            abort(403)
         return {'labels': label}
 
-    allowed = allowedLabels()
     if allowed is not None:
         return {'labels': {'$in': allowed}}
 
