@@ -119,9 +119,11 @@
             {%- elif asset.currency.name != config.MAIN_CURRENCY %}
             <dt class="col-sm-7">Average conversion rate</dt>
             <dd class="col-sm-5">
+              {%- if profitInfo.avgNetPrice is not none -%}
               {{ profitInfo.avgNetPrice | round(8) }} {{ config.MAIN_CURRENCY }}
+              {%- endif -%}
             </dd>
-            {%- if quoteHistory %}
+            {%- if quoteHistory and quoteHistory.data | length > 0 %}
             <dt class="col-sm-7">Current rate</dt>
             <dd class="col-sm-5" title="{{ quoteHistory.data[-1].timestamp }}">
               {{ quoteHistory.data[-1].quote | asCurrency(config.MAIN_CURRENCY) }}
