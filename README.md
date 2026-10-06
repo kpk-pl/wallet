@@ -17,6 +17,30 @@ You still need MongoDB. Either use a subset of `docker-compose.yml` to have Mong
 `bootstrap.sh` the GUI which will create Python's virtual env and install all dependencies. Then run `run.sh`
 to start the application.
 
+### Restricted views
+
+You can run additional instances of the GUI that only show assets with selected tags, e.g. to share a view
+with someone without exposing the rest of the wallet. Set `ALLOWED_LABELS` to a comma-separated list of tags:
+
+```
+ALLOWED_LABELS="kids,retirement" flask run --port=5002
+```
+
+With `docker-compose`, uncomment the `web-gui-restricted` service and adjust its tags and port.
+
+A restricted instance:
+
+- shows, prices and reports only assets with at least one allowed tag; other tags are hidden,
+- offers only the allowed tags as filters (a single allowed tag is always selected),
+- only lets you record new operations on those assets and edit strategies of the allowed tags: adding,
+  editing or trashing assets and editing operations are disabled,
+- shows only strategies saved for allowed tags (the untagged strategy belongs to the full view),
+- hides the Pricing and Quotes sections, which also rejects automatic quote updates sent to it,
+- disables the database backup.
+
+Point the `quote-updater` at the unrestricted instance. This is a convenience, not access control: anyone
+who can reach an unrestricted instance still sees everything.
+
 ## Credits
 
 - [AdminLTE](https://github.com/ColorlibHQ/AdminLTE) @ 3.1.0-rc

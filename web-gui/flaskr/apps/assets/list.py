@@ -5,6 +5,7 @@ from bson.objectid import ObjectId
 from bson.decimal128 import Decimal128
 from decimal import Decimal
 from flaskr import db, header, model
+from flaskr import labels as access
 from flaskr.model import PyObjectId
 from flaskr.model.types import HttpUrlStr
 from flaskr.model.assetPricing import AssetPricingParametrized
@@ -20,8 +21,7 @@ def _getPipeline(label = None, includeTrashed = False):
     if not includeTrashed:
         match = { 'trashed': { '$ne' : True } }
 
-    if label is not None:
-        match['labels'] = label
+    match.update(access.assetMatch(label))
 
     if match:
         pipeline.append({'$match': match})

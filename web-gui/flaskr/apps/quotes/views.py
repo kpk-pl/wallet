@@ -3,6 +3,13 @@ from flask import request, Blueprint
 
 quotes = Blueprint('quotes', __name__, template_folder='templates', static_folder='static')
 
+
+@quotes.before_request
+def _hideInRestrictedView():
+    # Covers the scheduled quote updates (PUT /quotes/) as well.
+    from flaskr import labels
+    labels.hideInRestrictedView()
+
 @quotes.route("/", methods=['GET', 'PUT'])
 def index():
     if request.args.get('url'):

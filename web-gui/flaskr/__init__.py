@@ -14,11 +14,22 @@ def create_app(test_config=None):
         MONGO_HOST = os.environ.get("MONGO_HOST", "127.0.0.1"),
         MONGO_PORT = os.environ.get("MONGO_PORT", "27017"),
         MONGO_SESSIONS = os.environ.get("MONGO_SESSIONS", "true").lower() not in ("false", "0", "no", ""),
+        ALLOWED_LABELS = os.environ.get("ALLOWED_LABELS"),
     )
 
     app.config.from_file('config.json', load=json.load)
     if test_config is not None:
         app.config.from_mapping(test_config)
+
+    from flaskr import labels
+    app.config['ALLOWED_LABELS'] = labels.parseAllowedLabels(app.config.get('ALLOWED_LABELS'))
+    if app.config['ALLOWED_LABELS'] is not None:
+        # Cookies are shared by every port on the same host, so a restricted
+        # instance keeps its own session cookie instead of inheriting the
+        # label selected on another instance.
+        import hashlib
+        digest = hashlib.sha1(','.join(app.config['ALLOWED_LABELS']).encode('utf-8')).hexdigest()[:10]
+        app.config['SESSION_COOKIE_NAME'] = 'session_' + digest
 
     try:
         os.makedirs(app.instance_path)
@@ -85,6 +96,10 @@ def create_app(test_config=None):
             return optValue
         return default
 
+    @app.template_filter()
+    def visibleLabels(value):
+        return labels.visibleLabels(value)
+
     @app.template_filter('zip')
     def zipFilter(a, b):
         return zip(a, b)
@@ -99,6 +114,7 @@ def create_app(test_config=None):
     def constants():
         return dict(
             resultsTimeranges = typing.Results.timeranges,
+            restrictedView = labels.isRestricted(),
         )
 
     return app

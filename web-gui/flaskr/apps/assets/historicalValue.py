@@ -1,5 +1,6 @@
 from flask import request, Response
 from flaskr import db
+from flaskr import labels as access
 from dataclasses import dataclass, asdict
 from bson.objectid import ObjectId
 from datetime import time, datetime, timedelta
@@ -20,8 +21,7 @@ def _getPipelineForIdsHistorical(daysBack, label = None, ids = []):
 
     if ids:
         match['_id'] = { "$in": [ObjectId(id) for id in ids] }
-    if label is not None:
-        match['labels'] = label
+    match.update(access.assetMatch(label))
 
     pipeline.append({ "$match" : match })
     pipeline.append({ "$addFields" : {
@@ -47,8 +47,7 @@ def _maxDaysBack(label = None, ids = [], default = 180):
 
     if ids:
         match['_id'] = { "$in": [ObjectId(id) for id in ids] }
-    if label is not None:
-        match['labels'] = label
+    match.update(access.assetMatch(label))
 
     pipeline = [
         { "$match": match },
@@ -101,9 +100,7 @@ def historicalValue():
         if 'alignTimescale' in request.args:
             alignTimescale = time.fromisoformat(request.args.get('alignTimescale'))
 
-        label = request.args.get('label')
-        if not label:
-            label = None
+        label = access.resolveLabel(request.args.get('label'))
 
         daysBack = 180
         if 'daysBack' in request.args:

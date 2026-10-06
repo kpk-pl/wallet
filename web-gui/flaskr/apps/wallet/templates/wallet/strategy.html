@@ -33,9 +33,11 @@ initialize({
           <h3 class="card-title flex-grow-1 text-truncate mb-0" style="min-width: 0;">Strategy</h3>
           <div class="card-tools flex-shrink-0 ml-2 d-flex align-items-center">
             <span id="tableElements" class="text-nowrap d-flex align-items-center"></span>
+            {%- if not restrictedView or session['label'] %}
             <a href="{{ url_for('wallet.strategy_edit', label=session['label']) }}">
               <button class="btn btn-tool" type="button" title="Group assets in different institutions"><i class="fas fa-edit"></i></button>
             </a>
+            {%- endif %}
           </div>
         </div>
         <div class="card-body">

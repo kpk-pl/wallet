@@ -1,6 +1,7 @@
 from flask import render_template, request
 
 from flaskr import db, header
+from flaskr import labels as access
 from flaskr.session import Session
 from flaskr.model import Asset, AggregatedAsset, WalletAsset
 from flaskr.analyzers import Profits, Categories, CategoryEntry
@@ -19,8 +20,7 @@ def _getPipelineFilters(label = None):
         "operations": { "$exists": True, "$not": { "$size": 0 } }
     }
 
-    if label is not None:
-        match['labels'] = label
+    match.update(access.assetMatch(label))
 
     pipeline.append({ "$match" : match })
     pipeline.append({ "$addFields" : {

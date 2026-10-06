@@ -1,4 +1,5 @@
 from flask import Blueprint, request
+from flaskr import labels as access
 
 
 assets = Blueprint('assets', __name__, template_folder='templates', static_folder='static')
@@ -16,18 +17,21 @@ def index():
 
 @assets.route("/", methods=["POST"])
 def index_post():
+    access.forbidInRestrictedView()
     from .list import post
     return post()
 
 
 @assets.route("/add", methods=['GET'])
 def add():
+    access.forbidInRestrictedView()
     from .add import add
     return add()
 
 
 @assets.route("/edit", methods=['GET', 'POST'])
 def edit():
+    access.forbidInRestrictedView()
     from .edit import edit
     return edit()
 
@@ -40,12 +44,14 @@ def receipt():
 
 @assets.route("/receipt/edit", methods=['GET', 'POST'])
 def receiptEdit():
+    access.forbidInRestrictedView()
     from .receipt import receiptEdit
     return receiptEdit()
 
 
 @assets.route("/trash", methods=['POST'])
 def trash():
+    access.forbidInRestrictedView()
     from .trash import trash
     return trash()
 
