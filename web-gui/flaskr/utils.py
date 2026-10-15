@@ -17,7 +17,7 @@ def simplifyModel(model):
         return model
 
 
-def jsonify(obj):
+def jsonify(obj, **kwargs):
     from flask import json
     from flask.json import JSONEncoder
 
@@ -29,7 +29,7 @@ def jsonify(obj):
                return str(obj)
             return JSONEncoder.default(self, obj)
 
-    return json.dumps(obj, cls=JsonEncoder)
+    return json.dumps(obj, cls=JsonEncoder, **kwargs)
 
 
 def clamp(n, smallest, largest):

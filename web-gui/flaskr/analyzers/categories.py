@@ -23,7 +23,12 @@ class Categories(object):
                 raise RuntimeError(f"Could not determine '{entry.name}' asset value for categories allocation engine")
             self.allocation[entry.category][entry.subcategory] += entry.netValue
 
-        return self.allocation
+        # Subcategory keys mix None and str, so sort them here (None first)
+        # instead of relying on the JSON encoder's sort_keys, which can't compare them.
+        return {
+            category: dict(sorted(subcategories.items(), key=lambda kv: (kv[0] is not None, kv[0] or '')))
+            for category, subcategories in sorted(self.allocation.items())
+        }
 
     def fillStrategy(self, strategy):
         strategyAllocation = {}

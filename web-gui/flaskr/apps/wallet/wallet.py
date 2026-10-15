@@ -98,5 +98,5 @@ def wallet():
 
     return render_template("wallet/wallet.html",
                            assetData=assetData,
-                           allocation=jsonify(categoryAllocation),
+                           allocation=jsonify(categoryAllocation, sort_keys=False),
                            header = headerData.asDict())

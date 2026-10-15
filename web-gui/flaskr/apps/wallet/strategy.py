@@ -149,4 +149,4 @@ def strategy_json():
         if response is None:
             return {'error': True, 'message': "Could not get strategy information"}, 500
 
-        return Response(jsonify(response), mimetype="application/json")
+        return Response(jsonify(response, sort_keys=False), mimetype="application/json")
